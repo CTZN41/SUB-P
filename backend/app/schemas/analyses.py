@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models import AnalysisStatus, PlayType
 
@@ -30,3 +30,23 @@ class AnalysisRegistrationResponse(BaseModel):
 class WarningAcceptanceResponse(BaseModel):
     id: str
     warnings_accepted: bool
+
+
+class CourtCalibrationRequest(BaseModel):
+    frame_time_ms: int = Field(ge=0)
+    image_points: list[list[float]]
+    court_points: list[list[float]]
+    hoop_point: list[float]
+
+
+class CourtCalibrationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    analysis_id: str
+    frame_time_ms: int
+    image_points: list[list[float]]
+    court_points: list[list[float]]
+    hoop_point: list[float]
+    transform: list[list[float]]
+    confirmed_at: datetime | None

@@ -3,6 +3,7 @@ import './App.css'
 import { AppLayout } from './components/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { NewAnalysisPage } from './pages/NewAnalysisPage'
+import { CourtCalibrationPage } from './pages/CourtCalibrationPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 
 function App() {
@@ -11,16 +12,7 @@ function App() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="new" element={<NewAnalysisPage />} />
-        <Route
-          path="court/:analysisId"
-          element={
-            <PlaceholderPage
-              eyebrow="분석 준비"
-              title="코트 기준점 설정"
-              description="하프코트의 기준점을 지정하는 기능은 Phase 4에서 연결합니다."
-            />
-          }
-        />
+        <Route path="court/:analysisId" element={<CourtCalibrationPage />} />
         <Route
           path="players/:analysisId"
           element={
