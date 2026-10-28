@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { AppLayout } from './components/AppLayout'
 import { HomePage } from './pages/HomePage'
+import { NewAnalysisPage } from './pages/NewAnalysisPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 
 function App() {
@@ -9,16 +10,7 @@ function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
-        <Route
-          path="new"
-          element={
-            <PlaceholderPage
-              eyebrow="새 분석"
-              title="영상 등록"
-              description="MP4 영상 선택과 촬영 조건 확인 기능은 Phase 3에서 연결합니다."
-            />
-          }
-        />
+        <Route path="new" element={<NewAnalysisPage />} />
         <Route
           path="court/:analysisId"
           element={

@@ -33,8 +33,8 @@ export function AppLayout() {
 
         <div className="sidebar-note">
           <span>현재 단계</span>
-          <strong>Phase 1</strong>
-          <p>프로젝트 실행 구조와 화면 이동을 준비하는 중입니다.</p>
+          <strong>Phase 3</strong>
+          <p>MP4 영상 등록과 기본 검사를 사용할 수 있습니다.</p>
         </div>
       </aside>
 

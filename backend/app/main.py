@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.health import router as health_router
+from app.api.analyses import router as analyses_router
 from app.core.config import get_settings
 from app.db.session import create_database_engine, create_session_factory
 
@@ -41,3 +42,4 @@ app.add_middleware(
 )
 
 app.include_router(health_router)
+app.include_router(analyses_router)

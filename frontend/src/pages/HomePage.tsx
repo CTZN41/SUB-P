@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 const statusItems = [
   { label: 'React 화면', state: '준비 완료' },
   { label: 'FastAPI 로컬 API', state: '준비 완료' },
-  { label: 'SQLite 저장 공간', state: '준비 완료' },
+  { label: 'MP4 영상 등록', state: '사용 가능' },
 ]
 
 export function HomePage() {
@@ -45,12 +45,12 @@ export function HomePage() {
 
       <section className="notice-card">
         <div>
-          <p className="eyebrow">PHASE 1 안내</p>
-          <h2>지금은 실행 가능한 뼈대를 만든 단계입니다.</h2>
+          <p className="eyebrow">PHASE 3 안내</p>
+          <h2>이제 MP4 영상을 안전하게 등록할 수 있습니다.</h2>
         </div>
         <p>
-          영상 업로드, 선수 추적, 슛 판정, 3D 코트는 아직 실제로 동작하지 않습니다.
-          다음 Phase부터 저장 구조와 영상 등록 기능을 순서대로 연결합니다.
+          영상 형식과 길이·용량, 촬영 동의와 기본 화질을 확인해 로컬 PC에 저장합니다.
+          코트 기준점, 선수 추적, 슛 판정과 결과 지도는 다음 Phase부터 연결합니다.
         </p>
       </section>
     </div>

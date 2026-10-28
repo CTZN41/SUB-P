@@ -10,4 +10,6 @@ httpx>=0.27,<1.0
 torch==2.8.0+cpu
 torchvision==0.23.0+cpu
 ultralytics>=8.4,<8.5
+opencv-python>=4.10,<5.0
+numpy>=1.26,<3.0
 clip @ git+https://github.com/ultralytics/CLIP.git@7ffa84b3bfa40c42ecc1c77147a855e69cb2dd40
