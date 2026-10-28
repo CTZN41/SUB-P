@@ -8,9 +8,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db_session
-from app.models import Analysis, CalibrationSource, CourtCalibration, Player, PlayType
+from app.models import Analysis, AnalysisJob, CalibrationSource, CourtCalibration, Player, PlayType
 from app.schemas.analyses import (
     AnalysisRegistrationResponse,
+    AnalysisJobResponse,
     CourtCalibrationRequest,
     CourtCalibrationResponse,
     PlayerCreateRequest,
@@ -27,6 +28,7 @@ from app.services.court_calibration import (
     validate_points,
 )
 from app.services.video_registration import RegistrationError, register_video
+from app.services.analysis_jobs import cancel_job, current_job, refresh_simulation, start_simulation
 
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
@@ -260,3 +262,52 @@ def delete_player(
         raise HTTPException(status_code=409, detail={"code": "SOLO_PLAYER_REQUIRED", "message": "개인 연습의 기본 선수는 삭제할 수 없습니다."})
     session.delete(player); session.commit()
     return Response(status_code=204)
+
+
+def ensure_analysis_ready(request: Request, session: Session, analysis: Analysis) -> None:
+    missing: list[str] = []
+    video_path = request.app.state.settings.upload_path / analysis.id / "original.mp4"
+    if not video_path.is_file(): missing.append("원본 영상")
+    if not analysis.ai_notice_confirmed: missing.append("OpenAI 처리 안내 확인")
+    if analysis.contains_others and not analysis.consent_confirmed: missing.append("촬영·분석 동의")
+    if analysis.warnings and not analysis.warnings_accepted: missing.append("촬영 조건 경고 확인")
+    if session.scalar(select(CourtCalibration).where(CourtCalibration.analysis_id == analysis.id)) is None: missing.append("코트 위치 확인")
+    if not list_players_for(session, analysis.id): missing.append("선수 설정")
+    if missing:
+        raise HTTPException(status_code=409, detail={"code": "ANALYSIS_NOT_READY", "message": "다음 설정을 먼저 확인해 주세요: " + ", ".join(missing)})
+
+
+@router.post("/{analysis_id}/jobs/start", response_model=AnalysisJobResponse)
+def start_analysis_job(
+    request: Request,
+    analysis_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> AnalysisJob:
+    analysis = find_analysis(session, analysis_id)
+    ensure_analysis_ready(request, session, analysis)
+    job, _ = start_simulation(session, analysis)
+    return job
+
+
+@router.get("/{analysis_id}/jobs/current", response_model=AnalysisJobResponse)
+def get_current_analysis_job(
+    analysis_id: str, session: Annotated[Session, Depends(get_db_session)]
+) -> AnalysisJob:
+    analysis = find_analysis(session, analysis_id)
+    job = current_job(session, analysis_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail={"code": "JOB_NOT_FOUND", "message": "아직 시작한 분석 작업이 없습니다."})
+    return refresh_simulation(session, analysis, job)
+
+
+@router.post("/{analysis_id}/jobs/{job_id}/cancel", response_model=AnalysisJobResponse)
+def cancel_analysis_job(
+    analysis_id: str,
+    job_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> AnalysisJob:
+    analysis = find_analysis(session, analysis_id)
+    job = session.get(AnalysisJob, job_id)
+    if job is None or job.analysis_id != analysis_id:
+        raise HTTPException(status_code=404, detail={"code": "JOB_NOT_FOUND", "message": "분석 작업을 찾을 수 없습니다."})
+    return cancel_job(session, analysis, job)

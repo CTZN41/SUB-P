@@ -580,6 +580,22 @@ h1 {
 .player-row span { grid-column: 1 / -1; color: #87948c; font-size: .75rem; }
 .inline-warning { padding: 10px 12px; border-radius: 9px; background: rgba(255,205,112,.08); color: #ffda91; font-size: .8rem; line-height: 1.45; }
 .full-button { width: 100%; margin-top: 16px; }
+.progress-page { max-width: 980px; }
+.simulation-banner { display: flex; gap: 14px; margin-bottom: 18px; padding: 16px 18px; border: 1px solid rgba(255,205,112,.24); border-radius: 14px; background: rgba(255,205,112,.08); color: #e8d3aa; }
+.simulation-banner strong { flex: 0 0 auto; color: #ffda91; }
+.progress-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.progress-summary > div { padding: 16px; border-radius: 13px; background: rgba(255,255,255,.035); }
+.progress-summary span, .progress-summary strong { display: block; }
+.progress-summary span { color: #829087; font-size: .78rem; }
+.progress-summary strong { margin-top: 7px; }
+.stage-list { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 28px 0; padding: 0; list-style: none; }
+.stage-list li { min-width: 0; color: #6f7b74; text-align: center; font-size: .73rem; }
+.stage-list li span { width: 34px; height: 34px; display: grid; place-items: center; margin: 0 auto 9px; border-radius: 50%; background: #0f1814; font-weight: 900; }
+.stage-list li strong { line-height: 1.35; }
+.stage-list li.active, .stage-list li.done { color: #eaff9e; }
+.stage-list li.active span { background: #d8ff4f; color: #101915; box-shadow: 0 0 20px rgba(216,255,79,.25); }
+.stage-list li.done span { background: rgba(216,255,79,.15); color: #d8ff4f; }
+.success-note { padding: 14px 16px; border-radius: 12px; background: rgba(40,190,125,.1); color: #84e9b8; }
 
 @media (max-width: 900px) {
   .app-shell {
@@ -622,6 +638,10 @@ h1 {
   .player-setup-grid {
     grid-template-columns: 1fr;
   }
+
+  .stage-list { grid-template-columns: 1fr; }
+  .stage-list li { display: flex; align-items: center; gap: 10px; text-align: left; }
+  .stage-list li span { margin: 0; flex: 0 0 auto; }
 }
 
 @media (max-width: 560px) {

@@ -242,6 +242,7 @@ class AnalysisJob(Base):
     stage: Mapped[str | None] = mapped_column(String(80))
     processed_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_simulation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_code: Mapped[str | None] = mapped_column(String(80))
     error_message: Mapped[str | None] = mapped_column(Text)

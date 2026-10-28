@@ -12,7 +12,16 @@ export function PlayerSetupPage() {
   const [selected, setSelected] = useState(''); const [timeMs, setTimeMs] = useState(0); const [error, setError] = useState('')
   const frameUrl = useMemo(() => `${API_BASE}/analyses/${analysisId}/calibration/frame?time_ms=${timeMs}`, [analysisId, timeMs])
   async function load() { const [a, p] = await Promise.all([fetch(`${API_BASE}/analyses/${analysisId}`), fetch(`${API_BASE}/analyses/${analysisId}/players`)]); if (!a.ok || !p.ok) throw new Error('선수 설정을 불러오지 못했습니다.'); setAnalysis(await a.json()); setData(await p.json()) }
-  useEffect(() => { load().catch((caught) => setError(caught.message)) }, [analysisId])
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API_BASE}/analyses/${analysisId}`),
+      fetch(`${API_BASE}/analyses/${analysisId}/players`),
+    ]).then(async ([analysisResponse, playerResponse]) => {
+      if (!analysisResponse.ok || !playerResponse.ok) throw new Error('선수 설정을 불러오지 못했습니다.')
+      setAnalysis(await analysisResponse.json())
+      setData(await playerResponse.json())
+    }).catch((caught) => setError(caught.message))
+  }, [analysisId])
   async function add() { setError(''); const response = await fetch(`${API_BASE}/analyses/${analysisId}/players`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); const payload = await response.json(); if (!response.ok) return setError(payload.detail?.message); await load(); setSelected(payload.id) }
   async function update(player: Player, changes: Record<string, unknown>) { setError(''); const response = await fetch(`${API_BASE}/analyses/${analysisId}/players/${player.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) }); const payload = await response.json(); if (!response.ok) return setError(payload.detail?.message); await load() }
   async function assign(event: React.PointerEvent<HTMLDivElement>) { const player = data.players.find((item) => item.id === selected); if (!player) return setError('먼저 지정할 선수를 선택해 주세요.'); const rect = event.currentTarget.getBoundingClientRect(); const width = .1, height = .22; const x = Math.max(0, Math.min(1 - width, (event.clientX - rect.left) / rect.width - width / 2)); const y = Math.max(0, Math.min(1 - height, (event.clientY - rect.top) / rect.height - height / 2)); await update(player, { initial_time_ms: timeMs, initial_box: [x, y, width, height] }) }

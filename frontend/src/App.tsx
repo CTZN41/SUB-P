@@ -5,6 +5,7 @@ import { HomePage } from './pages/HomePage'
 import { NewAnalysisPage } from './pages/NewAnalysisPage'
 import { CourtCalibrationPage } from './pages/CourtCalibrationPage'
 import { PlayerSetupPage } from './pages/PlayerSetupPage'
+import { AnalysisProgressPage } from './pages/AnalysisProgressPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 
 function App() {
@@ -15,16 +16,7 @@ function App() {
         <Route path="new" element={<NewAnalysisPage />} />
         <Route path="court/:analysisId" element={<CourtCalibrationPage />} />
         <Route path="players/:analysisId" element={<PlayerSetupPage />} />
-        <Route
-          path="progress/:analysisId"
-          element={
-            <PlaceholderPage
-              eyebrow="영상 분석"
-              title="분석 진행 상태"
-              description="실제 영상 분석과 진행률 표시는 이후 분석 Phase에서 연결합니다."
-            />
-          }
-        />
+        <Route path="progress/:analysisId" element={<AnalysisProgressPage />} />
         <Route
           path="results/:analysisId"
           element={

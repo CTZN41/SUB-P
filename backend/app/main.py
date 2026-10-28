@@ -8,6 +8,7 @@ from app.api.health import router as health_router
 from app.api.analyses import router as analyses_router
 from app.core.config import get_settings
 from app.db.session import create_database_engine, create_session_factory
+from app.services.analysis_jobs import recover_stale_jobs
 
 
 @asynccontextmanager
@@ -19,6 +20,8 @@ async def lifespan(app: FastAPI):
     session_factory = create_session_factory(engine)
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
+    with session_factory() as session:
+        recover_stale_jobs(session)
 
     app.state.settings = settings
     app.state.engine = engine

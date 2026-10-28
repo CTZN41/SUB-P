@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import AnalysisStatus, PlayType
+from app.models import AnalysisStatus, JobStatus, PlayType
 
 
 class AnalysisRegistrationResponse(BaseModel):
@@ -80,3 +80,19 @@ class PlayerListResponse(BaseModel):
     players: list[PlayerResponse]
     warnings: list[str]
     max_players: int
+
+
+class AnalysisJobResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    analysis_id: str
+    status: JobStatus
+    stage: str | None
+    processed_ms: int
+    cancel_requested: bool
+    is_simulation: bool
+    error_code: str | None
+    error_message: str | None
+    started_at: datetime | None
+    finished_at: datetime | None
