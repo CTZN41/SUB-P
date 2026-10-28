@@ -50,3 +50,33 @@ class CourtCalibrationResponse(BaseModel):
     hoop_point: list[float]
     transform: list[list[float]]
     confirmed_at: datetime | None
+
+
+class PlayerCreateRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=100)
+    jersey_number: str | None = Field(default=None, max_length=20)
+
+
+class PlayerUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=100)
+    jersey_number: str | None = Field(default=None, max_length=20)
+    initial_time_ms: int | None = Field(default=None, ge=0)
+    initial_box: list[float] | None = None
+
+
+class PlayerResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    analysis_id: str
+    display_name: str
+    jersey_number: str | None
+    is_temporary_name: bool
+    initial_time_ms: int | None
+    initial_box: list[float] | None
+
+
+class PlayerListResponse(BaseModel):
+    players: list[PlayerResponse]
+    warnings: list[str]
+    max_players: int

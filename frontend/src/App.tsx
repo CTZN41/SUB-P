@@ -4,6 +4,7 @@ import { AppLayout } from './components/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { NewAnalysisPage } from './pages/NewAnalysisPage'
 import { CourtCalibrationPage } from './pages/CourtCalibrationPage'
+import { PlayerSetupPage } from './pages/PlayerSetupPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 
 function App() {
@@ -13,16 +14,7 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="new" element={<NewAnalysisPage />} />
         <Route path="court/:analysisId" element={<CourtCalibrationPage />} />
-        <Route
-          path="players/:analysisId"
-          element={
-            <PlaceholderPage
-              eyebrow="분석 준비"
-              title="선수 설정"
-              description="이름·등번호 입력과 영상 속 선수 지정 기능은 Phase 5에서 연결합니다."
-            />
-          }
-        />
+        <Route path="players/:analysisId" element={<PlayerSetupPage />} />
         <Route
           path="progress/:analysisId"
           element={

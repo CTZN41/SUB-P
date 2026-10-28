@@ -8,11 +8,15 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db_session
-from app.models import Analysis, CalibrationSource, CourtCalibration, PlayType
+from app.models import Analysis, CalibrationSource, CourtCalibration, Player, PlayType
 from app.schemas.analyses import (
     AnalysisRegistrationResponse,
     CourtCalibrationRequest,
     CourtCalibrationResponse,
+    PlayerCreateRequest,
+    PlayerListResponse,
+    PlayerResponse,
+    PlayerUpdateRequest,
     WarningAcceptanceResponse,
 )
 from app.services.court_calibration import (
@@ -26,6 +30,13 @@ from app.services.video_registration import RegistrationError, register_video
 
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
+
+PLAYER_LIMITS = {
+    PlayType.SOLO: 1,
+    PlayType.ONE_ON_ONE: 2,
+    PlayType.TWO_ON_TWO: 4,
+    PlayType.THREE_ON_THREE: 6,
+}
 
 
 def find_analysis(session: Session, analysis_id: str) -> Analysis:
@@ -152,3 +163,100 @@ def save_calibration(
     session.commit()
     session.refresh(calibration)
     return calibration
+
+
+def player_warnings(players: list[Player]) -> list[str]:
+    warnings: list[str] = []
+    names = [player.display_name.strip().casefold() for player in players]
+    numbers = [player.jersey_number.strip().casefold() for player in players if player.jersey_number and player.jersey_number.strip()]
+    if len(names) != len(set(names)):
+        warnings.append("같은 선수 이름이 있어 화면에서 구분하기 어려울 수 있습니다.")
+    if len(numbers) != len(set(numbers)):
+        warnings.append("같은 등번호가 있어 화면에서 구분하기 어려울 수 있습니다.")
+    if any(player.initial_box is None for player in players):
+        warnings.append("화면 위치를 지정하지 않은 선수가 있어 자동 구분 정확도가 낮아질 수 있습니다.")
+    return warnings
+
+
+def list_players_for(session: Session, analysis_id: str) -> list[Player]:
+    return list(session.scalars(select(Player).where(Player.analysis_id == analysis_id).order_by(Player.created_at)))
+
+
+@router.get("/{analysis_id}/players", response_model=PlayerListResponse)
+def get_players(
+    analysis_id: str, session: Annotated[Session, Depends(get_db_session)]
+) -> PlayerListResponse:
+    analysis = find_analysis(session, analysis_id)
+    players = list_players_for(session, analysis_id)
+    return PlayerListResponse(players=players, warnings=player_warnings(players), max_players=PLAYER_LIMITS[analysis.play_type])
+
+
+@router.post("/{analysis_id}/players", response_model=PlayerResponse, status_code=201)
+def create_player(
+    analysis_id: str,
+    payload: PlayerCreateRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> Player:
+    analysis = find_analysis(session, analysis_id)
+    players = list_players_for(session, analysis_id)
+    if len(players) >= PLAYER_LIMITS[analysis.play_type]:
+        raise HTTPException(status_code=409, detail={"code": "PLAYER_LIMIT", "message": "촬영 형태에서 허용하는 최대 선수 수를 넘었습니다."})
+    name = (payload.display_name or "").strip()
+    player = Player(
+        analysis_id=analysis_id,
+        display_name=name or f"선수 {chr(65 + len(players))}",
+        jersey_number=(payload.jersey_number or "").strip() or None,
+        is_temporary_name=not bool(name),
+    )
+    session.add(player); session.commit(); session.refresh(player)
+    return player
+
+
+def boxes_overlap(left: list[float], right: list[float]) -> bool:
+    lx, ly, lw, lh = left; rx, ry, rw, rh = right
+    return lx < rx + rw and lx + lw > rx and ly < ry + rh and ly + lh > ry
+
+
+@router.patch("/{analysis_id}/players/{player_id}", response_model=PlayerResponse)
+def update_player(
+    analysis_id: str,
+    player_id: str,
+    payload: PlayerUpdateRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> Player:
+    analysis = find_analysis(session, analysis_id)
+    player = session.get(Player, player_id)
+    if player is None or player.analysis_id != analysis_id:
+        raise HTTPException(status_code=404, detail={"code": "PLAYER_NOT_FOUND", "message": "선수를 찾을 수 없습니다."})
+    if payload.initial_time_ms is not None and payload.initial_time_ms > analysis.duration_ms:
+        raise HTTPException(status_code=400, detail={"code": "PLAYER_TIME_INVALID", "message": "선수 지정 시간이 영상 범위를 벗어났습니다."})
+    if payload.initial_box is not None:
+        if len(payload.initial_box) != 4 or any(value < 0 or value > 1 for value in payload.initial_box) or payload.initial_box[2] <= 0 or payload.initial_box[3] <= 0 or payload.initial_box[0] + payload.initial_box[2] > 1 or payload.initial_box[1] + payload.initial_box[3] > 1:
+            raise HTTPException(status_code=400, detail={"code": "PLAYER_BOX_INVALID", "message": "선수 표시 영역이 영상 화면 밖에 있습니다."})
+        others = [item for item in list_players_for(session, analysis_id) if item.id != player.id and item.initial_box]
+        if any(boxes_overlap(payload.initial_box, item.initial_box) for item in others):
+            raise HTTPException(status_code=409, detail={"code": "PLAYER_BOX_OVERLAP", "message": "같은 화면 위치에 두 선수를 겹쳐 지정할 수 없습니다."})
+        player.initial_box = payload.initial_box
+        player.initial_time_ms = payload.initial_time_ms or 0
+    if payload.display_name is not None:
+        name = payload.display_name.strip()
+        player.display_name = name or player.display_name
+        if name: player.is_temporary_name = False
+    if payload.jersey_number is not None:
+        player.jersey_number = payload.jersey_number.strip() or None
+    session.commit(); session.refresh(player)
+    return player
+
+
+@router.delete("/{analysis_id}/players/{player_id}", status_code=204)
+def delete_player(
+    analysis_id: str, player_id: str, session: Annotated[Session, Depends(get_db_session)]
+) -> Response:
+    analysis = find_analysis(session, analysis_id)
+    player = session.get(Player, player_id)
+    if player is None or player.analysis_id != analysis_id:
+        raise HTTPException(status_code=404, detail={"code": "PLAYER_NOT_FOUND", "message": "선수를 찾을 수 없습니다."})
+    if analysis.play_type is PlayType.SOLO:
+        raise HTTPException(status_code=409, detail={"code": "SOLO_PLAYER_REQUIRED", "message": "개인 연습의 기본 선수는 삭제할 수 없습니다."})
+    session.delete(player); session.commit()
+    return Response(status_code=204)
