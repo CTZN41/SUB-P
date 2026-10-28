@@ -14,6 +14,7 @@ export function CourtCalibrationPage() {
   const [timeMs, setTimeMs] = useState(0)
   const [points, setPoints] = useState(INITIAL_POINTS)
   const [hoop, setHoop] = useState([50, 18])
+  const [draggingPoint, setDraggingPoint] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const frameUrl = useMemo(() => `${API_BASE}/analyses/${analysisId}/calibration/frame?time_ms=${timeMs}`, [analysisId, timeMs])
@@ -58,7 +59,18 @@ export function CourtCalibrationPage() {
       <div className="calibration-frame" style={{ backgroundImage: `url(${frameUrl})` }} onPointerDown={(event) => {
         const target = event.target as HTMLElement
         const index = Number(target.dataset.point)
-        if (!Number.isNaN(index)) movePoint(index, event)
+        if (!Number.isNaN(index)) {
+          event.currentTarget.setPointerCapture(event.pointerId)
+          setDraggingPoint(index)
+          movePoint(index, event)
+        }
+      }} onPointerMove={(event) => {
+        if (draggingPoint !== null) movePoint(draggingPoint, event)
+      }} onPointerUp={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+        setDraggingPoint(null)
+      }} onPointerCancel={() => {
+        setDraggingPoint(null)
       }}>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points={points.map((point) => point.join(',')).join(' ')} /></svg>
         {points.map((point, index) => <button key={index} data-point={index} className="calibration-point" style={{ left: `${point[0]}%`, top: `${point[1]}%` }} aria-label={`바닥 기준점 ${index + 1}`}>{index + 1}</button>)}
