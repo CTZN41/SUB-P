@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 SAMPLE_FPS = 8.0
+DETAILED_PERSON_HEIGHT_RATIO = .25
 
 
 class Phase7Error(RuntimeError):
@@ -88,6 +89,149 @@ def _detections(result: Any, names: dict[int, str]) -> dict[str, list[dict[str, 
     return found
 
 
+def _ball_cell(box: dict[str, Any], width: int, height: int) -> tuple[int, int]:
+    """Group nearly fixed detections so video logos are not tracked as balls."""
+    x, y = center(box)
+    return (int(x / max(1.0, width * .02)), int(y / max(1.0, height * .02)))
+
+
+def remove_static_ball_detections(
+    records: list[dict[str, Any]], width: int, height: int
+) -> int:
+    counts = Counter(
+        _ball_cell(ball, width, height)
+        for record in records
+        for ball in record.get("balls", [])
+    )
+    threshold = max(8, math.ceil(len(records) * .35))
+    fixed_cells = {cell for cell, count in counts.items() if count >= threshold}
+    removed = 0
+    for record in records:
+        balls = record.get("balls", [])
+        filtered = [
+            ball for ball in balls
+            if _ball_cell(ball, width, height) not in fixed_cells
+        ]
+        removed += len(balls) - len(filtered)
+        record["balls"] = filtered
+    return removed
+
+
+def trajectory_candidates(
+    records: list[dict[str, Any]],
+    hoop_point: list[float],
+    frame_height: int,
+    max_lookahead: int = 6,
+) -> list[dict[str, Any]]:
+    """Reconnect short ball-detection gaps and require a release above the head."""
+    raw: list[dict[str, Any]] = []
+    for index, record in enumerate(records):
+        person = record.get("person")
+        if not person or not record.get("hoop_valid"):
+            continue
+        x1, y1, x2, y2 = person["xyxy"]
+        person_width, person_height = x2 - x1, y2 - y1
+        starts = []
+        for ball in record.get("balls", []):
+            ball_x, ball_y = center(ball)
+            if (
+                x1 - .3 * person_width <= ball_x <= x2 + .3 * person_width
+                and y1 - .5 * person_height <= ball_y <= y1 + .4 * person_height
+            ):
+                starts.append(ball)
+        if not starts:
+            continue
+        ball = max(starts, key=lambda item: item["confidence"])
+        ball_x, ball_y = center(ball)
+        next_ball = next_record = None
+        target_hoop = record.get("detected_hoop") or hoop_point
+        for future in records[index + 1 : index + 1 + max_lookahead]:
+            if not future.get("hoop_valid"):
+                continue
+            for option in future.get("balls", []):
+                next_x, next_y = center(option)
+                if (
+                    ball_y - next_y >= max(4.0, person_height * .2)
+                    and next_y <= y1 - person_height * .1
+                    and math.dist((next_x, next_y), target_hoop)
+                    < math.dist((ball_x, ball_y), target_hoop)
+                ):
+                    next_ball, next_record = option, future
+                    break
+            if next_ball:
+                break
+        if not next_ball or not next_record:
+            continue
+        confidence = min(
+            person["confidence"], ball["confidence"], next_ball["confidence"]
+        )
+        reasons = ["탐지 신뢰도가 낮음"] if confidence < .35 else []
+        if person_height < frame_height * DETAILED_PERSON_HEIGHT_RATIO:
+            reasons.append("선수가 멀리 있어 AI 또는 사람의 확인 권장")
+        if record.get("rim_missing") or next_record.get("rim_missing"):
+            reasons.append("림 자동 탐지 실패 — 확인된 골대 위치 사용")
+        raw.append({
+            "time_ms": record["time_ms"],
+            "next_time_ms": next_record["time_ms"],
+            "frame_index": record["frame_index"],
+            "foot_point_px": [round((x1 + x2) / 2, 2), round(y2, 2)],
+            "ball_point_px": [round(ball_x, 2), round(ball_y, 2)],
+            "confidence": round(confidence, 4),
+            "review_reasons": reasons,
+        })
+    return merge_candidates(raw, cooldown_ms=1800)
+
+
+def rim_approach_candidates(
+    records: list[dict[str, Any]],
+    hoop_point: list[float],
+    frame_height: int,
+) -> list[dict[str, Any]]:
+    """Backtrack from a ball approaching the rim when release frames were missed."""
+    raw: list[dict[str, Any]] = []
+    for index, record in enumerate(records):
+        if not record.get("hoop_valid"):
+            continue
+        target_hoop = record.get("detected_hoop") or hoop_point
+        near_rim = [
+            ball for ball in record.get("balls", [])
+            if math.dist(center(ball), target_hoop) <= max(24.0, frame_height * .1)
+        ]
+        if not near_rim:
+            continue
+        rim_ball = max(near_rim, key=lambda item: item["confidence"])
+        rim_time = record["time_ms"]
+        lookback = [
+            previous for previous in records[max(0, index - 18):index]
+            if previous.get("person")
+            and previous.get("hoop_valid")
+            and 450 <= rim_time - previous["time_ms"] <= 1800
+        ]
+        if not lookback:
+            continue
+        release_record = min(
+            lookback,
+            key=lambda previous: abs((rim_time - previous["time_ms"]) - 900),
+        )
+        person = release_record["person"]
+        x1, y1, x2, y2 = person["xyxy"]
+        confidence = min(person["confidence"], rim_ball["confidence"]) * .85
+        reasons = ["릴리스 공을 놓쳐 림 접근 시점에서 약 1초 전으로 추정"]
+        if confidence < .35:
+            reasons.insert(0, "탐지 신뢰도가 낮음")
+        raw.append({
+            "time_ms": release_record["time_ms"],
+            "next_time_ms": rim_time,
+            "frame_index": release_record["frame_index"],
+            "foot_point_px": [round((x1 + x2) / 2, 2), round(y2, 2)],
+            "ball_point_px": [round(value, 2) for value in center(rim_ball)],
+            "confidence": round(confidence, 4),
+            "review_reasons": reasons,
+            "candidate_source": "rim_approach_backtrack",
+        })
+    return merge_candidates(raw, cooldown_ms=1800)
+
+
 def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sample_fps: float = SAMPLE_FPS,
                   start_ms: int = 0, end_ms: int | None = None,
                   progress: Callable[[int], None] | None = None, cancelled: Callable[[], bool] | None = None) -> dict[str, Any]:
@@ -121,10 +265,11 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
         step = max(1, round(fps / sample_fps))
         first_frame = round(start_ms / 1000 * fps)
         last_frame = min(count, round((end_ms or duration_ms) / 1000 * fps))
-        previous = person_last = ball_last = None
-        raw: list[dict[str, Any]] = []
+        person_last = None
+        records: list[dict[str, Any]] = []
+        inference_sizes: Counter[int] = Counter()
         issues: Counter[str] = Counter()
-        sampled = person_frames = ball_frames = rim_frames = 0
+        sampled = person_frames = rim_frames = 0
         for frame_index in range(first_frame, last_frame, step):
             if cancelled and cancelled():
                 raise Phase7Canceled("사용자가 분석을 취소했습니다.")
@@ -133,45 +278,75 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
             if not ok:
                 issues["읽지 못한 프레임"] += 1
                 continue
-            result = model.predict(frame, classes=wanted, conf=.12, imgsz=640, device="cpu", verbose=False)[0]
+            result = model.predict(
+                frame, classes=wanted, conf=.12, imgsz=640,
+                device="cpu", verbose=False
+            )[0]
+            inference_sizes[640] += 1
             groups = _detections(result, names)
+            person = choose(groups["person"], person_last, width, height, .18)
+            if (
+                person is None
+                or person["xyxy"][3] - person["xyxy"][1]
+                < height * DETAILED_PERSON_HEIGHT_RATIO
+            ):
+                detailed = model.predict(
+                    frame, classes=wanted, conf=.12, imgsz=960,
+                    device="cpu", verbose=False
+                )[0]
+                inference_sizes[960] += 1
+                detailed_groups = _detections(detailed, names)
+                detailed_person = choose(
+                    detailed_groups["person"], person_last, width, height, .18
+                )
+                if detailed_person is not None:
+                    groups, person = detailed_groups, detailed_person
             rim = min(groups["rim"], key=lambda box: math.dist(center(box), hoop_point)) if groups["rim"] else None
             rim_distance = math.dist(center(rim), hoop_point) if rim else 0.0
             hoop_valid = rim is None or rim_distance < math.hypot(width, height) * .18
             camera_shift = bool(rim and rim_distance > math.hypot(width, height) * .05)
             if not hoop_valid:
                 issues["카메라 구도 변경 — 기준점 무효"] += 1
-            person = choose(groups["person"], person_last, width, height, .18)
-            ball = choose(groups["basketball"], ball_last, width, height, .25)
             time_ms = round(frame_index / fps * 1000)
             sampled += 1
             person_frames += person is not None
-            ball_frames += ball is not None
             rim_frames += bool(groups["rim"])
             if person is None:
                 issues["선수 가림 또는 탐지 실패"] += 1
-            if ball is None:
-                issues["공 가림 또는 탐지 실패"] += 1
-            current = {"time_ms": time_ms, "frame_index": frame_index, "person": person, "ball": ball,
-                       "hoop_valid": hoop_valid, "camera_shift": camera_shift, "rim_missing": rim is None}
-            candidate = release_candidate(previous, current, list(center(rim)) if rim else hoop_point, height) if previous else None
-            if candidate:
-                raw.append(candidate)
-            previous, person_last, ball_last = current if hoop_valid else None, person if hoop_valid else None, ball if hoop_valid else None
+            records.append({
+                "time_ms": time_ms,
+                "frame_index": frame_index,
+                "person": person,
+                "balls": groups["basketball"],
+                "hoop_valid": hoop_valid,
+                "camera_shift": camera_shift,
+                "rim_missing": rim is None,
+                "detected_hoop": list(center(rim)) if rim else None,
+            })
+            person_last = person if hoop_valid else None
             if progress and (sampled % 8 == 0 or frame_index + step >= last_frame):
                 progress(time_ms)
+        static_balls = remove_static_ball_detections(records, width, height)
+        ball_frames = sum(bool(record["balls"]) for record in records)
+        issues["공 가림 또는 탐지 실패"] += sampled - ball_frames
+        if static_balls:
+            issues["고정 그래픽으로 추정한 공 탐지 제외"] += static_balls
         if sampled == 0 or person_frames == 0 or ball_frames == 0:
             raise Phase7Error("선수와 공을 함께 확인할 영상 증거가 부족합니다.")
-        candidates = merge_candidates(raw)
+        release_candidates = trajectory_candidates(records, hoop_point, height)
+        rim_candidates = rim_approach_candidates(records, hoop_point, height)
+        candidates = merge_candidates([*release_candidates, *rim_candidates], cooldown_ms=1800)
         if not candidates:
             issues["슛 후보 없음 — 직접 확인 필요"] += 1
         if rim_frames == 0:
             issues["림 자동 탐지 실패 — 확인된 골대 위치 사용"] += 1
-        return {"method": "phase7-yolo-candidates-v1", "notice": "슛 후보이며 성공 여부와 종류는 아직 판단하지 않았습니다.",
+        return {"method": "phase7-yolo-trajectory-candidates-v2", "notice": "슛 후보이며 OpenAI 또는 사람의 검토 전에는 확정하지 않습니다.",
                 "source_fps": round(fps, 4), "sample_fps": round(fps/step, 4), "source_frame_count": count,
                 "duration_ms": duration_ms, "range_start_ms": start_ms, "range_end_ms": round(last_frame/fps*1000),
                 "sampled_frames": sampled, "person_frames": person_frames,
-                "ball_frames": ball_frames, "rim_frames": rim_frames, "hoop_point_px": hoop_point,
+                "ball_frames": ball_frames, "rim_frames": rim_frames,
+                "inference_sizes": {str(key): value for key, value in inference_sizes.items()},
+                "hoop_point_px": hoop_point,
                 "candidates": candidates, "issues": dict(issues)}
     finally:
         cap.release()

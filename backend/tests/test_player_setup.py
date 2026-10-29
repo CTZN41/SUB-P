@@ -12,7 +12,7 @@ from app.models import Analysis, AnalysisStatus, PlayType, Player
 
 
 def make_client(tmp_path: Path, play_type: PlayType):
-    settings = Settings(_env_file=None, database_url=f"sqlite:///{(tmp_path / 'test.db').as_posix()}", upload_dir=str(tmp_path / "uploads"), work_dir=str(tmp_path / "work"))
+    settings = Settings(_env_file=None, app_env="test", database_url=f"sqlite:///{(tmp_path / 'test.db').as_posix()}", upload_dir=str(tmp_path / "uploads"), work_dir=str(tmp_path / "work"))
     settings.ensure_storage_directories(); engine = create_engine(settings.database_url, connect_args={"check_same_thread": False}); Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     analysis = Analysis(title="선수 시험", play_type=play_type, original_name="test.mp4", stored_path="", file_size=1, duration_ms=10000, width=320, height=240, fps=30, status=AnalysisStatus.SETUP_REQUIRED, ai_notice_confirmed=True, warnings_accepted=True)

@@ -30,6 +30,7 @@ def make_mp4(path: Path, *, fps: float = 30, frames: int = 12) -> bytes:
 def create_client(tmp_path: Path, **setting_overrides):
     settings = Settings(
         _env_file=None,
+        app_env="test",
         database_url=f"sqlite:///{(tmp_path / 'test.db').as_posix()}",
         upload_dir=str(tmp_path / "uploads"),
         work_dir=str(tmp_path / "work"),

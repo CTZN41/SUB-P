@@ -11,7 +11,7 @@ from app.services.court_zones import ZoneCode
 
 class ShotLike(Protocol):
     player_id: str
-    zone_code: str
+    zone_code: str | None
     shot_type: object
     result: object
 
@@ -33,8 +33,9 @@ def _value(value: object) -> str:
 def _line(shots: list[ShotLike], *, total_attempts: int | None = None, overall_rate: float | None = None) -> StatLine:
     attempts = len(shots)
     made = sum(_value(shot.result) == ShotResult.MADE.value for shot in shots)
-    missed = attempts - made
-    rate = (made / attempts * 100) if attempts else None
+    missed = sum(_value(shot.result) == ShotResult.MISSED.value for shot in shots)
+    decided = made + missed
+    rate = (made / decided * 100) if decided else None
     share = (attempts / total_attempts * 100) if total_attempts else None
     difference = rate - overall_rate if rate is not None and overall_rate is not None else None
     return StatLine(attempts, made, missed, rate, share, difference)

@@ -62,7 +62,7 @@
 - FastAPI
 - Python
 - 요청과 응답 데이터 검사는 Pydantic
-- 데이터 저장은 SQLAlchemy와 SQLite
+- 데이터 저장은 SQLAlchemy와 Supabase PostgreSQL을 사용합니다. 기존 SQLite 파일은 삭제하지 않고 시험·과거 자료로만 보존합니다.
 - 데이터 구조 변경은 Alembic
 
 FastAPI는 파일 등록, 데이터 조회·수정, 분석 시작·취소와 결과 제공을 담당합니다.
@@ -82,11 +82,12 @@ FastAPI는 파일 등록, 데이터 조회·수정, 분석 시작·취소와 결
 - 전체 영상을 전송하지 않습니다.
 - 슛 후보에서 필요한 프레임 또는 짧은 장면만 사용합니다.
 - 주 역할은 슛 종류 판단과 로컬 분석이 애매한 장면의 보조 검토입니다.
-- 구체적인 모델 이름은 Phase 8 시작 시점의 지원 모델과 가격을 확인한 뒤 환경설정으로 선택합니다.
+- 기본 모델은 `gpt-6.1-terra`, 보조 재검토 모델은 `gpt-6.1-sol`이며 환경설정에서 바꿀 수 있습니다.
 
 ### 4.5 저장
 
-- SQLite: 분석, 선수, 슛, 코트 기준점, 작업 상태와 오류 기록
+- Supabase PostgreSQL(현재 실행): 분석, 선수, 슛, 코트 기준점, 작업 상태와 오류 기록
+- SQLite(보존): 전환 전에 사용한 파일은 삭제하지 않으며 운영 실행에서 자동으로 사용하지 않습니다.
 - 로컬 파일: 원본 영상, 후보 장면과 필요한 임시 결과
 - 통계는 슛 기록에서 다시 계산할 수 있도록 설계
 
@@ -103,7 +104,7 @@ FastAPI
   ├─ 분석 작업 시작·취소
   └─ 영상 구간 재생 제공
        │
-       ├─ SQLite
+       ├─ Supabase PostgreSQL
        │   ├─ 분석 정보
        │   ├─ 코트 기준점
        │   ├─ 선수 정보
@@ -367,7 +368,7 @@ New/
 
 - 분석 번호 대신 외부 전송에 불필요한 내부 정보는 제거합니다.
 - 선수 이름이 필요하지 않으면 `player_1`처럼 익명 표시를 사용합니다.
-- 필요한 프레임 또는 최대 20초 이내 후보 장면만 사용합니다.
+- 후보마다 전체 장면 10장과 선수 주변 확대 장면 최대 4장만 사용합니다.
 - 판단 대상과 가능한 슛 종류를 명확히 전달합니다.
 - 원본 파일 경로, API 키와 다른 분석 정보는 전송하지 않습니다.
 
@@ -376,12 +377,13 @@ New/
 ```json
 {
   "is_shot": true,
+  "outcome": "made",
   "shot_type": "dribble_pull_up",
   "sequence_start_offset_ms": -2200,
   "sequence_end_offset_ms": 1800,
   "confidence": 0.82,
-  "needs_review": false,
-  "review_reason": null
+  "review_required": false,
+  "reason": null
 }
 ```
 
@@ -413,14 +415,17 @@ Phase 1에서 `New/backend/.env.example`에 다음 항목과 설명을 작성합
 | 항목 | 목적 | 비밀 여부 |
 |---|---|---|
 | APP_ENV | 개발 또는 실행 환경 | 아님 |
-| DATABASE_URL | 로컬 SQLite 위치 | 아님 |
+| DATABASE_URL | Supabase PostgreSQL Session pooler 접속 정보 | 비밀 |
 | UPLOAD_DIR | 원본 영상 폴더 | 아님 |
 | WORK_DIR | 임시 분석 폴더 | 아님 |
 | MAX_VIDEO_MINUTES | 최대 10분 | 아님 |
 | MAX_VIDEO_BYTES | 최대 5GB | 아님 |
 | OPENAI_API_KEY | OpenAI 인증 | 비밀 |
 | OPENAI_VISION_MODEL | 사용할 모델 이름 | 아님 |
+| OPENAI_VISION_FALLBACK_MODEL | 불확실할 때 한 번 더 검토할 모델 이름 | 아님 |
 | OPENAI_TIMEOUT_SECONDS | 호출 제한 시간 | 아님 |
+| OPENAI_SHOT_REVIEW_ENABLED | 후보 장면 보조 판정 사용 여부 | 아님 |
+| OPENAI_MAX_CANDIDATE_REVIEWS | 분석 한 건에서 검토할 최대 후보 수 | 아님 |
 | LOG_LEVEL | 로그 수준 | 아님 |
 
 실제 `.env`는 Git에서 제외합니다. `.env.example`에는 실제 키와 비밀번호를 넣지 않습니다.
@@ -549,12 +554,16 @@ Phase 1에서 `New/backend/.env.example`에 다음 항목과 설명을 작성합
 - Phase 2에서 표준 반코트 좌표, 14개 구역 경계와 통계 재계산 규칙을 구현함
 - Phase 3에서 MP4 스트리밍 저장, 영상 정보 검사, 동의·경고 저장과 등록 API를 구현함
 - Phase 3에서 React 영상 등록 화면과 촬영 조건 확인 후 코트 설정 이동을 구현함
+- Phase 7A에서 실행 저장소를 Supabase PostgreSQL로 전환하고 실제 연결·마이그레이션·저장·조회 검증을 완료함
+- Phase 8에서 후보 장면의 성공·실패, 슛 종류, 시퀀스와 코트 구역을 구조화된 슛 기록으로 저장함
+- OpenAI 실패·불확실 응답에서도 로컬 후보를 `확인 필요`로 보존하고 재시도 중복 및 사용자 확정값 덮어쓰기를 막음
+- 실제 OpenAI 후보 2건과 Supabase 임시 저장·조회·정리를 검증하고 백엔드 자동 시험 65개를 통과함
 
 ### 다음 할 일
 
-1. Phase 4에서 코트 기준점 설정과 좌표 변환을 구현합니다.
-2. `test-plan.md`의 정답표를 실제 샘플 영상을 보며 채웁니다.
-3. Phase 7 전에 FFmpeg가 필요한 후보 장면 생성 방식을 다시 검토합니다.
+1. Phase 9에서 확인 필요 슛의 검토·수정·삭제와 장면 재생을 구현합니다.
+2. 성공·실패와 각 슛 종류의 사람이 작성한 정답표를 늘려 공식 정확도를 측정합니다.
+3. Phase 10에서 확정된 슛 기록을 사용하는 요약 통계와 2D 히트맵을 구현합니다.
 
 ## 21. Phase 2에서 확정한 좌표와 통계 규칙
 

@@ -60,3 +60,16 @@ def test_recalculation_reflects_add_edit_and_delete() -> None:
 
     shots.pop()
     assert calculate_statistics(shots)["overall"]["success_rate"] == 100.0
+
+
+def test_needs_review_result_is_not_counted_as_a_miss() -> None:
+    shots = [
+        shot("a", ZoneCode.MID_CENTER, ShotResult.MADE, ShotType.SET_SHOT),
+        shot("a", ZoneCode.MID_CENTER, ShotResult.NEEDS_REVIEW, ShotType.NEEDS_REVIEW),
+    ]
+
+    overall = calculate_statistics(shots)["overall"]
+    assert overall["attempts"] == 2
+    assert overall["made"] == 1
+    assert overall["missed"] == 0
+    assert overall["success_rate"] == 100.0

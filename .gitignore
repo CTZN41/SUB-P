@@ -3,6 +3,7 @@
 !.env.example
 
 .venv/
+.venv.py313-broken/
 __pycache__/
 *.py[cod]
 .pytest_cache/

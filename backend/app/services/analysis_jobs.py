@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.models import Analysis, AnalysisJob, AnalysisStatus, CourtCalibration, JobStatus, Shot
 from app.analysis.phase7_pipeline import Phase7Canceled, Phase7Error, analyze_video, save_result
 from app.core.config import Settings
+from app.services.openai_shot_review import review_candidates_with_openai
+from app.services.phase8_shots import materialize_shots_from_candidates
 
 
 STAGES = [
@@ -149,21 +151,31 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
                 session.commit()
 
     try:
-        result = analyze_video(settings.upload_path / analysis_id / "original.mp4",
+        video_path = settings.upload_path / analysis_id / "original.mp4"
+        result = analyze_video(video_path,
                                settings.resolve_path("models/basketball-yolo26n-pilot-v3.pt"), hoop_point,
                                progress=progress, cancelled=cancelled)
+        result = review_candidates_with_openai(video_path, result, settings)
         with session_factory() as session:
             job = session.get(AnalysisJob, job_id)
             if job is None or job.cancel_requested:
                 raise Phase7Canceled("사용자가 분석을 취소했습니다.")
-            save_result(settings.work_path, analysis_id, result)
             analysis = session.get(Analysis, analysis_id)
+            calibration = session.scalar(
+                select(CourtCalibration).where(CourtCalibration.analysis_id == analysis_id)
+            )
+            if analysis is None or calibration is None:
+                raise Phase7Error("분석 또는 코트 위치 정보를 찾을 수 없습니다.")
+            job.stage = analysis.current_stage = STAGES[4]
+            materialize_shots_from_candidates(
+                session, analysis, calibration, result
+            )
+            save_result(settings.work_path, analysis_id, result)
             job.status = JobStatus.SUCCEEDED
-            job.stage = STAGES[3]
+            job.stage = STAGES[-1]
             job.processed_ms = analysis.duration_ms
             job.finished_at = utc_now()
-            analysis.status = AnalysisStatus.REVIEW_REQUIRED
-            analysis.current_stage = "슛 후보 검토 필요"
+            analysis.completed_at = job.finished_at
             analysis.processed_ms = analysis.duration_ms
             session.commit()
     except Exception as error:

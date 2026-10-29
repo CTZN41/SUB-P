@@ -47,6 +47,7 @@ class AnalysisStatus(StringEnum):
 class ShotResult(StringEnum):
     MADE = "made"
     MISSED = "missed"
+    NEEDS_REVIEW = "needs_review"
 
 
 class ShotType(StringEnum):
@@ -213,9 +214,9 @@ class Shot(Base):
     candidate_time_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     sequence_start_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     sequence_end_ms: Mapped[int] = mapped_column(Integer, nullable=False)
-    court_x: Mapped[float] = mapped_column(Float, nullable=False)
-    court_y: Mapped[float] = mapped_column(Float, nullable=False)
-    zone_code: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    court_x: Mapped[float | None] = mapped_column(Float)
+    court_y: Mapped[float | None] = mapped_column(Float)
+    zone_code: Mapped[str | None] = mapped_column(String(40), index=True)
     result: Mapped[ShotResult] = enum_column(ShotResult)
     shot_type: Mapped[ShotType] = enum_column(ShotType)
     status: Mapped[ShotStatus] = enum_column(ShotStatus, default=ShotStatus.AUTO)
