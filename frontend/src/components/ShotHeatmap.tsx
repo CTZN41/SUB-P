@@ -96,6 +96,7 @@ export function ShotHeatmap({
         <path d="M205 190A45 45 0 0 0 295 190" />
         <path d="M190 470A60 60 0 0 1 310 470" />
       </g>
+      {selected && <path className="selected-zone-outline" d={selected.path} aria-hidden="true" />}
       {ZONES.map((zone) => {
         const stat = statistics[zone.code]
         const width = zone.cardWidth ?? 82
