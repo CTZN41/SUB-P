@@ -88,7 +88,7 @@ export function ShotHeatmap({
       })}
       <g className="court-lines" aria-hidden="true">
         <rect x="1" y="1" width="498" height="468" rx="8" />
-        <path d="M30 0V140M470 0V140M30 140A237.5 237.5 0 0 0 470 140" />
+        <path d="M30 0V140M470 0V140M30 140C55 215 110 265 200 286Q250 300 300 286C390 265 445 215 470 140" />
         <rect x="170" y="0" width="160" height="190" />
         <path d="M210 53A40 40 0 0 0 290 53" />
         <circle cx="250" cy="53" r="7" />
