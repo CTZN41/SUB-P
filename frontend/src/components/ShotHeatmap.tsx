@@ -14,6 +14,7 @@ type ZoneShape = {
   cardX: number
   cardY: number
   cardWidth?: number
+  cardHeight?: number
 }
 
 const ZONES: ZoneShape[] = [
@@ -24,7 +25,7 @@ const ZONES: ZoneShape[] = [
   { code: 'three_wing_right', label: '오른쪽 윙 3점', path: 'M500 140H470C445 215 390 265 300 286L350 470H500Z', cardX: 420, cardY: 370 },
   { code: 'mid_baseline_left', label: '왼쪽 베이스라인 미드레인지', path: 'M30 0H170V130H90Q48 106 30 70Z', cardX: 111, cardY: 70, cardWidth: 70 },
   { code: 'mid_wing_left', label: '왼쪽 윙 미드레인지', path: 'M30 70V140C55 215 110 265 200 286L170 190V130H90Q48 106 30 70Z', cardX: 112, cardY: 156 },
-  { code: 'mid_center', label: '정면 미드레인지', path: 'M170 190H330L300 286Q250 300 200 286Z', cardX: 250, cardY: 230 },
+  { code: 'mid_center', label: '정면 미드레인지', path: 'M170 190H330L300 286Q250 300 200 286Z', cardX: 250, cardY: 266, cardHeight: 52 },
   { code: 'mid_wing_right', label: '오른쪽 윙 미드레인지', path: 'M470 70V140C445 215 390 265 300 286L330 190V130H410Q452 106 470 70Z', cardX: 388, cardY: 156 },
   { code: 'mid_baseline_right', label: '오른쪽 베이스라인 미드레인지', path: 'M330 0H470V70Q452 106 410 130H330Z', cardX: 389, cardY: 70, cardWidth: 70 },
   { code: 'paint_left', label: '페인트존 왼쪽', path: 'M170 0H223V190H170Z', cardX: 195, cardY: 157, cardWidth: 48 },
@@ -101,17 +102,19 @@ export function ShotHeatmap({
       {ZONES.map((zone) => {
         const stat = statistics[zone.code]
         const width = zone.cardWidth ?? 82
+        const height = zone.cardHeight ?? 68
+        const compact = height < 60
         return <g
-          className="zone-stat-card"
+          className={`zone-stat-card${compact ? ' compact' : ''}`}
           key={`${zone.code}-statistics`}
-          transform={`translate(${zone.cardX - width / 2} ${zone.cardY - 34})`}
+          transform={`translate(${zone.cardX - width / 2} ${zone.cardY - height / 2})`}
           onClick={() => onSelect(zone.code)}
         >
-          <rect width={width} height="68" rx="5" />
-          <text className="zone-fraction" x={width / 2} y="19">{stat?.made ?? 0}/{stat?.attempts ?? 0}</text>
-          <text x={width / 2} y="34">{percent(stat?.success_rate)}</text>
-          <text x={width / 2} y="48">AVG {percent(overallRate)}</text>
-          <text x={width / 2} y="61">DST {percent(stat?.attempt_share ?? 0)}</text>
+          <rect width={width} height={height} rx="5" />
+          <text className="zone-fraction" x={width / 2} y={compact ? 14 : 19}>{stat?.made ?? 0}/{stat?.attempts ?? 0}</text>
+          <text x={width / 2} y={compact ? 25 : 34}>{percent(stat?.success_rate)}</text>
+          <text x={width / 2} y={compact ? 37 : 48}>AVG {percent(overallRate)}</text>
+          <text x={width / 2} y={compact ? 48 : 61}>DST {percent(stat?.attempt_share ?? 0)}</text>
         </g>
       })}
     </svg>
