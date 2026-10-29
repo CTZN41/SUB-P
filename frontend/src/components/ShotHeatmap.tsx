@@ -60,7 +60,7 @@ export function ShotHeatmap({
   const selectedStat = selectedZone ? statistics[selectedZone] : undefined
   return <div className="heatmap-wrap">
     <div className="heatmap-heading"><strong>구역별 슈팅 효율</strong><span>AVG: 현재 필터 전체 성공률 · DST: 전체 슛 중 해당 구역 비중</span></div>
-    <svg className="shot-heatmap" viewBox="0 0 500 470" role="img" aria-label="14개 구역 슈팅 히트맵">
+    <svg className="shot-heatmap" viewBox="-12 -12 524 494" role="img" aria-label="14개 구역 슈팅 히트맵">
       <defs>
         <pattern id="courtWood" width="18" height="470" patternUnits="userSpaceOnUse">
           <rect width="18" height="470" fill="#d5b77d" />

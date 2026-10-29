@@ -612,12 +612,12 @@ h1 {
 .result-filters { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)) auto; gap: 10px; align-items: end; margin: 20px 0; }
 .result-filters label { color: #aab5ae; font-size: .76rem; font-weight: 750; }
 .result-filters select { width: 100%; margin-top: 6px; padding: 10px 11px; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; background: #0f1814; color: white; }
-.results-visual-layout { display: grid; grid-template-columns: minmax(520px, 1.35fr) minmax(280px, .65fr); gap: 18px; align-items: start; }
+.results-visual-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
 .heatmap-wrap { min-width: 0; padding: 14px; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; background: #0c1410; }
 .heatmap-heading { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin: 2px 2px 12px; }
 .heatmap-heading strong { color: #fff; font-size: .98rem; }
 .heatmap-heading span { color: #849188; font-size: .7rem; text-align: right; }
-.shot-heatmap { width: 100%; max-height: 620px; display: block; }
+.shot-heatmap { width: 100%; max-height: 820px; display: block; }
 .court-surface { fill: url(#courtWood); }
 .heat-zone { cursor: pointer; outline: none; }
 .heat-zone > path { fill-opacity: .84; stroke: #2f3130; stroke-width: 3; transition: filter .16s ease, stroke .16s ease; }
@@ -640,7 +640,7 @@ h1 {
 .heatmap-legend i.even { background: #e0c96a; }
 .heatmap-legend i.cold { background: #c8584e; }
 .heatmap-legend i.empty { background: #6f7973; }
-.stat-breakdowns { display: grid; gap: 12px; }
+.stat-breakdowns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .stat-breakdowns section { padding: 15px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; background: #101a15; }
 .stat-breakdowns h3 { margin: 0 0 12px; font-size: .94rem; }
 .stat-breakdowns ul { display: grid; gap: 8px; max-height: 230px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
@@ -737,5 +737,9 @@ h1 {
 
   .actions {
     flex-direction: column;
+  }
+
+  .stat-breakdowns {
+    grid-template-columns: 1fr;
   }
 }
