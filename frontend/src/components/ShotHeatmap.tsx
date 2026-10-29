@@ -30,7 +30,7 @@ const ZONES: ZoneShape[] = [
   { code: 'paint_left', label: '페인트존 왼쪽', path: 'M170 0H223V190H170Z', cardX: 195, cardY: 157, cardWidth: 48 },
   { code: 'paint_center', label: '페인트존 중앙', path: 'M223 0H277V190H223Z', cardX: 250, cardY: 157, cardWidth: 48 },
   { code: 'paint_right', label: '페인트존 오른쪽', path: 'M277 0H330V190H277Z', cardX: 305, cardY: 157, cardWidth: 48 },
-  { code: 'restricted', label: '골밑', path: 'M210 53A40 40 0 1 0 290 53A40 40 0 1 0 210 53Z', cardX: 250, cardY: 66, cardWidth: 60 },
+  { code: 'restricted', label: '골밑', path: 'M210 53A40 40 0 1 0 290 53A40 40 0 1 0 210 53Z', cardX: 250, cardY: 55, cardWidth: 60 },
 ]
 
 function zoneTone(stat: ZoneStat | undefined, totalAttempts: number) {
