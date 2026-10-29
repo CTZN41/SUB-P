@@ -33,10 +33,12 @@ const ZONES: ZoneShape[] = [
   { code: 'restricted', label: '골밑', path: 'M210 53A40 40 0 1 0 290 53A40 40 0 1 0 210 53Z', cardX: 250, cardY: 66, cardWidth: 60 },
 ]
 
-function zoneTone(stat: ZoneStat | undefined) {
+function zoneTone(stat: ZoneStat | undefined, totalAttempts: number) {
   if (!stat?.attempts) return 'empty'
-  const difference = stat.difference_from_overall ?? 0
-  return difference >= 0 ? 'hot' : 'cold'
+  if (totalAttempts < 5 || stat.success_rate == null || stat.difference_from_overall == null) return 'neutral'
+  if (stat.difference_from_overall >= 0) return 'hot'
+  if (stat.difference_from_overall <= -10) return 'cold'
+  return 'neutral'
 }
 
 function percent(value: number | null | undefined) {
@@ -56,6 +58,7 @@ export function ShotHeatmap({
 }) {
   const selected = ZONES.find((zone) => zone.code === selectedZone)
   const selectedStat = selectedZone ? statistics[selectedZone] : undefined
+  const totalAttempts = Object.values(statistics).reduce((sum, stat) => sum + stat.attempts, 0)
   return <div className="heatmap-wrap">
     <div className="heatmap-heading"><strong>구역별 슈팅 효율</strong><span>AVG: 현재 필터 전체 성공률 · DST: 전체 슛 중 해당 구역 비중</span></div>
     <svg className="shot-heatmap" viewBox="-12 -12 524 494" role="img" aria-label="14개 구역 슈팅 히트맵">
@@ -73,7 +76,7 @@ export function ShotHeatmap({
         const selectedNow = selectedZone === zone.code
         const detail = rate == null ? '데이터 없음' : `${rate.toFixed(1)}% · 비중 ${(stat?.attempt_share ?? 0).toFixed(1)}% · 전체 대비 ${(stat?.difference_from_overall ?? 0).toFixed(1)}%p`
         return <g
-          className={`heat-zone ${zoneTone(stat)}${selectedNow ? ' selected' : ''}`}
+          className={`heat-zone ${zoneTone(stat, totalAttempts)}${selectedNow ? ' selected' : ''}`}
           key={zone.code}
           role="button"
           tabIndex={0}
@@ -116,7 +119,7 @@ export function ShotHeatmap({
       {selected ? <><strong>{selected.label}</strong><span>성공/시도 {selectedStat?.made ?? 0}/{selectedStat?.attempts ?? 0}</span><span>성공률 {percent(selectedStat?.success_rate)}</span><span>슛 비중 {percent(selectedStat?.attempt_share ?? 0)}</span><span>전체 대비 {selectedStat?.difference_from_overall == null ? '-' : `${selectedStat.difference_from_overall > 0 ? '+' : ''}${selectedStat.difference_from_overall.toFixed(1)}%p`}</span></> : <span>구역을 선택하면 해당 구역의 슛 목록과 상세 수치를 볼 수 있습니다.</span>}
     </div>
     <div className="heatmap-legend" aria-label="히트맵 색상 설명">
-      <span><i className="cold" />전체보다 낮음</span><span><i className="hot" />전체 이상</span><span><i className="empty" />데이터 없음</span>
+      <span><i className="hot" />전체 평균 이상</span><span><i className="cold" />전체보다 10%p 이상 낮음</span><span><i className="neutral" />5회 미만·판단 보류</span><span><i className="empty" />데이터 없음</span>
     </div>
   </div>
 }
