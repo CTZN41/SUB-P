@@ -62,3 +62,82 @@ def test_invalid_calibration_is_rejected(tmp_path) -> None:
         assert response.status_code == 400
         assert response.json()["detail"]["code"] == "CALIBRATION_INVALID"
     engine.dispose()
+
+
+def test_auto_suggestion_endpoint_returns_named_points(tmp_path, monkeypatch) -> None:
+    client, analysis_id, engine = make_client(tmp_path)
+    suggestion = {
+        "usable": True,
+        "method": "test",
+        "confidence": .9,
+        "image_points": [[50, 80], [270, 80], [250, 180], [70, 180]],
+        "court_points": [[17, 0], [33, 0], [33, 19], [17, 19]],
+        "hoop_point": [160, 45],
+        "landmark_names": ["베이스라인 왼쪽", "베이스라인 오른쪽", "자유투선 오른쪽", "자유투선 왼쪽"],
+        "warnings": [],
+    }
+    monkeypatch.setattr("app.api.analyses.detect_court_landmarks", lambda frame, model: suggestion)
+    with client:
+        response = client.get(f"/api/analyses/{analysis_id}/calibration/suggestion")
+        assert response.status_code == 200
+        assert response.json() == suggestion
+    engine.dispose()
+
+
+def test_auto_suggestion_uses_temporal_fallback_when_rule_result_is_unusable(tmp_path, monkeypatch) -> None:
+    client, analysis_id, engine = make_client(tmp_path)
+    unavailable = {
+        "usable": False, "method": "rule", "confidence": 0.0, "image_points": [],
+        "court_points": [], "hoop_point": None,
+        "landmark_names": ["베이스라인 왼쪽", "베이스라인 오른쪽", "자유투선 오른쪽", "자유투선 왼쪽"],
+        "warnings": ["규칙 실패"],
+    }
+    temporal = {
+        "usable": True, "method": "temporal-yolo-pose-v1", "confidence": .8,
+        "image_points": [[50, 80], [270, 80], [250, 180], [70, 180]],
+        "court_points": [[17, 0], [33, 0], [33, 19], [17, 19]], "hoop_point": [160, 45],
+        "landmark_names": ["베이스라인 왼쪽", "베이스라인 오른쪽", "자유투선 오른쪽", "자유투선 왼쪽"],
+        "warnings": ["확인 필요"],
+    }
+    monkeypatch.setattr("app.api.analyses.detect_court_landmarks", lambda frame, model: unavailable)
+    monkeypatch.setattr(
+        "app.api.analyses.detect_court_landmarks_temporally", lambda frames, model: temporal
+    )
+    with client:
+        response = client.get(f"/api/analyses/{analysis_id}/calibration/suggestion")
+        assert response.status_code == 200
+        assert response.json() == temporal
+    engine.dispose()
+
+
+def test_auto_suggestion_tries_target_model_after_general_model_rejects(tmp_path, monkeypatch) -> None:
+    client, analysis_id, engine = make_client(tmp_path)
+    unavailable = {
+        "usable": False, "method": "rule", "confidence": 0.0, "image_points": [],
+        "court_points": [], "hoop_point": None,
+        "landmark_names": ["베이스라인 왼쪽", "베이스라인 오른쪽", "자유투선 오른쪽", "자유투선 왼쪽"],
+        "warnings": ["실패"],
+    }
+    calls = []
+
+    def temporal_result(frames, model):
+        calls.append(model.name)
+        if "v5-general" in model.name:
+            return unavailable
+        return {
+            **unavailable, "usable": True, "method": "temporal-yolo-pose-v1", "confidence": .5,
+            "image_points": [[50, 80], [270, 80], [250, 180], [70, 180]],
+            "court_points": [[17, 0], [33, 0], [33, 19], [17, 19]], "hoop_point": [160, 45],
+        }
+
+    monkeypatch.setattr("app.api.analyses.detect_court_landmarks", lambda frame, model: unavailable)
+    monkeypatch.setattr("app.api.analyses.detect_court_landmarks_temporally", temporal_result)
+    with client:
+        response = client.get(f"/api/analyses/{analysis_id}/calibration/suggestion")
+        assert response.status_code == 200
+        assert response.json()["usable"] is True
+        assert calls == [
+            "court-keypoints-yolo26n-pose-v5-general.pt",
+            "court-keypoints-yolo26n-pose-v6-target-low-lr.pt",
+        ]
+    engine.dispose()

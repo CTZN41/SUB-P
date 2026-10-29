@@ -15,6 +15,8 @@ SEGMENT_CONTEXT_MS = 3000
 HOOP_HOLD_MS = 1500
 SCENE_JUMP_RATIO = .18
 CANDIDATE_COOLDOWN_MS = 1000
+RIM_EVIDENCE_MERGE_MS = 2500
+POSE_CONFIDENCE = .2
 
 
 class Phase7Error(RuntimeError):
@@ -98,6 +100,259 @@ def _detections(result: Any, names: dict[int, str]) -> dict[str, list[dict[str, 
         if name in found:
             found[name].append({"confidence": float(box.conf.item()), "xyxy": [float(value) for value in box.xyxy[0].tolist()]})
     return found
+
+
+def _pose_for_person(result: Any, person: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Return the COCO keypoints belonging to the tracked player."""
+    if person is None or result.keypoints is None or not len(result.keypoints):
+        return None
+    person_center = center(person)
+    best: tuple[float, dict[str, Any]] | None = None
+    for index, keypoints in enumerate(result.keypoints):
+        xy = keypoints.xy[0].tolist()
+        confidence = (
+            keypoints.conf[0].tolist()
+            if keypoints.conf is not None
+            else [1.0] * len(xy)
+        )
+        if len(xy) < 17:
+            continue
+        if result.boxes is not None and index < len(result.boxes):
+            box = [float(value) for value in result.boxes.xyxy[index].tolist()]
+            distance = math.dist(person_center, ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2))
+        else:
+            visible = [point for point, score in zip(xy, confidence) if score >= POSE_CONFIDENCE]
+            if not visible:
+                continue
+            pose_center = (
+                sum(point[0] for point in visible) / len(visible),
+                sum(point[1] for point in visible) / len(visible),
+            )
+            distance = math.dist(person_center, pose_center)
+        pose = {"xy": xy, "confidence": confidence}
+        if best is None or distance < best[0]:
+            best = (distance, pose)
+    return best[1] if best else None
+
+
+def _raised_shooting_arm(record: dict[str, Any]) -> tuple[int, tuple[float, float], float] | None:
+    """Find a confidently raised wrist; COCO sides are shoulder/elbow/wrist."""
+    pose, person = record.get("pose"), record.get("person")
+    if not pose or not person:
+        return None
+    xy, confidence = pose["xy"], pose["confidence"]
+    person_height = person["xyxy"][3] - person["xyxy"][1]
+    choices: list[tuple[int, tuple[float, float], float]] = []
+    for shoulder, elbow, wrist in ((5, 7, 9), (6, 8, 10)):
+        score = min(confidence[shoulder], confidence[elbow], confidence[wrist])
+        if score < POSE_CONFIDENCE:
+            continue
+        shoulder_y = xy[shoulder][1]
+        elbow_y = xy[elbow][1]
+        wrist_point = tuple(xy[wrist])
+        if (
+            wrist_point[1] <= shoulder_y + person_height * .16
+            and elbow_y <= shoulder_y + person_height * .38
+        ):
+            choices.append((wrist, wrist_point, score))
+    return max(choices, key=lambda item: item[2]) if choices else None
+
+
+def pose_motion_candidates(
+    records: list[dict[str, Any]],
+    hoop_point: list[float],
+    frame_height: int,
+) -> list[dict[str, Any]]:
+    """Use a raised shooting arm plus later ball flight as a second candidate path."""
+    raw: list[dict[str, Any]] = []
+    for index, record in enumerate(records):
+        raised = _raised_shooting_arm(record)
+        person = record.get("person")
+        if not raised or not person or not record.get("hoop_valid"):
+            continue
+        if record.get("hoop_source") == "calibration":
+            # Crossfades and opening overlays can imitate a raised arm. Pose-only
+            # rescue candidates require rim evidence from the current scene.
+            continue
+        wrist_index, wrist_point, pose_score = raised
+        x1, y1, x2, y2 = person["xyxy"]
+        person_height = y2 - y1
+        # A shooting motion must rise from a lower wrist position or have the ball
+        # close to the wrist shortly before the raised pose.
+        preparation_seen = False
+        history_seen = False
+        nearby_ball: dict[str, Any] | None = None
+        for previous in reversed(records[max(0, index - 10):index + 1]):
+            if record["time_ms"] - previous["time_ms"] > 1250:
+                break
+            previous_pose = previous.get("pose")
+            if previous_pose and previous_pose["confidence"][wrist_index] >= POSE_CONFIDENCE:
+                if previous["time_ms"] < record["time_ms"] - 200:
+                    history_seen = True
+                if previous_pose["xy"][wrist_index][1] - wrist_point[1] >= person_height * .1:
+                    preparation_seen = True
+            for ball in previous.get("balls", []):
+                if math.dist(center(ball), wrist_point) <= max(40.0, person_height * .28):
+                    nearby_ball = ball
+                    preparation_seen = True
+        if not preparation_seen or not history_seen:
+            continue
+        target_hoop = record.get("tracked_hoop") or record.get("detected_hoop") or hoop_point
+        flight_ball = flight_record = None
+        reference = center(nearby_ball) if nearby_ball else wrist_point
+        for future in records[index:index + 13]:
+            if future["time_ms"] - record["time_ms"] > 1600:
+                break
+            for ball in future.get("balls", []):
+                ball_point = center(ball)
+                if (
+                    ball_point[1] <= y1 + person_height * .15
+                    and math.dist(ball_point, target_hoop) < math.dist(reference, target_hoop)
+                ):
+                    flight_ball, flight_record = ball, future
+                    break
+            if flight_ball:
+                break
+        if not flight_ball or not flight_record:
+            continue
+        confidence = min(person["confidence"], pose_score, flight_ball["confidence"])
+        reasons = ["선수 자세와 이후 공 비행으로 찾은 슛 동작 후보"]
+        if confidence < .35:
+            reasons.insert(0, "탐지 신뢰도가 낮음")
+        raw.append({
+            "time_ms": record["time_ms"],
+            "next_time_ms": flight_record["time_ms"],
+            "frame_index": record["frame_index"],
+            "foot_point_px": [round((x1 + x2) / 2, 2), round(y2, 2)],
+            "ball_point_px": [round(value, 2) for value in center(flight_ball)],
+            "confidence": round(confidence, 4),
+            "review_reasons": reasons,
+            "candidate_source": "pose_shot_motion",
+            "scene_id": int(record.get("scene_id", 0)),
+            "tracked_hoop_px": [round(value, 2) for value in target_hoop],
+            "calibration_shifted": bool(record.get("calibration_shifted")),
+        })
+    return merge_candidates(raw)
+
+
+def merge_candidate_evidence(
+    candidates: list[dict[str, Any]],
+    frame_width: int,
+    frame_height: int,
+) -> list[dict[str, Any]]:
+    """Merge late rim/pose evidence into a preceding release without hiding fast shots."""
+    merged: list[dict[str, Any]] = []
+    diagonal = math.hypot(frame_width, frame_height)
+    source_priority = {"trajectory": 3, "pose_shot_motion": 2, "rim_approach_backtrack": 1}
+    for incoming in sorted(candidates, key=lambda item: item["time_ms"]):
+        source = incoming.get("candidate_source", "trajectory")
+        match_index = None
+        for index in range(len(merged) - 1, -1, -1):
+            existing = merged[index]
+            gap = incoming["time_ms"] - existing["time_ms"]
+            if gap > RIM_EVIDENCE_MERGE_MS:
+                break
+            if existing.get("scene_id", 0) != incoming.get("scene_id", 0):
+                continue
+            same_player = math.dist(existing["foot_point_px"], incoming["foot_point_px"]) <= diagonal * .08
+            evidence_close = incoming["time_ms"] - int(existing.get("next_time_ms", existing["time_ms"])) <= 1200
+            sources = set(existing.get("candidate_sources", [existing.get("candidate_source", "trajectory")]))
+            sources.update(incoming.get("candidate_sources", [source]))
+            flight_overlaps = (
+                gap <= 1800
+                and int(existing.get("next_time_ms", existing["time_ms"])) >= incoming["time_ms"] - 150
+                and existing.get("candidate_source", "trajectory") == "trajectory"
+                and source == "trajectory"
+            )
+            if evidence_close and "rim_approach_backtrack" in sources:
+                match_index = index
+                break
+            if flight_overlaps or (same_player and gap < CANDIDATE_COOLDOWN_MS):
+                match_index = index
+                break
+        if match_index is None:
+            incoming.setdefault("candidate_source", source)
+            incoming["candidate_sources"] = [source]
+            merged.append(incoming)
+            continue
+        existing = merged[match_index]
+        existing_source = existing.get("candidate_source", "trajectory")
+        preferred = existing
+        if flight_overlaps:
+            preferred = incoming
+        elif source_priority.get(source, 0) > source_priority.get(existing_source, 0):
+            preferred = incoming
+        combined_sources = sorted(set(existing.get("candidate_sources", [existing_source]) + [source]))
+        combined_reasons = list(dict.fromkeys(existing.get("review_reasons", []) + incoming.get("review_reasons", [])))
+        evidence_end = max(
+            int(existing.get("evidence_end_ms", existing.get("next_time_ms", existing["time_ms"]))),
+            int(incoming.get("evidence_end_ms", incoming.get("next_time_ms", incoming["time_ms"]))),
+        )
+        preferred = {**preferred}
+        preferred["candidate_sources"] = combined_sources
+        preferred["review_reasons"] = combined_reasons
+        preferred["evidence_end_ms"] = evidence_end
+        preferred["confidence"] = round(max(existing["confidence"], incoming["confidence"]), 4)
+        merged[match_index] = preferred
+    # Rim evidence can be attached after a late trajectory candidate was first
+    # inserted. Revisit adjacent candidates once so that evidence can also join
+    # the earlier release from the same shot.
+    consolidated: list[dict[str, Any]] = []
+    for incoming in merged:
+        if not consolidated:
+            consolidated.append(incoming)
+            continue
+        existing = consolidated[-1]
+        gap = incoming["time_ms"] - existing["time_ms"]
+        sources = set(existing.get("candidate_sources", [existing.get("candidate_source", "trajectory")]))
+        sources.update(incoming.get("candidate_sources", [incoming.get("candidate_source", "trajectory")]))
+        same_player = math.dist(existing["foot_point_px"], incoming["foot_point_px"]) <= diagonal * .08
+        evidence_close = incoming["time_ms"] - int(existing.get("next_time_ms", existing["time_ms"])) <= 1200
+        flight_overlaps = (
+            gap <= 1800
+            and int(existing.get("next_time_ms", existing["time_ms"])) >= incoming["time_ms"] - 150
+            and "trajectory" in set(existing.get("candidate_sources", []))
+            and "trajectory" in set(incoming.get("candidate_sources", []))
+        )
+        if (
+            gap <= RIM_EVIDENCE_MERGE_MS
+            and evidence_close
+            and ("rim_approach_backtrack" in sources or flight_overlaps)
+        ):
+            if flight_overlaps:
+                incoming["candidate_sources"] = sorted(sources)
+                incoming["review_reasons"] = list(dict.fromkeys(
+                    existing.get("review_reasons", []) + incoming.get("review_reasons", [])
+                ))
+                incoming["evidence_end_ms"] = max(
+                    int(existing.get("evidence_end_ms", existing.get("next_time_ms", existing["time_ms"]))),
+                    int(incoming.get("evidence_end_ms", incoming.get("next_time_ms", incoming["time_ms"]))),
+                )
+                incoming["confidence"] = round(max(existing["confidence"], incoming["confidence"]), 4)
+                consolidated[-1] = incoming
+                continue
+            existing["candidate_sources"] = sorted(sources)
+            existing["review_reasons"] = list(dict.fromkeys(
+                existing.get("review_reasons", []) + incoming.get("review_reasons", [])
+            ))
+            existing["evidence_end_ms"] = max(
+                int(existing.get("evidence_end_ms", existing.get("next_time_ms", existing["time_ms"]))),
+                int(incoming.get("evidence_end_ms", incoming.get("next_time_ms", incoming["time_ms"]))),
+            )
+            existing["confidence"] = round(max(existing["confidence"], incoming["confidence"]), 4)
+            continue
+        consolidated.append(incoming)
+    return [
+        candidate for candidate in consolidated
+        if not (
+            candidate.get("candidate_sources") == ["pose_shot_motion"]
+            or (
+                candidate["confidence"] < .35
+                and candidate.get("calibration_shifted")
+                and "rim_approach_backtrack" not in candidate.get("candidate_sources", [])
+            )
+        )
+    ]
 
 
 def _ball_cell(box: dict[str, Any], width: int, height: int) -> tuple[int, int]:
@@ -251,7 +506,8 @@ def rim_approach_candidates(
     return merge_candidates(raw)
 
 
-def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sample_fps: float = SAMPLE_FPS,
+def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, pose_model_path: Path | None = None,
+                  sample_fps: float = SAMPLE_FPS,
                   start_ms: int = 0, end_ms: int | None = None,
                   progress: Callable[[int], None] | None = None, cancelled: Callable[[], bool] | None = None) -> dict[str, Any]:
     """Read source frames at fixed intervals and retain their original timestamps."""
@@ -262,6 +518,7 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
     from ultralytics import YOLO  # Torch must load before OpenCV on Windows.
     import cv2
     model = YOLO(str(model_path))
+    pose_model = YOLO(str(pose_model_path)) if pose_model_path and pose_model_path.is_file() else None
     names = {int(key): str(value) for key, value in model.names.items()}
     if not {"person", "basketball"}.issubset(names.values()):
         raise Phase7Error("탐지 모델에 사람 또는 농구공 항목이 없습니다.")
@@ -324,6 +581,13 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
                 )
                 if detailed_person is not None:
                     groups, person = detailed_groups, detailed_person
+            pose = None
+            if pose_model is not None and person is not None:
+                pose_result = pose_model.predict(
+                    frame, classes=[0], conf=.2, imgsz=640,
+                    device="cpu", verbose=False,
+                )[0]
+                pose = _pose_for_person(pose_result, person)
             time_ms = round(frame_index / fps * 1000)
             diagonal = math.hypot(width, height)
             rim = None
@@ -361,6 +625,7 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
                 "time_ms": time_ms,
                 "frame_index": frame_index,
                 "person": person,
+                "pose": pose,
                 "balls": groups["basketball"],
                 "hoop_valid": hoop_valid,
                 "camera_shift": camera_shift,
@@ -382,8 +647,11 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
         if sampled == 0 or person_frames == 0 or ball_frames == 0:
             raise Phase7Error("선수와 공을 함께 확인할 영상 증거가 부족합니다.")
         release_candidates = trajectory_candidates(records, hoop_point, height)
+        motion_candidates = pose_motion_candidates(records, hoop_point, height) if pose_model is not None else []
         rim_candidates = rim_approach_candidates(records, hoop_point, height)
-        candidates = merge_candidates([*release_candidates, *rim_candidates])
+        candidates = merge_candidate_evidence(
+            [*release_candidates, *motion_candidates, *rim_candidates], width, height
+        )
         range_end_ms = round(last_frame / fps * 1000)
         candidates = [
             candidate for candidate in candidates
@@ -393,13 +661,14 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
             issues["슛 후보 없음 — 직접 확인 필요"] += 1
         if rim_frames == 0:
             issues["림 자동 탐지 실패 — 확인된 골대 위치 사용"] += 1
-        return {"method": "phase7-yolo-trajectory-candidates-v2", "notice": "슛 후보이며 OpenAI 또는 사람의 검토 전에는 확정하지 않습니다.",
+        return {"method": "phase7-yolo-pose-trajectory-candidates-v3", "notice": "슛 후보이며 OpenAI 또는 사람의 검토 전에는 확정하지 않습니다.",
                 "source_fps": round(fps, 4), "sample_fps": round(fps/step, 4), "source_frame_count": count,
                 "duration_ms": duration_ms, "context_start_ms": context_start_ms,
                 "range_start_ms": start_ms, "range_end_ms": range_end_ms,
                 "sampled_frames": sampled, "person_frames": person_frames,
                 "ball_frames": ball_frames, "rim_frames": rim_frames,
                 "inference_sizes": {str(key): value for key, value in inference_sizes.items()},
+                "pose_motion_enabled": pose_model is not None,
                 "hoop_point_px": hoop_point,
                 "candidates": candidates, "issues": dict(issues)}
     finally:

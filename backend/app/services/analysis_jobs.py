@@ -154,6 +154,7 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         video_path = settings.upload_path / analysis_id / "original.mp4"
         result = analyze_video(video_path,
                                settings.resolve_path("models/basketball-yolo26n-pilot-v3.pt"), hoop_point,
+                               pose_model_path=settings.resolve_path("models/yolo26n-pose.pt"),
                                progress=progress, cancelled=cancelled)
         result = review_candidates_with_openai(video_path, result, settings)
         with session_factory() as session:

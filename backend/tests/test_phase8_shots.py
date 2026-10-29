@@ -18,6 +18,16 @@ from app.models import (
 from app.services.phase8_shots import materialize_shots_from_candidates
 
 
+def ai_location() -> dict:
+    return {
+        "court_zone": "paint_center",
+        "court_x": 25,
+        "court_y": 10,
+        "position_confidence": .9,
+        "position_reason": "코트 선 확인",
+    }
+
+
 def analysis_setup(session: Session) -> tuple[Analysis, CourtCalibration]:
     analysis = Analysis(
         title="Phase 8 시험",
@@ -57,6 +67,7 @@ def test_confident_review_becomes_complete_shot(tmp_path) -> None:
                 "confidence": .8,
                 "review_reasons": [],
                 "ai_review": {
+                    **ai_location(),
                     "is_shot": True,
                     "confidence": .9,
                     "outcome": "made",
@@ -112,6 +123,7 @@ def test_retry_updates_auto_shot_without_overwriting_confirmed_shot(tmp_path) ->
                 "time_ms": 5000,
                 "foot_point_px": [25, 10],
                 "ai_review": {
+                    **ai_location(),
                     "is_shot": True,
                     "outcome": "missed",
                     "shot_type": "layup",
@@ -157,6 +169,7 @@ def test_unknown_outcome_keeps_agreed_shot_type_for_partial_automation(tmp_path)
                 "foot_point_px": [25, 10],
                 "review_reasons": ["림 자동 탐지 실패 — 확인된 골대 위치 사용"],
                 "ai_review": {
+                    **ai_location(),
                     "is_shot": True,
                     "outcome": "unclear",
                     "shot_type": "dribble_pull_up",
@@ -192,6 +205,7 @@ def test_local_diagnostic_warning_does_not_block_clear_ai_result(tmp_path) -> No
                 "foot_point_px": [25, 10],
                 "review_reasons": ["림 자동 탐지 실패 — 확인된 골대 위치 사용"],
                 "ai_review": {
+                    **ai_location(),
                     "is_shot": True,
                     "outcome": "made",
                     "shot_type": "set_shot",
@@ -211,7 +225,7 @@ def test_local_diagnostic_warning_does_not_block_clear_ai_result(tmp_path) -> No
     engine.dispose()
 
 
-def test_camera_shifted_candidate_does_not_save_wrong_court_position(tmp_path) -> None:
+def test_camera_shifted_candidate_uses_ai_position_instead_of_old_calibration(tmp_path) -> None:
     engine = create_engine(f"sqlite:///{(tmp_path / 'phase8.db').as_posix()}")
     Base.metadata.create_all(engine)
     with Session(engine) as session:
@@ -227,6 +241,7 @@ def test_camera_shifted_candidate_does_not_save_wrong_court_position(tmp_path) -
                 "tracked_hoop_px": [40, 8],
                 "calibration_shifted": True,
                 "ai_review": {
+                    **ai_location(),
                     "is_shot": True,
                     "outcome": "made",
                     "shot_type": "set_shot",
@@ -237,9 +252,9 @@ def test_camera_shifted_candidate_does_not_save_wrong_court_position(tmp_path) -
         )[0]
         session.commit()
 
-        assert shot.court_x is None and shot.court_y is None and shot.zone_code is None
-        assert shot.status is ShotStatus.NEEDS_REVIEW
-        assert "카메라 이동" in shot.review_reason
+        assert (shot.court_x, shot.court_y, shot.zone_code) == (25, 10, "paint_center")
+        assert shot.status is ShotStatus.AUTO
+        assert shot.review_reason is None
         assert shot.confidence_data["scene_id"] == 1
         assert shot.confidence_data["tracked_hoop_px"] == [40, 8]
     engine.dispose()

@@ -60,6 +60,17 @@ class CourtCalibrationResponse(BaseModel):
     confirmed_at: datetime | None
 
 
+class CourtLandmarkSuggestionResponse(BaseModel):
+    usable: bool
+    method: str
+    confidence: float
+    image_points: list[list[float]]
+    court_points: list[list[float]]
+    hoop_point: list[float] | None
+    landmark_names: list[str]
+    warnings: list[str]
+
+
 class PlayerCreateRequest(BaseModel):
     display_name: str | None = Field(default=None, max_length=100)
     jersey_number: str | None = Field(default=None, max_length=20)

@@ -16,7 +16,6 @@ from app.models import (
     ShotStatus,
     ShotType,
 )
-from app.services.court_calibration import transform_point
 from app.services.court_zones import classify_zone
 
 
@@ -75,26 +74,30 @@ def _sequence_bounds(
 
 
 def _court_position(
-    calibration: CourtCalibration,
-    candidate: dict,
+    ai_review: dict,
     reasons: list[str],
 ) -> tuple[float | None, float | None, str | None]:
-    if candidate.get("calibration_shifted"):
-        _append_reason(reasons, "카메라 이동 장면이라 코트 위치를 다시 맞춰야 함")
-        return None, None, None
-    foot_point = candidate.get("foot_point_px")
-    if not isinstance(foot_point, list) or len(foot_point) != 2:
-        _append_reason(reasons, "선수 발 위치를 찾지 못해 코트 위치 확인 필요")
-        return None, None, None
-    try:
-        court_x, court_y = transform_point(calibration.transform, foot_point)
-    except Exception:
-        _append_reason(reasons, "영상 좌표를 코트 위치로 변환하지 못함")
+    zone_code = ai_review.get("court_zone")
+    court_x = ai_review.get("court_x")
+    court_y = ai_review.get("court_y")
+    confidence = ai_review.get("position_confidence")
+    if (
+        zone_code == "needs_review"
+        or not isinstance(court_x, (int, float))
+        or not isinstance(court_y, (int, float))
+        or not isinstance(confidence, (int, float))
+        or confidence < .75
+    ):
+        _append_reason(reasons, ai_review.get("position_reason") or "AI가 슛 위치를 확정하지 못함")
         return None, None, None
     if not 0 <= court_x <= 50 or not 0 <= court_y <= 47:
-        _append_reason(reasons, "변환한 발 위치가 반코트 범위 밖이어서 위치 확인 필요")
+        _append_reason(reasons, "AI가 반환한 슛 위치가 반코트 범위를 벗어남")
         return None, None, None
-    return court_x, court_y, classify_zone(court_x, court_y).value
+    calculated_zone = classify_zone(float(court_x), float(court_y)).value
+    if calculated_zone != zone_code:
+        _append_reason(reasons, "AI가 반환한 구역과 코트 좌표가 서로 맞지 않아 위치 확인 필요")
+        return None, None, None
+    return round(float(court_x), 4), round(float(court_y), 4), str(zone_code)
 
 
 def _result(ai_review: dict, reasons: list[str]) -> ShotResult:
@@ -157,7 +160,7 @@ def materialize_shots_from_candidates(
         if ai_review.get("status") == "failed" or not ai_review:
             _append_reason(reasons, "OpenAI 보조 판정을 사용할 수 없어 로컬 후보를 보존")
 
-        court_x, court_y, zone_code = _court_position(calibration, candidate, reasons)
+        court_x, court_y, zone_code = _court_position(ai_review, reasons)
         sequence_start_ms, sequence_end_ms = _sequence_bounds(
             candidate_time_ms, analysis.duration_ms, ai_review, diagnostic_reasons
         )

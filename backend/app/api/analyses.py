@@ -3,6 +3,8 @@ from typing import Annotated
 
 from datetime import datetime, timezone
 
+import cv2
+import numpy as np
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import delete, select
@@ -28,6 +30,7 @@ from app.schemas.analyses import (
     AnalysisJobResponse,
     CourtCalibrationRequest,
     CourtCalibrationResponse,
+    CourtLandmarkSuggestionResponse,
     PlayerCreateRequest,
     PlayerListResponse,
     PlayerResponse,
@@ -44,6 +47,10 @@ from app.services.court_calibration import (
     read_video_frame,
     resolve_video_path,
     validate_points,
+)
+from app.services.court_landmark_detection import (
+    detect_court_landmarks,
+    detect_court_landmarks_temporally,
 )
 from app.services.video_registration import RegistrationError, playback_video_path, register_video
 from app.services.analysis_jobs import cancel_job, current_job, read_phase7_result, refresh_simulation, run_phase7_job, start_phase7, start_simulation
@@ -136,6 +143,71 @@ def get_calibration_frame(
     except CalibrationError as error:
         raise HTTPException(status_code=400, detail={"code": "FRAME_READ_FAILED", "message": str(error)}) from error
     return Response(content=content, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@router.get(
+    "/{analysis_id}/calibration/suggestion",
+    response_model=CourtLandmarkSuggestionResponse,
+)
+def suggest_calibration(
+    request: Request,
+    analysis_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+    time_ms: int = 0,
+) -> dict:
+    analysis = find_analysis(session, analysis_id)
+    if time_ms < 0 or time_ms > analysis.duration_ms:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "FRAME_TIME_INVALID", "message": "대표 장면 시간이 영상 범위를 벗어났습니다."},
+        )
+    try:
+        content, _, _ = read_video_frame(
+            resolve_video_path(request.app.state.settings.upload_path, analysis.id), time_ms
+        )
+        frame = cv2.imdecode(np.frombuffer(content, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise CalibrationError("자동 인식할 영상 장면을 만들 수 없습니다.")
+        suggestion = detect_court_landmarks(
+            frame,
+            request.app.state.settings.resolve_path("models/basketball-yolo26n-pilot-v3.pt"),
+        )
+        if suggestion["usable"]:
+            return suggestion
+        frame_times = sorted({
+            max(0, min(analysis.duration_ms, time_ms + offset))
+            for offset in (-750, -500, -250, 0, 250, 500, 750)
+        })
+        nearby_frames = []
+        for frame_time in frame_times:
+            try:
+                nearby_content, _, _ = read_video_frame(
+                    resolve_video_path(request.app.state.settings.upload_path, analysis.id), frame_time
+                )
+            except CalibrationError:
+                continue
+            nearby_frame = cv2.imdecode(np.frombuffer(nearby_content, dtype=np.uint8), cv2.IMREAD_COLOR)
+            if nearby_frame is not None:
+                nearby_frames.append(nearby_frame)
+        temporal_failures = []
+        for model_name in (
+            "models/court-keypoints-yolo26n-pose-v5-general.pt",
+            "models/court-keypoints-yolo26n-pose-v6-target-low-lr.pt",
+        ):
+            temporal = detect_court_landmarks_temporally(
+                nearby_frames,
+                request.app.state.settings.resolve_path(model_name),
+            )
+            if temporal["usable"]:
+                return temporal
+            temporal_failures.extend(temporal["warnings"])
+        suggestion["warnings"] = suggestion["warnings"] + temporal_failures
+        return suggestion
+    except CalibrationError as error:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "AUTO_CALIBRATION_FAILED", "message": str(error)},
+        ) from error
 
 
 @router.get("/{analysis_id}/calibration", response_model=CourtCalibrationResponse)

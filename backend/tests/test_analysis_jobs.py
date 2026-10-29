@@ -15,7 +15,9 @@ from app.services.analysis_jobs import run_phase7_job
 from app.analysis.phase7_pipeline import (
     candidate_overlaps_range,
     Phase7Canceled,
+    merge_candidate_evidence,
     merge_candidates,
+    pose_motion_candidates,
     release_candidate,
     remove_static_ball_detections,
     rim_approach_candidates,
@@ -115,6 +117,71 @@ def test_candidate_merge_keeps_rapid_shots_more_than_one_second_apart() -> None:
     first = {"time_ms": 1000, "confidence": .8}
     second = {"time_ms": 2100, "confidence": .7}
     assert merge_candidates([first, second]) == [first, second]
+
+
+def test_late_rim_evidence_merges_into_same_release() -> None:
+    release = {
+        "time_ms": 4400, "next_time_ms": 5200, "confidence": .7,
+        "foot_point_px": [830, 960], "candidate_source": "trajectory",
+        "scene_id": 0, "review_reasons": [],
+    }
+    rim = {
+        "time_ms": 5867, "next_time_ms": 6800, "confidence": .4,
+        "foot_point_px": [802, 1076], "candidate_source": "rim_approach_backtrack",
+        "scene_id": 0, "review_reasons": ["rim evidence"],
+    }
+    candidates = merge_candidate_evidence([release, rim], 1920, 1080)
+    assert len(candidates) == 1
+    assert candidates[0]["time_ms"] == 4400
+    assert candidates[0]["evidence_end_ms"] == 6800
+    assert candidates[0]["candidate_sources"] == ["rim_approach_backtrack", "trajectory"]
+
+
+def test_overlapping_trajectory_evidence_keeps_later_release() -> None:
+    early = {
+        "time_ms": 8133, "next_time_ms": 9333, "confidence": .6,
+        "foot_point_px": [1675, 841], "candidate_source": "trajectory",
+        "scene_id": 0, "review_reasons": [],
+    }
+    release = {
+        "time_ms": 9333, "next_time_ms": 9467, "confidence": .45,
+        "foot_point_px": [1362, 844], "candidate_source": "trajectory",
+        "scene_id": 0, "review_reasons": [],
+    }
+    candidates = merge_candidate_evidence([early, release], 1920, 1080)
+    assert len(candidates) == 1
+    assert candidates[0]["time_ms"] == 9333
+    assert candidates[0]["confidence"] == .6
+
+
+def test_pose_motion_requires_preparation_and_later_ball_flight() -> None:
+    person = {"xyxy": [100, 100, 200, 400], "confidence": .9}
+    lower_pose = {
+        "xy": [[0, 0]] * 17,
+        "confidence": [0.0] * 17,
+    }
+    raised_pose = {
+        "xy": [[0, 0]] * 17,
+        "confidence": [0.0] * 17,
+    }
+    for pose in (lower_pose, raised_pose):
+        for index in (5, 7, 9):
+            pose["confidence"][index] = .9
+    lower_pose["xy"][5], lower_pose["xy"][7], lower_pose["xy"][9] = [140, 180], [145, 220], [150, 250]
+    raised_pose["xy"][5], raised_pose["xy"][7], raised_pose["xy"][9] = [140, 180], [150, 160], [160, 130]
+    records = [
+        {"time_ms": 0, "frame_index": 0, "person": person, "pose": lower_pose,
+         "balls": [{"xyxy": [145, 235, 165, 255], "confidence": .8}],
+         "hoop_valid": True, "tracked_hoop": [280, 60], "scene_id": 0},
+        {"time_ms": 500, "frame_index": 15, "person": person, "pose": raised_pose,
+         "balls": [], "hoop_valid": True, "tracked_hoop": [280, 60], "scene_id": 0},
+        {"time_ms": 750, "frame_index": 22, "person": person, "pose": raised_pose,
+         "balls": [{"xyxy": [205, 75, 225, 95], "confidence": .7}],
+         "hoop_valid": True, "tracked_hoop": [280, 60], "scene_id": 0},
+    ]
+    candidates = pose_motion_candidates(records, [280, 60], 480)
+    assert len(candidates) == 1
+    assert candidates[0]["candidate_source"] == "pose_shot_motion"
 
 
 def test_trajectory_candidate_allows_short_detection_gap_and_rejects_catch() -> None:
