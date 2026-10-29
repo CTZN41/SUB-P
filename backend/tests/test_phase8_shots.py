@@ -209,3 +209,37 @@ def test_local_diagnostic_warning_does_not_block_clear_ai_result(tmp_path) -> No
         assert shot.review_reason is None
         assert shot.confidence_data["diagnostic_reasons"]
     engine.dispose()
+
+
+def test_camera_shifted_candidate_does_not_save_wrong_court_position(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{(tmp_path / 'phase8.db').as_posix()}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        analysis, calibration = analysis_setup(session)
+        shot = materialize_shots_from_candidates(
+            session,
+            analysis,
+            calibration,
+            {"candidates": [{
+                "time_ms": 5000,
+                "foot_point_px": [25, 10],
+                "scene_id": 1,
+                "tracked_hoop_px": [40, 8],
+                "calibration_shifted": True,
+                "ai_review": {
+                    "is_shot": True,
+                    "outcome": "made",
+                    "shot_type": "set_shot",
+                    "sequence_start_offset_ms": -2000,
+                    "sequence_end_offset_ms": 2000,
+                },
+            }]},
+        )[0]
+        session.commit()
+
+        assert shot.court_x is None and shot.court_y is None and shot.zone_code is None
+        assert shot.status is ShotStatus.NEEDS_REVIEW
+        assert "카메라 이동" in shot.review_reason
+        assert shot.confidence_data["scene_id"] == 1
+        assert shot.confidence_data["tracked_hoop_px"] == [40, 8]
+    engine.dispose()

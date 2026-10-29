@@ -111,6 +111,12 @@ def test_phase7_release_candidates_require_rising_ball_toward_hoop() -> None:
     assert len(merge_candidates([candidate, {**candidate, "time_ms": 1500, "confidence": .2}])) == 1
 
 
+def test_candidate_merge_keeps_rapid_shots_more_than_one_second_apart() -> None:
+    first = {"time_ms": 1000, "confidence": .8}
+    second = {"time_ms": 2100, "confidence": .7}
+    assert merge_candidates([first, second]) == [first, second]
+
+
 def test_trajectory_candidate_allows_short_detection_gap_and_rejects_catch() -> None:
     person = {"xyxy": [100, 120, 180, 360], "confidence": .9}
     start_ball = {"xyxy": [135, 125, 155, 145], "confidence": .8}
@@ -132,6 +138,43 @@ def test_trajectory_candidate_allows_short_detection_gap_and_rejects_catch() -> 
 
     records[2]["balls"] = [{"xyxy": [170, 125, 190, 145], "confidence": .7}]
     assert trajectory_candidates(records, [240, 50], 480) == []
+
+
+def test_trajectory_candidate_connects_one_second_ball_detection_gap() -> None:
+    person = {"xyxy": [100, 120, 180, 360], "confidence": .9}
+    start_ball = {"xyxy": [135, 125, 155, 145], "confidence": .8}
+    released_ball = {"xyxy": [190, 50, 210, 70], "confidence": .7}
+    records = [{
+        "time_ms": 1000,
+        "frame_index": 30,
+        "person": person,
+        "balls": [start_ball],
+        "hoop_valid": True,
+        "rim_missing": False,
+        "tracked_hoop": [240, 50],
+    }]
+    records.extend({
+        "time_ms": time_ms,
+        "frame_index": 30 + offset,
+        "person": person,
+        "balls": [],
+        "hoop_valid": True,
+        "rim_missing": True,
+        "tracked_hoop": [240, 50],
+    } for offset, time_ms in enumerate(range(1125, 2000, 125), start=1))
+    records.append({
+        "time_ms": 2000,
+        "frame_index": 60,
+        "person": person,
+        "balls": [released_ball],
+        "hoop_valid": True,
+        "rim_missing": False,
+        "tracked_hoop": [240, 50],
+    })
+
+    candidates = trajectory_candidates(records, [240, 50], 480)
+    assert len(candidates) == 1
+    assert candidates[0]["time_ms"] == 1000
 
 
 def test_static_ball_overlay_is_removed() -> None:

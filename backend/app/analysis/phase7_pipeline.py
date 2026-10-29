@@ -12,6 +12,9 @@ from typing import Any, Callable
 SAMPLE_FPS = 8.0
 DETAILED_PERSON_HEIGHT_RATIO = .25
 SEGMENT_CONTEXT_MS = 3000
+HOOP_HOLD_MS = 1500
+SCENE_JUMP_RATIO = .18
+CANDIDATE_COOLDOWN_MS = 1000
 
 
 class Phase7Error(RuntimeError):
@@ -70,7 +73,7 @@ def release_candidate(previous: dict[str, Any], current: dict[str, Any], hoop: l
     }
 
 
-def merge_candidates(candidates: list[dict[str, Any]], cooldown_ms: int = 2000) -> list[dict[str, Any]]:
+def merge_candidates(candidates: list[dict[str, Any]], cooldown_ms: int = CANDIDATE_COOLDOWN_MS) -> list[dict[str, Any]]:
     merged: list[dict[str, Any]] = []
     for candidate in sorted(candidates, key=lambda item: item["time_ms"]):
         if merged and candidate["time_ms"] - merged[-1]["time_ms"] < cooldown_ms:
@@ -129,7 +132,7 @@ def trajectory_candidates(
     records: list[dict[str, Any]],
     hoop_point: list[float],
     frame_height: int,
-    max_lookahead: int = 6,
+    max_lookahead: int = 10,
 ) -> list[dict[str, Any]]:
     """Reconnect short ball-detection gaps and require a release above the head."""
     raw: list[dict[str, Any]] = []
@@ -152,8 +155,10 @@ def trajectory_candidates(
         ball = max(starts, key=lambda item: item["confidence"])
         ball_x, ball_y = center(ball)
         next_ball = next_record = None
-        target_hoop = record.get("detected_hoop") or hoop_point
+        target_hoop = record.get("tracked_hoop") or record.get("detected_hoop") or hoop_point
         for future in records[index + 1 : index + 1 + max_lookahead]:
+            if future["time_ms"] - record["time_ms"] > 1500:
+                break
             if not future.get("hoop_valid"):
                 continue
             for option in future.get("balls", []):
@@ -186,8 +191,11 @@ def trajectory_candidates(
             "ball_point_px": [round(ball_x, 2), round(ball_y, 2)],
             "confidence": round(confidence, 4),
             "review_reasons": reasons,
+            "scene_id": int(record.get("scene_id", 0)),
+            "tracked_hoop_px": [round(value, 2) for value in target_hoop],
+            "calibration_shifted": bool(record.get("calibration_shifted")),
         })
-    return merge_candidates(raw, cooldown_ms=1800)
+    return merge_candidates(raw)
 
 
 def rim_approach_candidates(
@@ -200,7 +208,7 @@ def rim_approach_candidates(
     for index, record in enumerate(records):
         if not record.get("hoop_valid"):
             continue
-        target_hoop = record.get("detected_hoop") or hoop_point
+        target_hoop = record.get("tracked_hoop") or record.get("detected_hoop") or hoop_point
         near_rim = [
             ball for ball in record.get("balls", [])
             if math.dist(center(ball), target_hoop) <= max(24.0, frame_height * .1)
@@ -236,8 +244,11 @@ def rim_approach_candidates(
             "confidence": round(confidence, 4),
             "review_reasons": reasons,
             "candidate_source": "rim_approach_backtrack",
+            "scene_id": int(release_record.get("scene_id", 0)),
+            "tracked_hoop_px": [round(value, 2) for value in target_hoop],
+            "calibration_shifted": bool(release_record.get("calibration_shifted")),
         })
-    return merge_candidates(raw, cooldown_ms=1800)
+    return merge_candidates(raw)
 
 
 def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sample_fps: float = SAMPLE_FPS,
@@ -275,6 +286,9 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
         first_frame = round(context_start_ms / 1000 * fps)
         last_frame = min(count, round((end_ms or duration_ms) / 1000 * fps))
         person_last = None
+        tracked_hoop: list[float] | None = None
+        tracked_hoop_time_ms: int | None = None
+        scene_id = 0
         records: list[dict[str, Any]] = []
         inference_sizes: Counter[int] = Counter()
         issues: Counter[str] = Counter()
@@ -310,13 +324,34 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
                 )
                 if detailed_person is not None:
                     groups, person = detailed_groups, detailed_person
-            rim = min(groups["rim"], key=lambda box: math.dist(center(box), hoop_point)) if groups["rim"] else None
-            rim_distance = math.dist(center(rim), hoop_point) if rim else 0.0
-            hoop_valid = rim is None or rim_distance < math.hypot(width, height) * .18
-            camera_shift = bool(rim and rim_distance > math.hypot(width, height) * .05)
-            if not hoop_valid:
-                issues["카메라 구도 변경 — 기준점 무효"] += 1
             time_ms = round(frame_index / fps * 1000)
+            diagonal = math.hypot(width, height)
+            rim = None
+            if groups["rim"]:
+                if tracked_hoop is None:
+                    rim = min(groups["rim"], key=lambda box: math.dist(center(box), hoop_point))
+                else:
+                    nearest = min(groups["rim"], key=lambda box: math.dist(center(box), tracked_hoop))
+                    rim = nearest if math.dist(center(nearest), tracked_hoop) <= diagonal * .12 else max(groups["rim"], key=lambda box: box["confidence"])
+                detected_hoop = list(center(rim))
+                camera_shift = bool(tracked_hoop and math.dist(detected_hoop, tracked_hoop) > diagonal * .05)
+                if tracked_hoop and math.dist(detected_hoop, tracked_hoop) > diagonal * SCENE_JUMP_RATIO:
+                    scene_id += 1
+                tracked_hoop = detected_hoop
+                tracked_hoop_time_ms = time_ms
+                hoop_source = "detected"
+            elif tracked_hoop is not None and tracked_hoop_time_ms is not None and time_ms - tracked_hoop_time_ms <= HOOP_HOLD_MS:
+                camera_shift = False
+                hoop_source = "carried"
+            else:
+                tracked_hoop = list(hoop_point)
+                tracked_hoop_time_ms = time_ms
+                camera_shift = False
+                hoop_source = "calibration"
+            calibration_shifted = math.dist(tracked_hoop, hoop_point) > diagonal * .05
+            if calibration_shifted:
+                issues["동적 골대가 저장된 기준점과 다름 — 장면별 코트 보정 필요"] += 1
+            hoop_valid = tracked_hoop is not None
             sampled += 1
             person_frames += person is not None
             rim_frames += bool(groups["rim"])
@@ -331,8 +366,12 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
                 "camera_shift": camera_shift,
                 "rim_missing": rim is None,
                 "detected_hoop": list(center(rim)) if rim else None,
+                "tracked_hoop": list(tracked_hoop),
+                "hoop_source": hoop_source,
+                "scene_id": scene_id,
+                "calibration_shifted": calibration_shifted,
             })
-            person_last = person if hoop_valid else None
+            person_last = person
             if progress and (sampled % 8 == 0 or frame_index + step >= last_frame):
                 progress(time_ms)
         static_balls = remove_static_ball_detections(records, width, height)
@@ -344,7 +383,7 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
             raise Phase7Error("선수와 공을 함께 확인할 영상 증거가 부족합니다.")
         release_candidates = trajectory_candidates(records, hoop_point, height)
         rim_candidates = rim_approach_candidates(records, hoop_point, height)
-        candidates = merge_candidates([*release_candidates, *rim_candidates], cooldown_ms=1800)
+        candidates = merge_candidates([*release_candidates, *rim_candidates])
         range_end_ms = round(last_frame / fps * 1000)
         candidates = [
             candidate for candidate in candidates

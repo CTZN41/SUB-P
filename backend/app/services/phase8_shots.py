@@ -79,6 +79,9 @@ def _court_position(
     candidate: dict,
     reasons: list[str],
 ) -> tuple[float | None, float | None, str | None]:
+    if candidate.get("calibration_shifted"):
+        _append_reason(reasons, "카메라 이동 장면이라 코트 위치를 다시 맞춰야 함")
+        return None, None, None
     foot_point = candidate.get("foot_point_px")
     if not isinstance(foot_point, list) or len(foot_point) != 2:
         _append_reason(reasons, "선수 발 위치를 찾지 못해 코트 위치 확인 필요")
@@ -194,6 +197,9 @@ def materialize_shots_from_candidates(
         shot.confidence_data = {
             "local_confidence": candidate.get("confidence"),
             "candidate_source": candidate.get("candidate_source", "trajectory"),
+            "scene_id": candidate.get("scene_id", 0),
+            "tracked_hoop_px": candidate.get("tracked_hoop_px"),
+            "calibration_shifted": bool(candidate.get("calibration_shifted")),
             "diagnostic_reasons": diagnostic_reasons,
             "ai_review": ai_review,
         }
