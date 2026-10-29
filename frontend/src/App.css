@@ -632,8 +632,6 @@ h1 {
 .zone-stat-card rect { fill: #f4f9f5; stroke: rgba(30,35,31,.2); stroke-width: 1; }
 .zone-stat-card text { fill: #111; font-size: 8px; font-weight: 650; text-anchor: middle; pointer-events: none; }
 .zone-stat-card .zone-fraction { font-size: 14px; font-weight: 800; }
-.zone-stat-card.compact text { font-size: 7px; }
-.zone-stat-card.compact .zone-fraction { font-size: 12px; }
 .court-lines { fill: none; stroke: rgba(255,255,255,.86); stroke-width: 2.2; pointer-events: none; }
 .selected-zone-detail { min-height: 38px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-top: 12px; padding: 11px 12px; border-radius: 10px; background: rgba(255,255,255,.04); color: #9da9a1; font-size: .76rem; }
 .selected-zone-detail strong { color: #fff; }
