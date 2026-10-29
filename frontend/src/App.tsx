@@ -7,6 +7,7 @@ import { CourtCalibrationPage } from './pages/CourtCalibrationPage'
 import { PlayerSetupPage } from './pages/PlayerSetupPage'
 import { AnalysisProgressPage } from './pages/AnalysisProgressPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { ShotReviewPage } from './pages/ShotReviewPage'
 
 function App() {
   return (
@@ -17,23 +18,14 @@ function App() {
         <Route path="court/:analysisId" element={<CourtCalibrationPage />} />
         <Route path="players/:analysisId" element={<PlayerSetupPage />} />
         <Route path="progress/:analysisId" element={<AnalysisProgressPage />} />
-        <Route
-          path="results/:analysisId"
-          element={
-            <PlaceholderPage
-              eyebrow="분석 결과"
-              title="슈팅 맵과 히트맵"
-              description="3D O/X 슈팅 맵과 2D 구역 히트맵은 Phase 9부터 구현합니다."
-            />
-          }
-        />
+        <Route path="results/:analysisId" element={<ShotReviewPage />} />
         <Route
           path="history"
           element={
             <PlaceholderPage
               eyebrow="저장 기록"
               title="분석 기록"
-              description="저장된 영상과 분석 결과 목록은 Phase 11에서 연결합니다."
+              description="저장된 영상과 분석 결과 목록은 Phase 12에서 연결합니다."
             />
           }
         />

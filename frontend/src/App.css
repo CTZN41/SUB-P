@@ -600,6 +600,31 @@ h1 {
 .stage-list li.active span { background: #d8ff4f; color: #101915; box-shadow: 0 0 20px rgba(216,255,79,.25); }
 .stage-list li.done span { background: rgba(216,255,79,.15); color: #d8ff4f; }
 .success-note { padding: 14px 16px; border-radius: 12px; background: rgba(40,190,125,.1); color: #84e9b8; }
+.button.danger { border: 1px solid rgba(229,83,83,.45); background: rgba(229,83,83,.1); color: #ffaaaa; }
+.shot-review-page { max-width: 1380px; }
+.review-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+.review-summary > div { padding: 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; background: #16211c; }
+.review-summary span, .review-summary strong { display: block; }
+.review-summary span { color: #829087; font-size: .78rem; }
+.review-summary strong { margin-top: 5px; font-size: 1.4rem; }
+.review-layout { display: grid; grid-template-columns: minmax(340px, .75fr) minmax(540px, 1.25fr); gap: 18px; align-items: start; }
+.shot-list-panel .panel-title p { margin: 5px 0 0; color: #849188; font-size: .78rem; }
+.review-shot-list { display: grid; gap: 8px; max-height: 720px; margin: 20px 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.review-shot-list button { width: 100%; display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: #0f1814; color: #e8eeea; text-align: left; cursor: pointer; }
+.review-shot-list button.selected { border-color: rgba(216,255,79,.65); background: rgba(216,255,79,.06); }
+.review-shot-list strong, .review-shot-list small { display: block; }
+.review-shot-list small { margin-top: 4px; color: #849188; }
+.review-shot-list em { color: #ffda91; font-size: .72rem; font-style: normal; }
+.result-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; font-weight: 900; }
+.result-mark.made { background: #18a56e; }
+.result-mark.missed { background: #e55353; }
+.result-mark.needs_review { background: #9a7b34; }
+.shot-detail-panel video { width: 100%; max-height: 440px; border-radius: 14px; background: #080d0a; }
+.video-review-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 12px 0 18px; color: #87948c; font-size: .8rem; }
+.shot-edit-form h2 { margin: 20px 0 16px; font-size: 1.25rem; }
+.shot-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.shot-form-grid label { color: #aab5ae; font-size: .8rem; font-weight: 750; }
+.shot-form-grid input, .shot-form-grid select { width: 100%; margin-top: 6px; padding: 10px 11px; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; background: #0f1814; color: white; }
 
 @media (min-width: 901px) and (max-width: 1250px) {
   .player-setup-grid { grid-template-columns: minmax(0, 1fr); }
@@ -648,6 +673,7 @@ h1 {
   }
 
   .stage-list { grid-template-columns: 1fr; }
+  .review-layout, .review-summary, .shot-form-grid { grid-template-columns: 1fr; }
   .stage-list li { display: flex; align-items: center; gap: 10px; text-align: left; }
   .stage-list li span { margin: 0; flex: 0 0 auto; }
 }

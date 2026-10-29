@@ -4,11 +4,25 @@ from typing import Annotated
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db_session
-from app.models import Analysis, AnalysisJob, CalibrationSource, CourtCalibration, Player, PlayType
+from app.models import (
+    Analysis,
+    AnalysisJob,
+    AnalysisStatus,
+    CalibrationSource,
+    CourtCalibration,
+    Player,
+    PlayType,
+    Shot,
+    ShotResult,
+    ShotSource,
+    ShotStatus,
+    ShotType,
+)
 from app.schemas.analyses import (
     AnalysisRegistrationResponse,
     AnalysisJobResponse,
@@ -18,6 +32,10 @@ from app.schemas.analyses import (
     PlayerListResponse,
     PlayerResponse,
     PlayerUpdateRequest,
+    ShotCreateRequest,
+    ShotListResponse,
+    ShotResponse,
+    ShotUpdateRequest,
     WarningAcceptanceResponse,
 )
 from app.services.court_calibration import (
@@ -30,6 +48,8 @@ from app.services.court_calibration import (
 from app.services.video_registration import RegistrationError, register_video
 from app.services.analysis_jobs import cancel_job, current_job, read_phase7_result, refresh_simulation, run_phase7_job, start_phase7, start_simulation
 from app.analysis.phase7_pipeline import Phase7Error
+from app.services.court_zones import ZONE_LABELS, ZoneCode, classify_zone
+from app.services.shot_statistics import calculate_statistics
 
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
@@ -342,3 +362,209 @@ def cancel_analysis_job(
     if job is None or job.analysis_id != analysis_id:
         raise HTTPException(status_code=404, detail={"code": "JOB_NOT_FOUND", "message": "분석 작업을 찾을 수 없습니다."})
     return cancel_job(session, analysis, job)
+
+
+def _find_shot(session: Session, analysis_id: str, shot_id: str) -> Shot:
+    shot = session.get(Shot, shot_id)
+    if shot is None or shot.analysis_id != analysis_id:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "SHOT_NOT_FOUND", "message": "슛 기록을 찾을 수 없습니다."},
+        )
+    return shot
+
+
+def _find_shot_player(session: Session, analysis_id: str, player_id: str) -> Player:
+    player = session.get(Player, player_id)
+    if player is None or player.analysis_id != analysis_id:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "PLAYER_INVALID", "message": "이 분석에 등록된 선수를 선택해 주세요."},
+        )
+    return player
+
+
+def _validate_shot_values(analysis: Analysis, values: dict) -> None:
+    start = int(values["sequence_start_ms"])
+    end = int(values["sequence_end_ms"])
+    candidate = int(values["candidate_time_ms"])
+    if start >= end:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "SEQUENCE_ORDER_INVALID", "message": "장면 시작 시간은 끝 시간보다 빨라야 합니다."},
+        )
+    if end > analysis.duration_ms or candidate > analysis.duration_ms:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "SHOT_TIME_OUT_OF_RANGE", "message": "슛 시간과 재생 구간은 원본 영상 길이 안에 있어야 합니다."},
+        )
+    if not start <= candidate <= end:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "CANDIDATE_OUTSIDE_SEQUENCE", "message": "슛 시간은 재생 장면의 시작과 끝 사이에 있어야 합니다."},
+        )
+    if end - start > 20_000:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "SEQUENCE_TOO_LONG", "message": "한 슛의 재생 장면은 최대 20초까지 저장할 수 있습니다."},
+        )
+    if values["result"] is ShotResult.NEEDS_REVIEW or values["shot_type"] is ShotType.NEEDS_REVIEW:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "CONFIRMED_VALUE_REQUIRED", "message": "사용자가 저장할 때는 성공 여부와 슛 종류를 확정해 주세요."},
+        )
+
+
+def _refresh_analysis_review_status(session: Session, analysis: Analysis) -> None:
+    has_review = session.scalar(
+        select(Shot.id).where(
+            Shot.analysis_id == analysis.id,
+            Shot.status == ShotStatus.NEEDS_REVIEW,
+        ).limit(1)
+    ) is not None
+    analysis.status = AnalysisStatus.REVIEW_REQUIRED if has_review else AnalysisStatus.COMPLETED
+
+
+def _shot_response(shot: Shot) -> ShotResponse:
+    zone = ZoneCode(shot.zone_code) if shot.zone_code else None
+    return ShotResponse(
+        id=shot.id,
+        analysis_id=shot.analysis_id,
+        player_id=shot.player_id,
+        player_name=shot.player.display_name,
+        candidate_time_ms=shot.candidate_time_ms,
+        sequence_start_ms=shot.sequence_start_ms,
+        sequence_end_ms=shot.sequence_end_ms,
+        court_x=shot.court_x,
+        court_y=shot.court_y,
+        zone_code=shot.zone_code,
+        zone_label=ZONE_LABELS[zone] if zone else None,
+        result=shot.result,
+        shot_type=shot.shot_type,
+        status=shot.status,
+        review_reason=shot.review_reason,
+        source=shot.source,
+        confidence_data=shot.confidence_data,
+        created_at=shot.created_at,
+        updated_at=shot.updated_at,
+    )
+
+
+@router.get("/{analysis_id}/video")
+def get_analysis_video(
+    request: Request,
+    analysis_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> FileResponse:
+    analysis = find_analysis(session, analysis_id)
+    video_path = request.app.state.settings.upload_path / analysis.id / "original.mp4"
+    if not video_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "VIDEO_NOT_FOUND", "message": "보관된 원본 영상을 찾을 수 없습니다."},
+        )
+    return FileResponse(video_path, media_type="video/mp4", headers={"Accept-Ranges": "bytes"})
+
+
+@router.get("/{analysis_id}/shots", response_model=ShotListResponse)
+def list_shots(
+    analysis_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> ShotListResponse:
+    analysis = find_analysis(session, analysis_id)
+    shots = list(
+        session.scalars(
+            select(Shot).where(Shot.analysis_id == analysis_id).order_by(Shot.candidate_time_ms, Shot.created_at)
+        )
+    )
+    return ShotListResponse(
+        analysis_id=analysis.id,
+        analysis_status=analysis.status,
+        duration_ms=analysis.duration_ms,
+        fps=analysis.fps,
+        shots=[_shot_response(shot) for shot in shots],
+        statistics=calculate_statistics(shots),
+    )
+
+
+@router.post("/{analysis_id}/shots", response_model=ShotResponse, status_code=201)
+def create_shot(
+    analysis_id: str,
+    payload: ShotCreateRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> ShotResponse:
+    analysis = find_analysis(session, analysis_id)
+    _find_shot_player(session, analysis_id, payload.player_id)
+    values = payload.model_dump()
+    _validate_shot_values(analysis, values)
+    shot = Shot(
+        analysis_id=analysis_id,
+        **values,
+        zone_code=classify_zone(payload.court_x, payload.court_y).value,
+        status=ShotStatus.USER_CONFIRMED,
+        source=ShotSource.USER,
+        review_reason=None,
+        confidence_data={"entered_by_user": True},
+    )
+    session.add(shot)
+    session.flush()
+    _refresh_analysis_review_status(session, analysis)
+    session.commit()
+    session.refresh(shot)
+    return _shot_response(shot)
+
+
+@router.patch("/{analysis_id}/shots/{shot_id}", response_model=ShotResponse)
+def update_shot(
+    analysis_id: str,
+    shot_id: str,
+    payload: ShotUpdateRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> ShotResponse:
+    analysis = find_analysis(session, analysis_id)
+    shot = _find_shot(session, analysis_id, shot_id)
+    changes = payload.model_dump(exclude_unset=True)
+    values = {
+        "player_id": shot.player_id,
+        "candidate_time_ms": shot.candidate_time_ms,
+        "sequence_start_ms": shot.sequence_start_ms,
+        "sequence_end_ms": shot.sequence_end_ms,
+        "court_x": shot.court_x,
+        "court_y": shot.court_y,
+        "result": shot.result,
+        "shot_type": shot.shot_type,
+        **changes,
+    }
+    if values["court_x"] is None or values["court_y"] is None:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "COURT_POSITION_REQUIRED", "message": "확정하려면 코트의 가로·세로 위치를 입력해 주세요."},
+        )
+    _find_shot_player(session, analysis_id, values["player_id"])
+    _validate_shot_values(analysis, values)
+    for field, value in changes.items():
+        setattr(shot, field, value)
+    shot.zone_code = classify_zone(float(values["court_x"]), float(values["court_y"])).value
+    shot.status = ShotStatus.USER_CONFIRMED
+    shot.review_reason = None
+    shot.confidence_data = {**shot.confidence_data, "confirmed_by_user": True}
+    session.flush()
+    _refresh_analysis_review_status(session, analysis)
+    session.commit()
+    session.refresh(shot)
+    return _shot_response(shot)
+
+
+@router.delete("/{analysis_id}/shots/{shot_id}", status_code=204)
+def delete_shot(
+    analysis_id: str,
+    shot_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> Response:
+    analysis = find_analysis(session, analysis_id)
+    shot = _find_shot(session, analysis_id, shot_id)
+    session.delete(shot)
+    session.flush()
+    _refresh_analysis_review_status(session, analysis)
+    session.commit()
+    return Response(status_code=204)

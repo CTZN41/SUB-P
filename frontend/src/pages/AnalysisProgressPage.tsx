@@ -88,12 +88,12 @@ export function AnalysisProgressPage() {
       <div><span>{simulation ? '점검 화면의 예시 구간' : '처리한 원본 영상 구간'}</span><strong>{job ? `${(job.processed_ms / 1000).toFixed(1)}초 / ${((analysis?.duration_ms ?? 0) / 1000).toFixed(1)}초` : '-'}</strong></div></div>
       <ol className="stage-list">{STAGES.map((stage, index) => <li key={stage} className={index < activeIndex || (simulation && job?.status === 'succeeded') ? 'done' : index === activeIndex && job ? 'active' : ''}><span>{index + 1}</span><strong>{stage}</strong></li>)}</ol>
       {job?.status === 'succeeded' && simulation && <p className="success-note">작업 흐름 점검이 끝났습니다. 가짜 슛 결과는 만들지 않았습니다.</p>}
-      {job?.status === 'succeeded' && !simulation && <p className="success-note">후보 추출이 끝났습니다. 아래 장면을 직접 확인해 주세요.</p>}
+      {job?.status === 'succeeded' && !simulation && <p className="success-note">후보 분석과 슛 기록 저장이 끝났습니다. 결과 화면에서 원본 장면을 확인해 주세요.</p>}
       {job?.status === 'failed' && <p className="form-error">{job.error_message ?? '분석이 중단되었습니다. 다시 시도할 수 있습니다.'}</p>}
       {job?.status === 'canceled' && <p className="inline-warning">취소되었습니다. 원본 영상과 코트·선수 설정은 그대로 남아 있습니다.</p>}
       {analysis && analysis.play_type !== 'solo' && <p className="inline-warning">실제 슛 후보 분석은 현재 개인 연습 영상만 지원합니다. 여러 선수의 첫 위치 지정과 개발용 흐름은 확인할 수 있습니다.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="actions">{terminal && <><button className="button primary" onClick={() => start(true)} disabled={busy || analysis?.play_type !== 'solo'}>{job ? '실제 후보 다시 찾기' : '실제 슛 후보 찾기'}</button><button className="button secondary" onClick={() => start(false)} disabled={busy}>개발용 흐름 점검</button></>}
+      <div className="actions">{job?.status === 'succeeded' && !simulation && <Link className="button primary" to={`/results/${analysisId}`}>슛 기록 검토하기</Link>}{terminal && <><button className="button secondary" onClick={() => start(true)} disabled={busy || analysis?.play_type !== 'solo'}>{job ? '실제 후보 다시 찾기' : '실제 슛 후보 찾기'}</button><button className="button secondary" onClick={() => start(false)} disabled={busy}>개발용 흐름 점검</button></>}
         {job && !terminal && <button className="button secondary" onClick={cancel} disabled={busy}>{busy ? '취소 요청 중…' : '분석 취소'}</button>}<Link className="button secondary" to="/">화면 나가기</Link></div>
     </section>
     {result && <section className="setup-card progress-card" aria-label="슛 후보 결과"><h2>찾은 슛 후보 {result.candidates.length}개</h2><p>{result.notice}</p>

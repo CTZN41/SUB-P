@@ -2,7 +2,15 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import AnalysisStatus, JobStatus, PlayType
+from app.models import (
+    AnalysisStatus,
+    JobStatus,
+    PlayType,
+    ShotResult,
+    ShotSource,
+    ShotStatus,
+    ShotType,
+)
 
 
 class AnalysisRegistrationResponse(BaseModel):
@@ -96,3 +104,56 @@ class AnalysisJobResponse(BaseModel):
     error_message: str | None
     started_at: datetime | None
     finished_at: datetime | None
+
+
+class ShotCreateRequest(BaseModel):
+    player_id: str
+    candidate_time_ms: int = Field(ge=0)
+    sequence_start_ms: int = Field(ge=0)
+    sequence_end_ms: int = Field(ge=0)
+    court_x: float = Field(ge=0, le=50)
+    court_y: float = Field(ge=0, le=47)
+    result: ShotResult
+    shot_type: ShotType
+
+
+class ShotUpdateRequest(BaseModel):
+    player_id: str | None = None
+    candidate_time_ms: int | None = Field(default=None, ge=0)
+    sequence_start_ms: int | None = Field(default=None, ge=0)
+    sequence_end_ms: int | None = Field(default=None, ge=0)
+    court_x: float | None = Field(default=None, ge=0, le=50)
+    court_y: float | None = Field(default=None, ge=0, le=47)
+    result: ShotResult | None = None
+    shot_type: ShotType | None = None
+
+
+class ShotResponse(BaseModel):
+    id: str
+    analysis_id: str
+    player_id: str
+    player_name: str
+    candidate_time_ms: int
+    sequence_start_ms: int
+    sequence_end_ms: int
+    court_x: float | None
+    court_y: float | None
+    zone_code: str | None
+    zone_label: str | None
+    result: ShotResult
+    shot_type: ShotType
+    status: ShotStatus
+    review_reason: str | None
+    source: ShotSource
+    confidence_data: dict
+    created_at: datetime
+    updated_at: datetime
+
+
+class ShotListResponse(BaseModel):
+    analysis_id: str
+    analysis_status: AnalysisStatus
+    duration_ms: int
+    fps: float | None
+    shots: list[ShotResponse]
+    statistics: dict[str, object]
