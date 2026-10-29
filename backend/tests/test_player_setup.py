@@ -49,5 +49,7 @@ def test_solo_default_player_cannot_be_deleted(tmp_path) -> None:
     client, analysis_id, engine = make_client(tmp_path, PlayType.SOLO)
     factory = sessionmaker(bind=engine)
     with factory() as session: player = Player(analysis_id=analysis_id, display_name="선수 A"); session.add(player); session.commit(); player_id = player.id
-    with client: assert client.delete(f"/api/analyses/{analysis_id}/players/{player_id}").status_code == 409
+    with client:
+        assert client.delete(f"/api/analyses/{analysis_id}/players/{player_id}").status_code == 409
+        assert client.get(f"/api/analyses/{analysis_id}/players").json()["warnings"] == []
     engine.dispose()

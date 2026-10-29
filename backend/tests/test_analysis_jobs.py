@@ -11,6 +11,8 @@ from app.core.config import Settings
 from app.db.base import Base
 from app.models import Analysis, AnalysisJob, AnalysisStatus, CalibrationSource, CourtCalibration, JobStatus, Player, PlayType, Shot
 from app.services.analysis_jobs import recover_stale_jobs, utc_now
+from app.services.analysis_jobs import run_phase7_job
+from app.analysis.phase7_pipeline import Phase7Canceled, merge_candidates, release_candidate
 
 
 def make_ready_client(tmp_path: Path):
@@ -31,6 +33,7 @@ def test_start_is_idempotent_and_cancel_keeps_source(tmp_path) -> None:
         assert first.status_code == 200 and second.json()["id"] == first.json()["id"]
         canceled = client.post(f"/api/analyses/{analysis_id}/jobs/{first.json()['id']}/cancel")
         assert canceled.json()["status"] == "canceled"
+        assert canceled.json()["processed_ms"] == 0
         retried = client.post(f"/api/analyses/{analysis_id}/jobs/start")
         assert retried.json()["id"] != first.json()["id"]
     with Session(engine) as session:
@@ -74,4 +77,50 @@ def test_completed_simulation_creates_no_fake_shots(tmp_path) -> None:
     with Session(engine) as session:
         assert session.scalar(select(Shot)) is None
         assert session.get(Analysis, analysis_id).status is AnalysisStatus.SETUP_REQUIRED
+    engine.dispose()
+
+
+def test_phase7_release_candidates_require_rising_ball_toward_hoop() -> None:
+    person = {"xyxy": [90, 100, 210, 400], "confidence": .9}
+    ball = {"xyxy": [145, 145, 165, 165], "confidence": .8}
+    next_ball = {"xyxy": [175, 95, 195, 115], "confidence": .7}
+    before = {"time_ms": 1000, "frame_index": 30, "person": person, "ball": ball, "hoop_valid": True}
+    after = {"time_ms": 1250, "ball": next_ball, "hoop_valid": True}
+    candidate = release_candidate(before, after, [230, 60], 480)
+    assert candidate and candidate["time_ms"] == 1000
+    assert candidate["foot_point_px"] == [150, 400]
+    assert release_candidate(before, {**after, "hoop_valid": False}, [230, 60], 480) is None
+    assert release_candidate(before, {**after, "ball": {**next_ball, "xyxy": [175, 205, 195, 225]}}, [230, 60], 480) is None
+    assert len(merge_candidates([candidate, {**candidate, "time_ms": 1500, "confidence": .2}])) == 1
+
+
+def test_phase7_worker_saves_candidates_and_review_status(tmp_path, monkeypatch) -> None:
+    client, analysis_id, engine, factory = make_ready_client(tmp_path)
+    with factory() as session:
+        job = AnalysisJob(analysis_id=analysis_id, status=JobStatus.QUEUED, stage="영상 준비", is_simulation=False)
+        session.add(job); session.commit(); job_id = job.id
+    result = {"candidates": [{"time_ms": 1000, "foot_point_px": [150, 400]}], "issues": {}}
+    monkeypatch.setattr("app.services.analysis_jobs.analyze_video", lambda *args, **kwargs: result)
+    run_phase7_job(factory, client.app.state.settings, analysis_id, job_id)
+    with factory() as session:
+        assert session.get(AnalysisJob, job_id).status is JobStatus.SUCCEEDED
+        assert session.get(Analysis, analysis_id).status is AnalysisStatus.REVIEW_REQUIRED
+        assert session.scalar(select(Shot)) is None
+    assert (tmp_path / "work" / analysis_id / "phase7-candidates.json").is_file()
+    engine.dispose()
+
+
+def test_phase7_cancel_discards_partial_result(tmp_path, monkeypatch) -> None:
+    client, analysis_id, engine, factory = make_ready_client(tmp_path)
+    with factory() as session:
+        job = AnalysisJob(analysis_id=analysis_id, status=JobStatus.QUEUED, stage="영상 준비", is_simulation=False)
+        session.add(job); session.commit(); job_id = job.id
+    def stop(*args, **kwargs):
+        raise Phase7Canceled("취소")
+    monkeypatch.setattr("app.services.analysis_jobs.analyze_video", stop)
+    run_phase7_job(factory, client.app.state.settings, analysis_id, job_id)
+    with factory() as session:
+        assert session.get(AnalysisJob, job_id).status is JobStatus.CANCELED
+        assert session.get(Analysis, analysis_id).status is AnalysisStatus.CANCELED
+    assert not (tmp_path / "work" / analysis_id / "phase7-candidates.json").exists()
     engine.dispose()

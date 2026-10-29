@@ -112,10 +112,11 @@ export function NewAnalysisPage() {
             <button className="button primary" type="button" onClick={continueToCourt}>
               확인하고 코트 설정으로 이동
             </button>
-            <button className="button secondary" type="button" onClick={() => setResult(null)}>
-              다른 영상 등록
+            <button className="button secondary" type="button" onClick={() => { setResult(null); setFile(null) }}>
+              새 분석 추가
             </button>
           </div>
+          <p className="helper-text">현재 영상은 이미 저장되었습니다. 새 분석을 추가해도 이 기록은 유지됩니다.</p>
         </section>
       </div>
     )

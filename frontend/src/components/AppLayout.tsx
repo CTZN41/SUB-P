@@ -33,8 +33,8 @@ export function AppLayout() {
 
         <div className="sidebar-note">
           <span>현재 단계</span>
-          <strong>Phase 6</strong>
-          <p>영상 등록부터 분석 작업 흐름 점검까지 사용할 수 있습니다.</p>
+          <strong>Phase 7</strong>
+          <p>개인 연습 영상에서 슛 후보를 찾고 직접 검토할 수 있습니다.</p>
         </div>
       </aside>
 

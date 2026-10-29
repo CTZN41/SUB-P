@@ -578,6 +578,10 @@ h1 {
 .player-row.selected { border-color: rgba(216,255,79,.6); }
 .player-row input { min-width: 0; padding: 9px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: #0f1814; color: white; }
 .player-row span { grid-column: 1 / -1; color: #87948c; font-size: .75rem; }
+.player-row button { grid-column: 1 / -1; min-height: 34px; }
+.box-controls { display: flex; gap: 18px; margin-top: 16px; color: #b8c3bc; font-size: .82rem; }
+.box-controls label { display: grid; flex: 1; gap: 6px; }
+.box-controls input { width: 100%; accent-color: #d8ff4f; }
 .inline-warning { padding: 10px 12px; border-radius: 9px; background: rgba(255,205,112,.08); color: #ffda91; font-size: .8rem; line-height: 1.45; }
 .full-button { width: 100%; margin-top: 16px; }
 .progress-page { max-width: 980px; }
@@ -596,6 +600,10 @@ h1 {
 .stage-list li.active span { background: #d8ff4f; color: #101915; box-shadow: 0 0 20px rgba(216,255,79,.25); }
 .stage-list li.done span { background: rgba(216,255,79,.15); color: #d8ff4f; }
 .success-note { padding: 14px 16px; border-radius: 12px; background: rgba(40,190,125,.1); color: #84e9b8; }
+
+@media (min-width: 901px) and (max-width: 1250px) {
+  .player-setup-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 @media (max-width: 900px) {
   .app-shell {

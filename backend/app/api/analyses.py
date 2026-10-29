@@ -3,7 +3,7 @@ from typing import Annotated
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -28,7 +28,8 @@ from app.services.court_calibration import (
     validate_points,
 )
 from app.services.video_registration import RegistrationError, register_video
-from app.services.analysis_jobs import cancel_job, current_job, refresh_simulation, start_simulation
+from app.services.analysis_jobs import cancel_job, current_job, read_phase7_result, refresh_simulation, run_phase7_job, start_phase7, start_simulation
+from app.analysis.phase7_pipeline import Phase7Error
 
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
@@ -167,7 +168,7 @@ def save_calibration(
     return calibration
 
 
-def player_warnings(players: list[Player]) -> list[str]:
+def player_warnings(players: list[Player], play_type: PlayType) -> list[str]:
     warnings: list[str] = []
     names = [player.display_name.strip().casefold() for player in players]
     numbers = [player.jersey_number.strip().casefold() for player in players if player.jersey_number and player.jersey_number.strip()]
@@ -175,7 +176,7 @@ def player_warnings(players: list[Player]) -> list[str]:
         warnings.append("같은 선수 이름이 있어 화면에서 구분하기 어려울 수 있습니다.")
     if len(numbers) != len(set(numbers)):
         warnings.append("같은 등번호가 있어 화면에서 구분하기 어려울 수 있습니다.")
-    if any(player.initial_box is None for player in players):
+    if play_type is not PlayType.SOLO and any(player.initial_box is None for player in players):
         warnings.append("화면 위치를 지정하지 않은 선수가 있어 자동 구분 정확도가 낮아질 수 있습니다.")
     return warnings
 
@@ -190,7 +191,7 @@ def get_players(
 ) -> PlayerListResponse:
     analysis = find_analysis(session, analysis_id)
     players = list_players_for(session, analysis_id)
-    return PlayerListResponse(players=players, warnings=player_warnings(players), max_players=PLAYER_LIMITS[analysis.play_type])
+    return PlayerListResponse(players=players, warnings=player_warnings(players, analysis.play_type), max_players=PLAYER_LIMITS[analysis.play_type])
 
 
 @router.post("/{analysis_id}/players", response_model=PlayerResponse, status_code=201)
@@ -287,6 +288,36 @@ def start_analysis_job(
     ensure_analysis_ready(request, session, analysis)
     job, _ = start_simulation(session, analysis)
     return job
+
+
+@router.post("/{analysis_id}/jobs/start-real", response_model=AnalysisJobResponse)
+def start_real_analysis_job(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    analysis_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> AnalysisJob:
+    analysis = find_analysis(session, analysis_id)
+    ensure_analysis_ready(request, session, analysis)
+    try:
+        job, created = start_phase7(session, analysis, request.app.state.settings)
+    except Phase7Error as error:
+        raise HTTPException(status_code=409, detail={"code": "PHASE7_NOT_READY", "message": str(error)}) from error
+    if created:
+        background_tasks.add_task(run_phase7_job, request.app.state.session_factory,
+                                  request.app.state.settings, analysis_id, job.id)
+    return job
+
+
+@router.get("/{analysis_id}/phase7-candidates")
+def get_phase7_candidates(
+    request: Request, analysis_id: str, session: Annotated[Session, Depends(get_db_session)]
+) -> dict:
+    find_analysis(session, analysis_id)
+    result = read_phase7_result(request.app.state.settings, analysis_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail={"code": "CANDIDATES_NOT_FOUND", "message": "저장된 슛 후보가 없습니다."})
+    return result
 
 
 @router.get("/{analysis_id}/jobs/current", response_model=AnalysisJobResponse)
