@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 SAMPLE_FPS = 8.0
 DETAILED_PERSON_HEIGHT_RATIO = .25
+SEGMENT_CONTEXT_MS = 3000
 
 
 class Phase7Error(RuntimeError):
@@ -78,6 +79,13 @@ def merge_candidates(candidates: list[dict[str, Any]], cooldown_ms: int = 2000) 
         else:
             merged.append(candidate)
     return merged
+
+
+def candidate_overlaps_range(candidate: dict[str, Any], start_ms: int, end_ms: int) -> bool:
+    """Keep a release just before the boundary when its tracked flight enters the range."""
+    candidate_time = int(candidate["time_ms"])
+    next_time = int(candidate.get("next_time_ms", candidate_time))
+    return candidate_time < end_ms and (candidate_time >= start_ms or next_time >= start_ms)
 
 
 def _detections(result: Any, names: dict[int, str]) -> dict[str, list[dict[str, Any]]]:
@@ -263,7 +271,8 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
         if start_ms < 0 or start_ms >= duration_ms or (end_ms is not None and end_ms <= start_ms):
             raise Phase7Error("분석할 영상 구간이 올바르지 않습니다.")
         step = max(1, round(fps / sample_fps))
-        first_frame = round(start_ms / 1000 * fps)
+        context_start_ms = max(0, start_ms - SEGMENT_CONTEXT_MS)
+        first_frame = round(context_start_ms / 1000 * fps)
         last_frame = min(count, round((end_ms or duration_ms) / 1000 * fps))
         person_last = None
         records: list[dict[str, Any]] = []
@@ -336,13 +345,19 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, sa
         release_candidates = trajectory_candidates(records, hoop_point, height)
         rim_candidates = rim_approach_candidates(records, hoop_point, height)
         candidates = merge_candidates([*release_candidates, *rim_candidates], cooldown_ms=1800)
+        range_end_ms = round(last_frame / fps * 1000)
+        candidates = [
+            candidate for candidate in candidates
+            if candidate_overlaps_range(candidate, start_ms, range_end_ms)
+        ]
         if not candidates:
             issues["슛 후보 없음 — 직접 확인 필요"] += 1
         if rim_frames == 0:
             issues["림 자동 탐지 실패 — 확인된 골대 위치 사용"] += 1
         return {"method": "phase7-yolo-trajectory-candidates-v2", "notice": "슛 후보이며 OpenAI 또는 사람의 검토 전에는 확정하지 않습니다.",
                 "source_fps": round(fps, 4), "sample_fps": round(fps/step, 4), "source_frame_count": count,
-                "duration_ms": duration_ms, "range_start_ms": start_ms, "range_end_ms": round(last_frame/fps*1000),
+                "duration_ms": duration_ms, "context_start_ms": context_start_ms,
+                "range_start_ms": start_ms, "range_end_ms": range_end_ms,
                 "sampled_frames": sampled, "person_frames": person_frames,
                 "ball_frames": ball_frames, "rim_frames": rim_frames,
                 "inference_sizes": {str(key): value for key, value in inference_sizes.items()},

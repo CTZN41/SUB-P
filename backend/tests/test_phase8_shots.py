@@ -141,3 +141,71 @@ def test_retry_updates_auto_shot_without_overwriting_confirmed_shot(tmp_path) ->
         assert len(list(session.scalars(select(Shot)))) == 1
         assert second.source is ShotSource.AUTO
     engine.dispose()
+
+
+def test_unknown_outcome_keeps_agreed_shot_type_for_partial_automation(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{(tmp_path / 'phase8.db').as_posix()}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        analysis, calibration = analysis_setup(session)
+        shot = materialize_shots_from_candidates(
+            session,
+            analysis,
+            calibration,
+            {"candidates": [{
+                "time_ms": 5000,
+                "foot_point_px": [25, 10],
+                "review_reasons": ["림 자동 탐지 실패 — 확인된 골대 위치 사용"],
+                "ai_review": {
+                    "is_shot": True,
+                    "outcome": "unclear",
+                    "shot_type": "dribble_pull_up",
+                    "sequence_start_offset_ms": -3000,
+                    "sequence_end_offset_ms": 3000,
+                    "review_required": True,
+                    "reason": "성공 여부 근거가 화면에 없음",
+                },
+            }]},
+        )[0]
+        session.commit()
+
+        assert shot.result is ShotResult.NEEDS_REVIEW
+        assert shot.shot_type is ShotType.DRIBBLE_PULL_UP
+        assert shot.status is ShotStatus.NEEDS_REVIEW
+        assert shot.court_x == 25
+        assert "성공·실패" in shot.review_reason
+        assert shot.confidence_data["diagnostic_reasons"]
+    engine.dispose()
+
+
+def test_local_diagnostic_warning_does_not_block_clear_ai_result(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{(tmp_path / 'phase8.db').as_posix()}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        analysis, calibration = analysis_setup(session)
+        shot = materialize_shots_from_candidates(
+            session,
+            analysis,
+            calibration,
+            {"candidates": [{
+                "time_ms": 5000,
+                "foot_point_px": [25, 10],
+                "review_reasons": ["림 자동 탐지 실패 — 확인된 골대 위치 사용"],
+                "ai_review": {
+                    "is_shot": True,
+                    "outcome": "made",
+                    "shot_type": "set_shot",
+                    "sequence_start_offset_ms": -3000,
+                    "sequence_end_offset_ms": 3000,
+                    "review_required": False,
+                },
+            }]},
+        )[0]
+        session.commit()
+
+        assert shot.result is ShotResult.MADE
+        assert shot.shot_type is ShotType.SET_SHOT
+        assert shot.status is ShotStatus.AUTO
+        assert shot.review_reason is None
+        assert shot.confidence_data["diagnostic_reasons"]
+    engine.dispose()

@@ -146,22 +146,30 @@ def materialize_shots_from_candidates(
     for candidate in candidates:
         candidate_time_ms = max(0, min(analysis.duration_ms, int(candidate["time_ms"])))
         reasons: list[str] = []
+        diagnostic_reasons: list[str] = []
         for reason in candidate.get("review_reasons") or []:
-            _append_reason(reasons, str(reason))
+            _append_reason(diagnostic_reasons, str(reason))
 
         ai_review = candidate.get("ai_review") or {}
         if ai_review.get("status") == "failed" or not ai_review:
             _append_reason(reasons, "OpenAI 보조 판정을 사용할 수 없어 로컬 후보를 보존")
-        if ai_review.get("review_required"):
-            _append_reason(reasons, ai_review.get("reason") or "OpenAI가 사람 확인을 권장")
 
         court_x, court_y, zone_code = _court_position(calibration, candidate, reasons)
         sequence_start_ms, sequence_end_ms = _sequence_bounds(
-            candidate_time_ms, analysis.duration_ms, ai_review, reasons
+            candidate_time_ms, analysis.duration_ms, ai_review, diagnostic_reasons
         )
         shot_result = _result(ai_review, reasons)
         shot_type = _shot_type(ai_review, reasons)
-        status = ShotStatus.NEEDS_REVIEW if reasons else ShotStatus.AUTO
+        if reasons:
+            _append_reason(reasons, ai_review.get("reason"))
+        unresolved = (
+            shot_result is ShotResult.NEEDS_REVIEW
+            or shot_type is ShotType.NEEDS_REVIEW
+            or court_x is None
+            or not ai_review.get("is_shot")
+            or ai_review.get("status") == "failed"
+        )
+        status = ShotStatus.NEEDS_REVIEW if unresolved else ShotStatus.AUTO
         shot = _existing_auto_shot(session, analysis.id, candidate_time_ms)
         if shot is not None and shot.status is ShotStatus.USER_CONFIRMED:
             shots.append(shot)
@@ -186,6 +194,7 @@ def materialize_shots_from_candidates(
         shot.confidence_data = {
             "local_confidence": candidate.get("confidence"),
             "candidate_source": candidate.get("candidate_source", "trajectory"),
+            "diagnostic_reasons": diagnostic_reasons,
             "ai_review": ai_review,
         }
         shots.append(shot)

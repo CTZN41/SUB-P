@@ -13,6 +13,7 @@ from app.models import Analysis, AnalysisJob, AnalysisStatus, CalibrationSource,
 from app.services.analysis_jobs import recover_stale_jobs, utc_now
 from app.services.analysis_jobs import run_phase7_job
 from app.analysis.phase7_pipeline import (
+    candidate_overlaps_range,
     Phase7Canceled,
     merge_candidates,
     release_candidate,
@@ -56,6 +57,15 @@ def test_missing_calibration_blocks_start(tmp_path) -> None:
         response = client.post(f"/api/analyses/{analysis_id}/jobs/start")
         assert response.status_code == 409 and "코트 위치 확인" in response.json()["detail"]["message"]
     engine.dispose()
+
+
+def test_candidate_crossing_segment_start_is_kept_without_old_context_candidates() -> None:
+    crossing = {"time_ms": 99_700, "next_time_ms": 100_200}
+    old = {"time_ms": 97_000, "next_time_ms": 97_500}
+    inside = {"time_ms": 101_000, "next_time_ms": 101_300}
+    assert candidate_overlaps_range(crossing, 100_000, 110_000) is True
+    assert candidate_overlaps_range(inside, 100_000, 110_000) is True
+    assert candidate_overlaps_range(old, 100_000, 110_000) is False
 
 
 def test_stale_running_job_is_recovered_as_failed(tmp_path) -> None:

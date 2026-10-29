@@ -12,15 +12,20 @@ from pydantic import BaseModel, Field
 from app.core.config import Settings
 
 
-FRAME_OFFSETS_MS = (-2400, -1500, -900, -300, 0, 300, 700, 1200, 1800, 2500)
-FOCUS_OFFSETS_MS = (-900, -300, 0, 300)
+FRAME_OFFSETS_MS = (
+    -5000, -4000, -3200, -2500, -1800, -1200, -700, -300,
+    0, 300, 700, 1200, 1800, 2600, 3500, 4500, 5500,
+)
+FOCUS_OFFSETS_MS = (-1200, -700, -300, 0, 300, 700)
 ESCALATION_CONFIDENCE = 0.65
 
 
 class ShotReviewDecision(BaseModel):
     is_shot: bool
     confidence: float = Field(ge=0, le=1)
+    is_shot_confidence: float = Field(ge=0, le=1)
     outcome: Literal["made", "missed", "unclear"]
+    outcome_confidence: float = Field(ge=0, le=1)
     shot_type: Literal[
         "catch_and_shoot",
         "set_shot",
@@ -33,6 +38,19 @@ class ShotReviewDecision(BaseModel):
         "other",
         "needs_review",
     ]
+    shot_type_confidence: float = Field(ge=0, le=1)
+    visible_evidence: list[Literal[
+        "release",
+        "ball_rising",
+        "rim_passage",
+        "rim_deflection",
+        "ball_falling_below_rim",
+        "rebound_behavior",
+        "scoreboard_change",
+        "camera_cut",
+        "rim_not_visible",
+        "ball_path_not_visible",
+    ]]
     sequence_start_offset_ms: int = Field(ge=-20000, le=0)
     sequence_end_offset_ms: int = Field(ge=0, le=20000)
     review_required: bool
@@ -125,16 +143,19 @@ def _review_once(
                 "type": "input_text",
                 "text": (
                     "The images are chronological frames from one basketball shot candidate. "
-                    "The first ten images show the full scene at offsets -2400, -1500, -900, -300, "
-                    "0, +300, +700, +1200, +1800, and +2500 milliseconds from the candidate. "
+                    "The first seventeen images show the full scene from -5000 through +5500 "
+                    "milliseconds, sampled more densely around the release. "
                     "If more images follow, they are chronological "
-                    "close-ups of the detected player at -900, -300, 0, and +300 milliseconds. "
-                    "Decide whether a player actually attempts a shot. If visible, classify make or miss "
-                    "and choose exactly one shot type from the response schema. Set sequence offsets to "
+                    "close-ups of the detected player from -1200 through +700 milliseconds. "
+                    "Judge shot attempt, shot type, and outcome independently and give a confidence for "
+                    "each. For outcome, first use visible rim passage or rim deflection. If those are not "
+                    "clear, consider the ball falling below the rim, the player's rebound behavior, and a "
+                    "visible scoreboard or shot-counter change as secondary evidence. Never invent evidence "
+                    "that is off-screen. If a shot attempt and type are visible but the outcome is not, keep "
+                    "the shot and type and return outcome=unclear. Set sequence offsets to "
                     "cover preparation through the visible result, normally 3 to 15 seconds total and "
-                    "never beyond the schema limits. Judge only visible evidence; use unclear for outcome, "
-                    "needs_review for shot type, and review_required when the release, rim, ball path, or "
-                    "shot type is insufficient. Do not infer from pose alone."
+                    "never beyond the schema limits. Use needs_review for shot type only when the movement "
+                    "itself is not classifiable. List only evidence actually visible in the supplied frames."
                 ),
             }, *images],
         }],
@@ -144,6 +165,63 @@ def _review_once(
     if parsed is None:
         raise OpenAIShotReviewError("AI가 판정 형식에 맞는 결과를 반환하지 않았습니다.")
     return parsed, _usage_dict(response)
+
+
+def _needs_fallback(decision: ShotReviewDecision) -> bool:
+    return (
+        not decision.is_shot
+        or decision.review_required
+        or decision.outcome == "unclear"
+        or decision.shot_type == "needs_review"
+        or min(
+            decision.confidence,
+            decision.is_shot_confidence,
+            decision.outcome_confidence,
+            decision.shot_type_confidence,
+        ) < ESCALATION_CONFIDENCE
+    )
+
+
+def _consensus(primary: ShotReviewDecision, fallback: ShotReviewDecision) -> dict:
+    shot_agrees = primary.is_shot == fallback.is_shot
+    type_agrees = (
+        primary.shot_type == fallback.shot_type
+        and primary.shot_type != "needs_review"
+    )
+    outcome_agrees = (
+        primary.outcome == fallback.outcome
+        and primary.outcome in {"made", "missed"}
+    )
+    is_shot = primary.is_shot if shot_agrees else (primary.is_shot or fallback.is_shot)
+    shot_type = primary.shot_type if type_agrees else "needs_review"
+    outcome = primary.outcome if outcome_agrees else "unclear"
+    unresolved = not shot_agrees or (is_shot and (not type_agrees or not outcome_agrees))
+    reasons = []
+    if not shot_agrees:
+        reasons.append("Terra와 Sol의 슛 여부 판단이 다름")
+    if is_shot and not type_agrees:
+        reasons.append("Terra와 Sol의 슛 종류 판단이 다름")
+    if is_shot and not outcome_agrees:
+        reasons.append("성공·실패를 두 모델이 같은 근거로 확정하지 못함")
+    return {
+        "is_shot": is_shot,
+        "confidence": min(primary.confidence, fallback.confidence),
+        "is_shot_confidence": min(primary.is_shot_confidence, fallback.is_shot_confidence),
+        "outcome": outcome,
+        "outcome_confidence": min(primary.outcome_confidence, fallback.outcome_confidence),
+        "shot_type": shot_type,
+        "shot_type_confidence": min(primary.shot_type_confidence, fallback.shot_type_confidence),
+        "visible_evidence": sorted(set(primary.visible_evidence + fallback.visible_evidence)),
+        "sequence_start_offset_ms": min(primary.sequence_start_offset_ms, fallback.sequence_start_offset_ms),
+        "sequence_end_offset_ms": max(primary.sequence_end_offset_ms, fallback.sequence_end_offset_ms),
+        "review_required": unresolved,
+        "reason": "; ".join(reasons) or "Terra와 Sol의 판단이 일치함",
+        "consensus": {
+            "shot_agrees": shot_agrees,
+            "shot_type_agrees": type_agrees,
+            "outcome_agrees": outcome_agrees,
+        },
+    }
 
 
 def review_candidates_with_openai(
@@ -177,19 +255,17 @@ def review_candidates_with_openai(
                 int(candidate["time_ms"]),
                 candidate.get("foot_point_px"),
             )
-            decision, usage = _review_once(client, settings.openai_vision_model, images)
+            primary, usage = _review_once(client, settings.openai_vision_model, images)
             attempts.append({"model": settings.openai_vision_model, "effort": "low", "usage": usage})
             final_model = settings.openai_vision_model
+            final_review = primary.model_dump()
+            model_decisions = {"primary": primary.model_dump()}
             if (
                 settings.openai_vision_fallback_model
-                and (
-                    not decision.is_shot
-                    or decision.review_required
-                    or decision.confidence < ESCALATION_CONFIDENCE
-                )
+                and _needs_fallback(primary)
             ):
-                fallback_effort = "medium" if not decision.is_shot else "low"
-                decision, usage = _review_once(
+                fallback_effort = "medium" if not primary.is_shot else "low"
+                fallback, usage = _review_once(
                     client,
                     settings.openai_vision_fallback_model,
                     images,
@@ -202,13 +278,16 @@ def review_candidates_with_openai(
                 })
                 final_model = settings.openai_vision_fallback_model
                 escalated += 1
-            local_ai_conflict = not decision.is_shot
+                model_decisions["fallback"] = fallback.model_dump()
+                final_review = _consensus(primary, fallback)
+            local_ai_conflict = not final_review["is_shot"]
             candidate["ai_review"] = {
-                **decision.model_dump(),
-                "review_required": decision.review_required or local_ai_conflict,
+                **final_review,
+                "review_required": final_review["review_required"] or local_ai_conflict,
                 "local_ai_conflict": local_ai_conflict,
                 "model": final_model,
                 "attempts": attempts,
+                "model_decisions": model_decisions,
             }
             reviewed += 1
         except Exception:

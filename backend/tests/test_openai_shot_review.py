@@ -18,12 +18,23 @@ class FakeResponses:
         )
 
 
-def decision(confidence: float, review_required: bool, *, is_shot: bool = True) -> ShotReviewDecision:
+def decision(
+    confidence: float,
+    review_required: bool,
+    *,
+    is_shot: bool = True,
+    outcome: str | None = None,
+    shot_type: str = "set_shot",
+) -> ShotReviewDecision:
     return ShotReviewDecision(
         is_shot=is_shot,
         confidence=confidence,
-        outcome="unclear" if review_required else "made",
-        shot_type="set_shot",
+        is_shot_confidence=confidence,
+        outcome=outcome or ("unclear" if review_required or not is_shot else "made"),
+        outcome_confidence=confidence,
+        shot_type=shot_type,
+        shot_type_confidence=confidence,
+        visible_evidence=["release"],
         sequence_start_offset_ms=-2000,
         sequence_end_offset_ms=2000,
         review_required=review_required,
@@ -54,7 +65,59 @@ def test_ambiguous_terra_result_escalates_once_to_sol(tmp_path, monkeypatch) -> 
     assert [call["model"] for call in responses.calls] == ["gpt-6.1-terra", "gpt-6.1-sol"]
     assert all("astra" not in call["model"] for call in responses.calls)
     assert result["candidates"][0]["ai_review"]["model"] == "gpt-6.1-sol"
+    assert result["candidates"][0]["ai_review"]["outcome"] == "unclear"
+    assert result["candidates"][0]["ai_review"]["review_required"] is True
     assert result["ai_review"]["escalated"] == 1
+
+
+def test_matching_terra_and_sol_results_are_auto_consensus(tmp_path, monkeypatch) -> None:
+    responses = FakeResponses([
+        decision(.6, True, outcome="made"),
+        decision(.9, False, outcome="made"),
+    ])
+    client = SimpleNamespace(responses=responses)
+    monkeypatch.setattr(
+        "app.services.openai_shot_review.candidate_frame_inputs",
+        lambda *args: [{"type": "input_image", "image_url": "data:image/jpeg;base64,test", "detail": "high"}],
+    )
+    result = review_candidates_with_openai(
+        tmp_path / "video.mp4",
+        {"candidates": [{"time_ms": 1000}]},
+        Settings(_env_file=None, openai_api_key="test-key"),
+        client=client,
+    )
+    review = result["candidates"][0]["ai_review"]
+    assert review["outcome"] == "made"
+    assert review["shot_type"] == "set_shot"
+    assert review["review_required"] is False
+    assert review["consensus"] == {
+        "shot_agrees": True,
+        "shot_type_agrees": True,
+        "outcome_agrees": True,
+    }
+
+
+def test_unclear_outcome_preserves_agreed_shot_type(tmp_path, monkeypatch) -> None:
+    responses = FakeResponses([
+        decision(.8, True, outcome="unclear", shot_type="dribble_pull_up"),
+        decision(.9, True, outcome="unclear", shot_type="dribble_pull_up"),
+    ])
+    client = SimpleNamespace(responses=responses)
+    monkeypatch.setattr(
+        "app.services.openai_shot_review.candidate_frame_inputs",
+        lambda *args: [{"type": "input_image", "image_url": "data:image/jpeg;base64,test", "detail": "high"}],
+    )
+    result = review_candidates_with_openai(
+        tmp_path / "video.mp4",
+        {"candidates": [{"time_ms": 1000}]},
+        Settings(_env_file=None, openai_api_key="test-key"),
+        client=client,
+    )
+    review = result["candidates"][0]["ai_review"]
+    assert review["is_shot"] is True
+    assert review["shot_type"] == "dribble_pull_up"
+    assert review["outcome"] == "unclear"
+    assert review["review_required"] is True
 
 
 def test_confident_terra_result_does_not_escalate(tmp_path, monkeypatch) -> None:
