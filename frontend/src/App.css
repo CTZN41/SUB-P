@@ -626,7 +626,7 @@ h1 {
 .heat-zone.cold path { fill: #c8493f; }
 .heat-zone.empty path { fill: #8c948f; }
 .heat-zone:hover > path, .heat-zone:focus > path { filter: brightness(1.12); stroke: #fff; }
-.heat-zone.selected > path { filter: brightness(1.18); stroke: #d8ff4f; stroke-width: 5; }
+.heat-zone.selected > path { filter: brightness(1.18) drop-shadow(0 0 5px rgba(255,255,255,.5)); stroke: #fff; stroke-width: 4; }
 .zone-stat-card rect { fill: rgba(244,249,245,.72); stroke: rgba(30,35,31,.12); stroke-width: 1; }
 .zone-stat-card text { fill: #111; font-size: 8px; font-weight: 650; text-anchor: middle; pointer-events: none; }
 .zone-stat-card .zone-fraction { font-size: 14px; font-weight: 800; }
