@@ -17,8 +17,8 @@ type ZoneShape = {
 }
 
 const ZONES: ZoneShape[] = [
-  { code: 'three_corner_left', label: '왼쪽 코너 3점', path: 'M0 0H30V140H0Z', cardX: 31, cardY: 84, cardWidth: 48 },
-  { code: 'three_corner_right', label: '오른쪽 코너 3점', path: 'M470 0H500V140H470Z', cardX: 469, cardY: 84, cardWidth: 48 },
+  { code: 'three_corner_left', label: '왼쪽 코너 3점', path: 'M0 0H30V140H0Z', cardX: 38, cardY: 84, cardWidth: 70 },
+  { code: 'three_corner_right', label: '오른쪽 코너 3점', path: 'M470 0H500V140H470Z', cardX: 462, cardY: 84, cardWidth: 70 },
   { code: 'three_wing_left', label: '왼쪽 윙 3점', path: 'M0 140H30C55 215 110 265 200 286L150 470H0Z', cardX: 80, cardY: 370 },
   { code: 'three_center', label: '정면 3점', path: 'M200 286Q250 300 300 286L350 470H150Z', cardX: 250, cardY: 406 },
   { code: 'three_wing_right', label: '오른쪽 윙 3점', path: 'M500 140H470C445 215 390 265 300 286L350 470H500Z', cardX: 420, cardY: 370 },
@@ -73,7 +73,6 @@ export function ShotHeatmap({
         const stat = statistics[zone.code]
         const rate = stat?.success_rate
         const selectedNow = selectedZone === zone.code
-        const width = zone.cardWidth ?? 82
         const detail = rate == null ? '데이터 없음' : `${rate.toFixed(1)}% · 비중 ${(stat?.attempt_share ?? 0).toFixed(1)}% · 전체 대비 ${(stat?.difference_from_overall ?? 0).toFixed(1)}%p`
         return <g
           className={`heat-zone ${zoneTone(stat)}${selectedNow ? ' selected' : ''}`}
@@ -85,13 +84,6 @@ export function ShotHeatmap({
           onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(zone.code) } }}
         >
           <path d={zone.path}><title>{`${zone.label} · ${stat?.made ?? 0}/${stat?.attempts ?? 0} · ${detail}`}</title></path>
-          <g className="zone-stat-card" transform={`translate(${zone.cardX - width / 2} ${zone.cardY - 34})`}>
-            <rect width={width} height="68" rx="5" />
-            <text className="zone-fraction" x={width / 2} y="19">{stat?.made ?? 0}/{stat?.attempts ?? 0}</text>
-            <text x={width / 2} y="34">{percent(rate)}</text>
-            <text x={width / 2} y="48">AVG {percent(overallRate)}</text>
-            <text x={width / 2} y="61">DST {percent(stat?.attempt_share ?? 0)}</text>
-          </g>
         </g>
       })}
       <g className="court-lines" aria-hidden="true">
@@ -104,6 +96,22 @@ export function ShotHeatmap({
         <path d="M205 190A45 45 0 0 0 295 190" />
         <path d="M190 470A60 60 0 0 1 310 470" />
       </g>
+      {ZONES.map((zone) => {
+        const stat = statistics[zone.code]
+        const width = zone.cardWidth ?? 82
+        return <g
+          className="zone-stat-card"
+          key={`${zone.code}-statistics`}
+          transform={`translate(${zone.cardX - width / 2} ${zone.cardY - 34})`}
+          onClick={() => onSelect(zone.code)}
+        >
+          <rect width={width} height="68" rx="5" />
+          <text className="zone-fraction" x={width / 2} y="19">{stat?.made ?? 0}/{stat?.attempts ?? 0}</text>
+          <text x={width / 2} y="34">{percent(stat?.success_rate)}</text>
+          <text x={width / 2} y="48">AVG {percent(overallRate)}</text>
+          <text x={width / 2} y="61">DST {percent(stat?.attempt_share ?? 0)}</text>
+        </g>
+      })}
     </svg>
     <div className="selected-zone-detail" aria-live="polite">
       {selected ? <><strong>{selected.label}</strong><span>성공/시도 {selectedStat?.made ?? 0}/{selectedStat?.attempts ?? 0}</span><span>성공률 {percent(selectedStat?.success_rate)}</span><span>슛 비중 {percent(selectedStat?.attempt_share ?? 0)}</span><span>전체 대비 {selectedStat?.difference_from_overall == null ? '-' : `${selectedStat.difference_from_overall > 0 ? '+' : ''}${selectedStat.difference_from_overall.toFixed(1)}%p`}</span></> : <span>구역을 선택하면 해당 구역의 슛 목록과 상세 수치를 볼 수 있습니다.</span>}
