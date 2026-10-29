@@ -622,7 +622,6 @@ h1 {
 .heat-zone { cursor: pointer; outline: none; }
 .heat-zone > path { fill-opacity: .84; stroke: #2f3130; stroke-width: 3; transition: filter .16s ease, stroke .16s ease; }
 .heat-zone.hot path { fill: #329b65; }
-.heat-zone.even path { fill: #efe59a; }
 .heat-zone.cold path { fill: #c8493f; }
 .heat-zone.empty path { fill: #8c948f; }
 .heat-zone:hover > path, .heat-zone:focus > path { filter: brightness(1.12); stroke: #fff; }
@@ -639,7 +638,6 @@ h1 {
 .heatmap-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .heatmap-legend i { width: 12px; height: 12px; border-radius: 3px; }
 .heatmap-legend i.hot { background: #329b65; }
-.heatmap-legend i.even { background: #e0c96a; }
 .heatmap-legend i.cold { background: #c8584e; }
 .heatmap-legend i.empty { background: #6f7973; }
 .stat-breakdowns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
