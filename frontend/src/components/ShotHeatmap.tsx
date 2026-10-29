@@ -1,0 +1,115 @@
+type ZoneStat = {
+  attempts: number
+  made: number
+  missed: number
+  success_rate: number | null
+  attempt_share: number | null
+  difference_from_overall: number | null
+}
+
+type ZoneShape = {
+  code: string
+  label: string
+  path: string
+  cardX: number
+  cardY: number
+  cardWidth?: number
+}
+
+const ZONES: ZoneShape[] = [
+  { code: 'three_corner_left', label: '왼쪽 코너 3점', path: 'M0 0H30V140H0Z', cardX: 48, cardY: 82 },
+  { code: 'three_corner_right', label: '오른쪽 코너 3점', path: 'M470 0H500V140H470Z', cardX: 452, cardY: 82 },
+  { code: 'three_wing_left', label: '왼쪽 윙 3점', path: 'M0 140H30C52 220 98 292 175 330L145 470H0Z', cardX: 82, cardY: 372 },
+  { code: 'three_center', label: '정면 3점', path: 'M175 330Q250 365 325 330L355 470H145Z', cardX: 250, cardY: 406 },
+  { code: 'three_wing_right', label: '오른쪽 윙 3점', path: 'M500 140H470C448 220 402 292 325 330L355 470H500Z', cardX: 418, cardY: 372 },
+  { code: 'mid_baseline_left', label: '왼쪽 베이스라인 미드레인지', path: 'M30 0H170V130H90Q48 106 30 70Z', cardX: 92, cardY: 85 },
+  { code: 'mid_wing_left', label: '왼쪽 윙 미드레인지', path: 'M30 70Q48 190 175 330L205 205Q126 178 90 130H90Q48 106 30 70Z', cardX: 122, cardY: 260 },
+  { code: 'mid_center', label: '정면 미드레인지', path: 'M205 205Q250 225 295 205L325 330Q250 365 175 330Z', cardX: 250, cardY: 296 },
+  { code: 'mid_wing_right', label: '오른쪽 윙 미드레인지', path: 'M470 70Q452 190 325 330L295 205Q374 178 410 130H410Q452 106 470 70Z', cardX: 378, cardY: 260 },
+  { code: 'mid_baseline_right', label: '오른쪽 베이스라인 미드레인지', path: 'M330 0H470V70Q452 106 410 130H330Z', cardX: 408, cardY: 85 },
+  { code: 'paint_left', label: '페인트존 왼쪽', path: 'M170 0H223V190H170Z', cardX: 195, cardY: 160, cardWidth: 52 },
+  { code: 'paint_center', label: '페인트존 중앙', path: 'M223 0H277V190H223Z', cardX: 250, cardY: 160, cardWidth: 52 },
+  { code: 'paint_right', label: '페인트존 오른쪽', path: 'M277 0H330V190H277Z', cardX: 305, cardY: 160, cardWidth: 52 },
+  { code: 'restricted', label: '골밑', path: 'M210 53A40 40 0 1 0 290 53A40 40 0 1 0 210 53Z', cardX: 250, cardY: 65, cardWidth: 72 },
+]
+
+function zoneTone(stat: ZoneStat | undefined) {
+  if (!stat?.attempts) return 'empty'
+  const difference = stat.difference_from_overall ?? 0
+  if (difference > 5) return 'hot'
+  if (difference < -5) return 'cold'
+  return 'even'
+}
+
+function percent(value: number | null | undefined) {
+  return value == null ? '-' : `${value.toFixed(1)}%`
+}
+
+export function ShotHeatmap({
+  statistics,
+  overallRate,
+  selectedZone,
+  onSelect,
+}: {
+  statistics: Record<string, ZoneStat>
+  overallRate: number | null
+  selectedZone: string | null
+  onSelect: (zone: string) => void
+}) {
+  const selected = ZONES.find((zone) => zone.code === selectedZone)
+  const selectedStat = selectedZone ? statistics[selectedZone] : undefined
+  return <div className="heatmap-wrap">
+    <div className="heatmap-heading"><strong>구역별 슈팅 효율</strong><span>AVG: 현재 필터 전체 성공률 · DST: 전체 슛 중 해당 구역 비중</span></div>
+    <svg className="shot-heatmap" viewBox="0 0 500 470" role="img" aria-label="14개 구역 슈팅 히트맵">
+      <defs>
+        <pattern id="courtWood" width="18" height="470" patternUnits="userSpaceOnUse">
+          <rect width="18" height="470" fill="#d5b77d" />
+          <path d="M1 0V470M17 0V470" stroke="#efd7a9" strokeWidth="1" opacity=".48" />
+          <path d="M5 0V470M12 0V470" stroke="#a88757" strokeWidth=".55" opacity=".25" />
+        </pattern>
+      </defs>
+      <rect className="court-surface" x="0" y="0" width="500" height="470" rx="8" />
+      {ZONES.map((zone) => {
+        const stat = statistics[zone.code]
+        const rate = stat?.success_rate
+        const selectedNow = selectedZone === zone.code
+        const width = zone.cardWidth ?? 82
+        const detail = rate == null ? '데이터 없음' : `${rate.toFixed(1)}% · 비중 ${(stat?.attempt_share ?? 0).toFixed(1)}% · 전체 대비 ${(stat?.difference_from_overall ?? 0).toFixed(1)}%p`
+        return <g
+          className={`heat-zone ${zoneTone(stat)}${selectedNow ? ' selected' : ''}`}
+          key={zone.code}
+          role="button"
+          tabIndex={0}
+          aria-label={`${zone.label}, ${stat?.made ?? 0}/${stat?.attempts ?? 0}, ${detail}`}
+          onClick={() => onSelect(zone.code)}
+          onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(zone.code) } }}
+        >
+          <path d={zone.path}><title>{`${zone.label} · ${stat?.made ?? 0}/${stat?.attempts ?? 0} · ${detail}`}</title></path>
+          <g className="zone-stat-card" transform={`translate(${zone.cardX - width / 2} ${zone.cardY - 34})`}>
+            <rect width={width} height="68" rx="5" />
+            <text className="zone-fraction" x={width / 2} y="19">{stat?.made ?? 0}/{stat?.attempts ?? 0}</text>
+            <text x={width / 2} y="34">{percent(rate)}</text>
+            <text x={width / 2} y="48">AVG {percent(overallRate)}</text>
+            <text x={width / 2} y="61">DST {percent(stat?.attempt_share ?? 0)}</text>
+          </g>
+        </g>
+      })}
+      <g className="court-lines" aria-hidden="true">
+        <rect x="1" y="1" width="498" height="468" rx="8" />
+        <path d="M30 0V140M470 0V140M30 140A237.5 237.5 0 0 0 470 140" />
+        <rect x="170" y="0" width="160" height="190" />
+        <path d="M210 53A40 40 0 0 0 290 53" />
+        <circle cx="250" cy="53" r="7" />
+        <path d="M228 34H272" />
+        <path d="M205 190A45 45 0 0 0 295 190" />
+        <path d="M190 470A60 60 0 0 1 310 470" />
+      </g>
+    </svg>
+    <div className="selected-zone-detail" aria-live="polite">
+      {selected ? <><strong>{selected.label}</strong><span>성공/시도 {selectedStat?.made ?? 0}/{selectedStat?.attempts ?? 0}</span><span>성공률 {percent(selectedStat?.success_rate)}</span><span>슛 비중 {percent(selectedStat?.attempt_share ?? 0)}</span><span>전체 대비 {selectedStat?.difference_from_overall == null ? '-' : `${selectedStat.difference_from_overall > 0 ? '+' : ''}${selectedStat.difference_from_overall.toFixed(1)}%p`}</span></> : <span>구역을 선택하면 해당 구역의 슛 목록과 상세 수치를 볼 수 있습니다.</span>}
+    </div>
+    <div className="heatmap-legend" aria-label="히트맵 색상 설명">
+      <span><i className="cold" />전체보다 낮음</span><span><i className="even" />전체와 비슷</span><span><i className="hot" />전체보다 높음</span><span><i className="empty" />데이터 없음</span>
+    </div>
+  </div>
+}

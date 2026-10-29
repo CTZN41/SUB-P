@@ -12,6 +12,7 @@ from app.api.analyses import router
 from app.core.config import Settings
 from app.db.base import Base
 from app.models import Analysis, AnalysisStatus, Player
+from app.services.video_registration import video_codec
 
 
 def make_mp4(path: Path, *, fps: float = 30, frames: int = 12) -> bytes:
@@ -89,6 +90,9 @@ def test_valid_mp4_is_saved_with_metadata_and_default_player(tmp_path) -> None:
         assert analysis.warnings_accepted is True
         assert player is not None and player.display_name == "선수 A"
         assert (settings.upload_path / analysis.id / "original.mp4").is_file()
+        playback = settings.upload_path / analysis.id / "playback.mp4"
+        assert playback.is_file()
+        assert video_codec(playback) in {"h264", "avc1", "x264"}
     engine.dispose()
 
 

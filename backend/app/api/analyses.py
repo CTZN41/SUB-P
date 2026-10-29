@@ -45,7 +45,7 @@ from app.services.court_calibration import (
     resolve_video_path,
     validate_points,
 )
-from app.services.video_registration import RegistrationError, register_video
+from app.services.video_registration import RegistrationError, playback_video_path, register_video
 from app.services.analysis_jobs import cancel_job, current_job, read_phase7_result, refresh_simulation, run_phase7_job, start_phase7, start_simulation
 from app.analysis.phase7_pipeline import Phase7Error
 from app.services.court_zones import ZONE_LABELS, ZoneCode, classify_zone
@@ -457,7 +457,7 @@ def get_analysis_video(
     session: Annotated[Session, Depends(get_db_session)],
 ) -> FileResponse:
     analysis = find_analysis(session, analysis_id)
-    video_path = request.app.state.settings.upload_path / analysis.id / "original.mp4"
+    video_path = playback_video_path(request.app.state.settings.upload_path / analysis.id)
     if not video_path.is_file():
         raise HTTPException(
             status_code=404,
@@ -470,11 +470,23 @@ def get_analysis_video(
 def list_shots(
     analysis_id: str,
     session: Annotated[Session, Depends(get_db_session)],
+    player_id: str | None = None,
+    result: ShotResult | None = None,
+    shot_type: ShotType | None = None,
 ) -> ShotListResponse:
     analysis = find_analysis(session, analysis_id)
+    if player_id is not None:
+        _find_shot_player(session, analysis_id, player_id)
+    statement = select(Shot).where(Shot.analysis_id == analysis_id)
+    if player_id is not None:
+        statement = statement.where(Shot.player_id == player_id)
+    if result is not None:
+        statement = statement.where(Shot.result == result)
+    if shot_type is not None:
+        statement = statement.where(Shot.shot_type == shot_type)
     shots = list(
         session.scalars(
-            select(Shot).where(Shot.analysis_id == analysis_id).order_by(Shot.candidate_time_ms, Shot.created_at)
+            statement.order_by(Shot.candidate_time_ms, Shot.created_at)
         )
     )
     return ShotListResponse(

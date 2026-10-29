@@ -165,3 +165,65 @@ def test_original_video_is_available_for_sequence_playback(tmp_path) -> None:
         assert response.headers["accept-ranges"] == "bytes"
         assert response.headers["content-type"].startswith("video/mp4")
     engine.dispose()
+
+
+def test_browser_compatible_playback_copy_is_preferred(tmp_path) -> None:
+    client, engine, (analysis_id, _, _) = make_client(tmp_path)
+    analysis_folder = client.app.state.settings.upload_path / analysis_id
+    (analysis_folder / "playback.mp4").write_bytes(b"browser-compatible")
+    with client:
+        response = client.get(f"/api/analyses/{analysis_id}/video")
+        assert response.status_code == 200
+        assert response.content == b"browser-compatible"
+    engine.dispose()
+
+
+def test_shot_filters_apply_to_list_and_statistics(tmp_path) -> None:
+    client, engine, (analysis_id, player_id, shot_id) = make_client(tmp_path)
+    with client:
+        confirmed = client.patch(
+            f"/api/analyses/{analysis_id}/shots/{shot_id}",
+            json={
+                "player_id": player_id,
+                "candidate_time_ms": 3000,
+                "sequence_start_ms": 1000,
+                "sequence_end_ms": 5000,
+                "court_x": 25,
+                "court_y": 6,
+                "result": "made",
+                "shot_type": "layup",
+            },
+        )
+        assert confirmed.status_code == 200
+        missed = client.post(
+            f"/api/analyses/{analysis_id}/shots",
+            json={
+                "player_id": player_id,
+                "candidate_time_ms": 8000,
+                "sequence_start_ms": 6000,
+                "sequence_end_ms": 10_000,
+                "court_x": 2,
+                "court_y": 8,
+                "result": "missed",
+                "shot_type": "set_shot",
+            },
+        )
+        assert missed.status_code == 201
+
+        filtered = client.get(
+            f"/api/analyses/{analysis_id}/shots",
+            params={"player_id": player_id, "result": "made", "shot_type": "layup"},
+        )
+        assert filtered.status_code == 200
+        payload = filtered.json()
+        assert [shot["id"] for shot in payload["shots"]] == [shot_id]
+        assert payload["statistics"]["overall"]["attempts"] == 1
+        assert payload["statistics"]["overall"]["success_rate"] == 100.0
+        assert payload["statistics"]["by_zone"]["restricted"]["attempts"] == 1
+        assert payload["statistics"]["by_zone"]["three_corner_left"]["attempts"] == 0
+
+        invalid_player = client.get(
+            f"/api/analyses/{analysis_id}/shots", params={"player_id": "missing"}
+        )
+        assert invalid_player.status_code == 400
+    engine.dispose()

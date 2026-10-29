@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import errno
 import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
+import imageio_ffmpeg
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
@@ -58,6 +60,54 @@ def validate_confirmations(
 def has_mp4_signature(path: Path) -> bool:
     with path.open("rb") as stream:
         return b"ftyp" in stream.read(64)
+
+
+def video_codec(path: Path) -> str:
+    capture = cv2.VideoCapture(str(path))
+    if not capture.isOpened():
+        return ""
+    try:
+        code = int(capture.get(cv2.CAP_PROP_FOURCC))
+        return "".join(chr((code >> (8 * index)) & 0xFF) for index in range(4)).strip("\x00").lower()
+    finally:
+        capture.release()
+
+
+def ensure_browser_playback(source: Path) -> Path | None:
+    """Create an H.264 copy only when the uploaded MP4 is not browser-safe."""
+    if video_codec(source) in {"h264", "avc1", "x264"}:
+        return None
+    destination = source.with_name("playback.mp4")
+    result = subprocess.run(
+        [
+            imageio_ffmpeg.get_ffmpeg_exe(),
+            "-y",
+            "-i", str(source),
+            "-map", "0:v:0",
+            "-map", "0:a?",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "21",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-movflags", "+faststart",
+            str(destination),
+        ],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0 or not destination.is_file() or destination.stat().st_size == 0:
+        destination.unlink(missing_ok=True)
+        raise RegistrationError(
+            "VIDEO_CONVERSION_FAILED",
+            "브라우저에서 재생할 영상으로 변환하지 못했습니다. 다른 MP4를 선택해 주세요.",
+        )
+    return destination
+
+
+def playback_video_path(analysis_folder: Path) -> Path:
+    compatible = analysis_folder / "playback.mp4"
+    return compatible if compatible.is_file() else analysis_folder / "original.mp4"
 
 
 def probe_video(path: Path, max_duration_ms: int) -> VideoMetadata:
@@ -160,6 +210,11 @@ async def register_video(
     try:
         file_size = await save_upload(upload, stored_file, settings.max_video_bytes)
         metadata = probe_video(stored_file, settings.max_video_minutes * 60_000)
+        playback_file = ensure_browser_playback(stored_file)
+        if playback_file is not None:
+            metadata.warnings.append(
+                "브라우저 재생을 위해 H.264 호환 영상이 자동으로 준비됐습니다. 업로드 원본은 그대로 보존됩니다."
+            )
         analysis = Analysis(
             id=analysis_id,
             title=clean_title,
