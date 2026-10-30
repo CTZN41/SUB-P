@@ -124,6 +124,7 @@ export function ShotReviewPage() {
     const first = data?.shots.find((shot) => shot.zone_code === nextZone)
     if (first) choose(first)
   }
+  if (!data) return <div className="page shot-review-page"><p role="status" className="inline-warning">{error || '분석 결과를 불러오는 중입니다…'}</p></div>
   return <div className="page shot-review-page">
     <header className="setup-header"><div><p className="eyebrow">RESULTS & HEATMAP</p><h1>{analysis?.title ?? '슛 분석 결과'}</h1><p className="lead">요약과 14개 구역 히트맵을 보고, 필요한 기록은 원본 장면에서 바로 확인합니다.</p>{analysis && analysis.play_type !== 'solo' && <p className="inline-warning">다인원 자동 추적은 아직 지원하지 않습니다. 원본 영상을 보면서 슛과 선수를 직접 기록해 주세요.</p>}</div><Link className="button secondary" to={`/progress/${analysisId}`}>분석 화면</Link></header>
     <section className="review-summary" aria-label="결과 요약"><div><span>전체 후보</span><strong>{stats?.attempts ?? 0}</strong></div><div><span>성공 / 실패</span><strong>{stats?.made ?? 0} / {stats?.missed ?? 0}</strong></div><div><span>확인 필요</span><strong>{reviewCount}</strong></div><div><span>확정 성공률</span><strong>{stats?.success_rate == null ? '-' : `${stats.success_rate.toFixed(1)}%`}</strong></div></section>

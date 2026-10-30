@@ -17,6 +17,23 @@ export type CourtShot = {
 
 const DEFAULT_CAMERA = new THREE.Vector3(62, 64, 76)
 const COURT_TARGET = new THREE.Vector3(0, 0, 0)
+const COURT_FIT_POINTS = [
+  ...[-28, 28].flatMap((x) => [-26.5, 26.5].flatMap((z) => [-.7, .5].map((y) => new THREE.Vector3(x, y, z)))),
+  ...[-3.5, 3.5].flatMap((x) => [9.5, 13.5].map((y) => new THREE.Vector3(x, y, -20.1))),
+  new THREE.Vector3(0, 12, -26),
+]
+
+function minimumCourtDistance(camera: THREE.PerspectiveCamera, target: THREE.Vector3) {
+  const direction = camera.position.clone().sub(target).normalize()
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
+  const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * .9
+  const horizontal = vertical * camera.aspect
+  return Math.max(42, ...COURT_FIT_POINTS.map((point) => {
+    const relative = point.clone().sub(target)
+    return relative.dot(direction) + Math.max(Math.abs(relative.dot(right)) / horizontal, Math.abs(relative.dot(up)) / vertical)
+  }))
+}
 
 // The API stores feet from the left sideline and from the baseline.
 function courtPosition(x: number, y: number) {
@@ -181,7 +198,12 @@ export function ShotCourt3D({ shots, selectedShot, jerseyNumber, onSelect, onPla
     controls.minPolarAngle = .25
     controls.maxPolarAngle = Math.PI / 2.15
     controls.update()
-    const draw = () => renderer.render(scene, camera)
+    const draw = () => {
+      controls.minDistance = minimumCourtDistance(camera, controls.target)
+      const offset = camera.position.clone().sub(controls.target)
+      if (offset.length() < controls.minDistance) camera.position.copy(controls.target).add(offset.setLength(controls.minDistance))
+      renderer.render(scene, camera)
+    }
     controls.addEventListener('change', draw)
     const resize = () => {
       const width = mount.clientWidth
@@ -195,22 +217,35 @@ export function ShotCourt3D({ shots, selectedShot, jerseyNumber, onSelect, onPla
     const observer = new ResizeObserver(resize)
     observer.observe(mount)
     resize()
-    const raycaster = new THREE.Raycaster()
-    const pointer = new THREE.Vector2()
-    let pointerDown: [number, number] | null = null
-    const down = (event: PointerEvent) => { pointerDown = [event.clientX, event.clientY] }
+    let pointerDown: { id: number; x: number; y: number } | null = null
+    const down = (event: PointerEvent) => {
+      if (event.button === 0) pointerDown = { id: event.pointerId, x: event.clientX, y: event.clientY }
+    }
     const up = (event: PointerEvent) => {
-      if (!pointerDown || Math.hypot(event.clientX - pointerDown[0], event.clientY - pointerDown[1]) > 5) return
+      const start = pointerDown
+      pointerDown = null
+      if (!start || start.id !== event.pointerId || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) return
       const bounds = renderer.domElement.getBoundingClientRect()
-      pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1)
-      raycaster.setFromCamera(pointer, camera)
-      const hit = raycaster.intersectObjects(markers.children, false)[0]
-      const id = hit?.object.userData.shotId
-      const shot = shotsRef.current.find((item) => item.id === id)
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return
+      let nearest: { id: string; distance: number } | null = null
+      for (const marker of markers.children) {
+        const id = marker.userData.shotId as string | undefined
+        if (!id || !(marker instanceof THREE.Mesh)) continue
+        const center = marker.position.clone().project(camera)
+        const edge = marker.position.clone().add(new THREE.Vector3(marker.geometry.parameters.width / 2, 0, 0)).project(camera)
+        const x = bounds.left + (center.x + 1) * bounds.width / 2
+        const y = bounds.top + (1 - center.y) * bounds.height / 2
+        const radius = Math.max(18, Math.abs(edge.x - center.x) * bounds.width / 2 + 8)
+        const distance = Math.hypot(event.clientX - x, event.clientY - y)
+        if (distance <= radius && (!nearest || distance < nearest.distance)) nearest = { id, distance }
+      }
+      const shot = shotsRef.current.find((item) => item.id === nearest?.id)
       if (shot) onSelectRef.current(shot.id)
     }
+    const cancel = () => { pointerDown = null }
     renderer.domElement.addEventListener('pointerdown', down)
-    renderer.domElement.addEventListener('pointerup', up)
+    renderer.domElement.ownerDocument.addEventListener('pointerup', up, true)
+    renderer.domElement.addEventListener('pointercancel', cancel)
     sceneRef.current = scene
     cameraRef.current = camera
     controlsRef.current = controls
@@ -220,7 +255,8 @@ export function ShotCourt3D({ shots, selectedShot, jerseyNumber, onSelect, onPla
     return () => {
       observer.disconnect()
       renderer.domElement.removeEventListener('pointerdown', down)
-      renderer.domElement.removeEventListener('pointerup', up)
+      renderer.domElement.ownerDocument.removeEventListener('pointerup', up, true)
+      renderer.domElement.removeEventListener('pointercancel', cancel)
       controls.removeEventListener('change', draw)
       controls.dispose()
       scene.traverse((item) => {
