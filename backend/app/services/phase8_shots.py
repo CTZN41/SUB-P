@@ -17,6 +17,7 @@ from app.models import (
     ShotType,
 )
 from app.services.court_zones import classify_zone
+from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
 
 
 DEFAULT_SEQUENCE_BEFORE_MS = 5000
@@ -87,7 +88,7 @@ def _court_position(
         or not isinstance(court_x, (int, float))
         or not isinstance(court_y, (int, float))
         or not isinstance(confidence, (int, float))
-        or confidence < .75
+        or confidence < POSITION_AUTO_CONFIRM_CONFIDENCE
     ):
         _append_reason(reasons, ai_review.get("position_reason") or "AI가 슛 위치를 확정하지 못함")
         return None, None, None

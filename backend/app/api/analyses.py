@@ -96,7 +96,7 @@ def find_analysis(session: Session, analysis_id: str) -> Analysis:
     return analysis
 
 
-def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *, has_calibration: bool, has_player: bool) -> AnalysisListItem:
+def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *, has_calibration: bool, has_assigned_player: bool) -> AnalysisListItem:
     video_available = (upload_path / analysis.id / "original.mp4").is_file()
     if not video_available:
         label, detail = "원본 영상 없음", "원본 파일이 없어 재생하거나 다시 분석할 수 없습니다. 기록을 삭제할 수 있습니다."
@@ -129,7 +129,7 @@ def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *,
         next_path = f"/progress/{analysis.id}"
     elif not has_calibration:
         next_path = f"/court/{analysis.id}"
-    elif not has_player:
+    elif analysis.play_type is not PlayType.SOLO and not has_assigned_player:
         next_path = f"/players/{analysis.id}"
     else:
         next_path = f"/progress/{analysis.id}"
@@ -144,15 +144,17 @@ def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *,
 @router.get("", response_model=AnalysisListResponse)
 def list_analyses(request: Request, session: Annotated[Session, Depends(get_db_session)]) -> AnalysisListResponse:
     has_calibration = select(CourtCalibration.id).where(CourtCalibration.analysis_id == Analysis.id).exists()
-    has_player = select(Player.id).where(Player.analysis_id == Analysis.id).exists()
+    has_assigned_player = select(Player.id).where(
+        Player.analysis_id == Analysis.id, Player.initial_box.is_not(None)
+    ).exists()
     job_status = (select(AnalysisJob.status).where(AnalysisJob.analysis_id == Analysis.id)
                   .order_by(AnalysisJob.started_at.desc(), AnalysisJob.id.desc()).limit(1).scalar_subquery())
-    rows = session.execute(select(Analysis, has_calibration, has_player, job_status)
+    rows = session.execute(select(Analysis, has_calibration, has_assigned_player, job_status)
                            .order_by(Analysis.created_at.desc(), Analysis.id.desc())).all()
     return AnalysisListResponse(analyses=[
         _list_item(
             analysis, request.app.state.settings.upload_path, latest_job_status,
-            has_calibration=calibration_ready, has_player=player_ready,
+            has_calibration=calibration_ready, has_assigned_player=player_ready,
         ) for analysis, calibration_ready, player_ready, latest_job_status in rows
     ])
 

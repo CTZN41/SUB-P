@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
+import { useRef, useState } from 'react'
+import type { FormEvent, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const API_BASE = 'http://127.0.0.1:8000/api'
@@ -32,13 +32,23 @@ function formatDuration(milliseconds: number) {
 
 export function NewAnalysisPage() {
   const navigate = useNavigate()
+  const recordedDateRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
+  const [playType, setPlayType] = useState('solo')
   const [containsOthers, setContainsOthers] = useState(false)
   const [consentConfirmed, setConsentConfirmed] = useState(false)
   const [aiNoticeConfirmed, setAiNoticeConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<RegistrationResult | null>(null)
+
+  function openRecordedDatePicker(event: MouseEvent<HTMLLabelElement>) {
+    const input = recordedDateRef.current
+    if (!input || !input.showPicker) return
+    event.preventDefault()
+    input.focus()
+    try { input.showPicker() } catch { /* 이 경우 입력창에서 날짜를 직접 선택할 수 있습니다. */ }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -146,9 +156,9 @@ export function NewAnalysisPage() {
           <div className="section-heading"><span>01</span><div><h2>영상과 기본 정보</h2><p>분석 기록에서 알아보기 쉬운 이름을 사용하세요.</p></div></div>
           <label>분석 이름<input name="title" maxLength={100} required placeholder="예: 10월 28일 개인 슈팅 연습" /></label>
           <div className="form-grid">
-            <label>촬영 형태<select name="play_type" defaultValue="solo"><option value="solo">개인 연습</option><option value="one_on_one">1대1</option><option value="two_on_two">2대2</option><option value="three_on_three">3대3</option></select></label>
-            <label>촬영 날짜 <small>선택</small><input name="recorded_date" type="date" /></label>
-            <label>선수 이름 <small>선택</small><input name="player_name" maxLength={100} placeholder="입력하지 않으면 선수 A" /></label>
+            <label>촬영 형태<select name="play_type" value={playType} onChange={(event) => setPlayType(event.target.value)}><option value="solo">개인 연습</option><option value="one_on_one">1대1</option><option value="two_on_two">2대2</option><option value="three_on_three">3대3</option></select></label>
+            <label className="recorded-date-field" onClick={openRecordedDatePicker}>촬영 날짜 <small>선택</small><input ref={recordedDateRef} name="recorded_date" type="date" /></label>
+            {playType !== 'solo' && <label>첫 선수 이름 <small>선택</small><input name="player_name" maxLength={100} placeholder="나머지 선수는 다음 단계에서 등록" /></label>}
           </div>
           <label className="file-picker">
             <span>{file ? file.name : 'MP4 파일을 선택하세요'}</span>

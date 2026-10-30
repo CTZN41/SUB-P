@@ -46,12 +46,11 @@ export function AnalysisHistory({ recent = false }: { recent?: boolean }) {
         const payload = await response.json()
         throw new Error(payload.detail?.message ?? '기록을 삭제하지 못했습니다. 다시 시도해 주세요.')
       }
+      setRecords((current) => current.filter((item) => item.id !== deleting.id))
       setDeleting(null)
       setNotice('영상과 분석 결과를 삭제했습니다.')
-      await load()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '기록을 삭제하지 못했습니다.')
-      await load().catch(() => {})
     } finally {
       setBusy(false)
     }

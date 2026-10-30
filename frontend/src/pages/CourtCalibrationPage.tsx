@@ -74,7 +74,7 @@ export function CourtCalibrationPage() {
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.detail?.message ?? '코트 위치를 저장하지 못했습니다.')
-      navigate(`/players/${analysisId}`)
+      navigate(analysis.play_type === 'solo' ? `/progress/${analysisId}` : `/players/${analysisId}`)
     } catch (caught) { setError(caught instanceof Error ? caught.message : '코트 위치를 저장하지 못했습니다.') }
     finally { setSaving(false) }
   }
@@ -101,7 +101,7 @@ export function CourtCalibrationPage() {
   }
 
   return <div className="page setup-page">
-    <header className="setup-header"><div><p className="eyebrow">COURT SETUP</p><h1>코트 위치 확인</h1><p className="lead">초기 점은 안내용입니다. 실제 바닥 모서리 네 곳과 골대 중심에 맞게 직접 눌러 옮겨 주세요.</p></div><span className="step-chip">1 / 3 설정</span></header>
+    <header className="setup-header"><div><p className="eyebrow">COURT SETUP</p><h1>코트 위치 확인</h1><p className="lead">초기 점은 안내용입니다. 실제 바닥 모서리 네 곳과 골대 중심에 맞게 직접 눌러 옮겨 주세요.</p></div><span className="step-chip">{analysis?.play_type === 'solo' ? '1 / 2 설정' : '1 / 3 설정'}</span></header>
     <section className="setup-card">
       <div className="frame-toolbar"><strong>{analysis?.title ?? '영상을 불러오는 중'}</strong><label>대표 장면<input type="range" min="0" max={Math.max(0, (analysis?.duration_ms ?? 0) - 500)} step="500" value={timeMs} onChange={(e) => { setTimeMs(Number(e.target.value)); setConfirmed(false); setError(''); setSuggestionMessage('') }} /></label><span>{(timeMs / 1000).toFixed(1)}초</span><button className="button secondary" onClick={detect} disabled={!analysis || !frameReady || detecting}>{detecting ? '찾는 중…' : '코트 선 자동 찾기'}</button></div>
       <div className="calibration-frame" style={{ backgroundImage: frameReady ? `url(${frameUrl})` : 'none', aspectRatio: analysis ? `${analysis.width} / ${analysis.height}` : '16 / 9' }} onPointerDown={(event) => {
@@ -129,7 +129,7 @@ export function CourtCalibrationPage() {
       {suggestionMessage && <p className="inline-warning">{suggestionMessage}</p>}
       <label className="check-row"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />영상에 반코트와 골대가 보이고 기준점을 실제 위치에 맞춘 것을 확인했습니다.</label>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="actions"><button className="button secondary" onClick={() => { setPoints(INITIAL_POINTS); setCourtPoints(INITIAL_COURT_POINTS); setPointNames(INITIAL_POINT_NAMES); setHoop([50, 18]); setConfirmed(false); setSuggestionMessage('') }}>초기화</button><button className="button primary" onClick={save} disabled={!analysis || !frameReady || !confirmed || saving}>{saving ? '저장 중…' : '확인하고 선수 설정으로'}</button></div>
+      <div className="actions"><button className="button secondary" onClick={() => { setPoints(INITIAL_POINTS); setCourtPoints(INITIAL_COURT_POINTS); setPointNames(INITIAL_POINT_NAMES); setHoop([50, 18]); setConfirmed(false); setSuggestionMessage('') }}>초기화</button><button className="button primary" onClick={save} disabled={!analysis || !frameReady || !confirmed || saving}>{saving ? '저장 중…' : analysis?.play_type === 'solo' ? '확인하고 분석 준비로' : '확인하고 선수 설정으로'}</button></div>
     </section>
   </div>
 }

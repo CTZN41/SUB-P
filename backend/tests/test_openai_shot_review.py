@@ -9,6 +9,7 @@ from app.services.openai_shot_review import (
     PositionReviewDecision,
     ShotReviewDecision,
     _build_shared_camera_contexts,
+    _camera_context_is_unclear,
     review_candidates_with_openai,
 )
 
@@ -23,6 +24,12 @@ def camera_context() -> CameraContextDecision:
         visible_landmarks=["hoop", "paint", "three-point arc"],
         reason="stable fixed camera",
     )
+
+
+def test_camera_orientation_keeps_75_percent_threshold() -> None:
+    context = camera_context()
+    assert _camera_context_is_unclear(context.model_copy(update={"confidence": .72}))
+    assert not _camera_context_is_unclear(context.model_copy(update={"confidence": .75}))
 
 
 @pytest.fixture(autouse=True)

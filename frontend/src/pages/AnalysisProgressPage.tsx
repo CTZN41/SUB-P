@@ -81,7 +81,7 @@ export function AnalysisProgressPage() {
   const simulation = job?.is_simulation ?? false
   return <div className="page progress-page">
     <header className="setup-header"><div><p className="eyebrow">ANALYSIS FLOW</p><h1>{analysis?.title ?? '분석 준비'}</h1>
-      <p className="lead">실제 영상에서 슛 후보를 찾거나 개발용 작업 흐름을 점검합니다.</p></div><span className="step-chip">3 / 3 설정</span></header>
+      <p className="lead">실제 영상에서 슛 후보를 찾거나 개발용 작업 흐름을 점검합니다.</p></div><span className="step-chip">{analysis?.play_type === 'solo' ? '2 / 2 설정' : '3 / 3 설정'}</span></header>
     <div className="simulation-banner"><strong>{simulation ? '개발용 흐름 점검' : 'Phase 7 슛 후보 분석'}</strong>
       <span>{simulation ? '실제 슛을 찾거나 결과를 저장하지 않습니다.' : '로컬 모델이 슛 후보를 찾고 AI가 슛 여부·종류·결과를 검토합니다. 확신이 부족한 기록은 확인 필요로 남깁니다.'}</span></div>
     <section className="setup-card progress-card"><div className="progress-summary"><div><span>현재 상태</span><strong>{job?.stage ?? '시작 전'}</strong></div>
@@ -101,7 +101,6 @@ export function AnalysisProgressPage() {
       <p>원본 {result.source_fps}fps · 분석 간격 {result.sample_fps}fps</p>
       {result.candidates.length === 0 && <p className="inline-warning">자동으로 찾은 슛이 없습니다. 원본 영상과 촬영 조건을 확인해 주세요.</p>}
       <ol>{result.candidates.map((candidate, index) => <li key={`${candidate.time_ms}-${index}`}>{(candidate.time_ms / 1000).toFixed(1)}초 · 선수 발 화면 좌표 ({candidate.foot_point_px.join(', ')}) · 탐지 신뢰도 {(candidate.confidence * 100).toFixed(0)}%{candidate.review_reasons.length > 0 && ` · ${candidate.review_reasons.join(', ')}`}</li>)}</ol>
-      {Object.keys(result.issues).length > 0 && <><h3>확인할 점</h3><ul>{Object.entries(result.issues).map(([reason, count]) => <li key={reason}>{reason}: {count}회</li>)}</ul></>}
     </section>}
   </div>
 }

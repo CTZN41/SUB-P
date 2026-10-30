@@ -234,7 +234,7 @@ async def register_video(
             ai_notice_confirmed=ai_notice_confirmed,
         )
         clean_player_name = (player_name or "").strip()
-        if play_type is PlayType.SOLO:
+        if play_type is PlayType.SOLO or clean_player_name:
             analysis.players.append(
                 Player(
                     display_name=clean_player_name or "선수 A",

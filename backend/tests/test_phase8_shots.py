@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
+import pytest
 
 from app.db.base import Base
 from app.models import (
@@ -89,6 +90,35 @@ def test_confident_review_becomes_complete_shot(tmp_path) -> None:
         assert (shots[0].sequence_start_ms, shots[0].sequence_end_ms) == (3000, 7000)
         assert analysis.status is AnalysisStatus.COMPLETED
         assert result["candidates"][0]["phase8"]["shot_id"] == shots[0].id
+    engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("confidence", "expected_status"),
+    [(0.69, ShotStatus.NEEDS_REVIEW), (0.70, ShotStatus.AUTO), (0.72, ShotStatus.AUTO)],
+)
+def test_position_auto_confirmation_boundary(tmp_path, confidence, expected_status) -> None:
+    engine = create_engine(f"sqlite:///{(tmp_path / 'phase8.db').as_posix()}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        analysis, calibration = analysis_setup(session)
+        shot = materialize_shots_from_candidates(
+            session, analysis, calibration,
+            {"candidates": [{
+                "time_ms": 5000,
+                "ai_review": {
+                    **ai_location(),
+                    "position_confidence": confidence,
+                    "is_shot": True,
+                    "outcome": "made",
+                    "shot_type": "set_shot",
+                    "sequence_start_offset_ms": -2000,
+                    "sequence_end_offset_ms": 2000,
+                },
+            }]},
+        )[0]
+        assert shot.status is expected_status
+        assert (shot.court_x is not None) is (expected_status is ShotStatus.AUTO)
     engine.dispose()
 
 

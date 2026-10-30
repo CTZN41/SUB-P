@@ -116,6 +116,8 @@
   align-items: center;
   gap: 60px;
 }
+.home-page .page-header { min-height: 360px; }
+.home-start-actions .actions { margin-top: 0; flex-wrap: wrap; }
 
 .eyebrow {
   margin: 0 0 14px;
@@ -179,6 +181,7 @@ h1 {
   background: rgba(255, 255, 255, 0.04);
   color: #e8eeea;
 }
+.recorded-date-field, .recorded-date-field input { cursor: pointer; }
 
 .court-preview {
   position: relative;
@@ -244,70 +247,9 @@ h1 {
   background: #e55353;
 }
 
-.status-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-top: 38px;
-}
-
-.status-card,
-.notice-card,
 .placeholder-card {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: #16211c;
-}
-
-.status-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 21px;
-  border-radius: 17px;
-}
-
-.status-card p,
-.status-card strong {
-  margin: 0;
-}
-
-.status-card p {
-  color: #859188;
-  font-size: 0.78rem;
-}
-
-.status-card strong {
-  display: block;
-  margin-top: 4px;
-}
-
-.status-light {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #d8ff4f;
-  box-shadow: 0 0 18px rgba(216, 255, 79, 0.65);
-}
-
-.notice-card {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.7fr) minmax(320px, 1.3fr);
-  gap: 40px;
-  margin-top: 18px;
-  padding: 28px;
-  border-radius: 20px;
-}
-
-.notice-card h2 {
-  margin-bottom: 0;
-  font-size: 1.45rem;
-}
-
-.notice-card > p {
-  align-self: center;
-  margin-bottom: 0;
-  color: #9ca8a1;
-  line-height: 1.7;
 }
 
 .placeholder-page {
@@ -710,8 +652,6 @@ h1 {
     margin: 0 auto;
   }
 
-  .status-grid,
-  .notice-card,
   .registration-header,
   .form-grid,
   .player-setup-grid {

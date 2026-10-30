@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from app.api.analyses import router
 from app.core.config import Settings
 from app.db.base import Base
-from app.models import Analysis, AnalysisJob, AnalysisStatus, JobStatus, PlayType, Player, Shot, ShotResult, ShotStatus, ShotSource, ShotType
+from app.models import Analysis, AnalysisJob, AnalysisStatus, CalibrationSource, CourtCalibration, JobStatus, PlayType, Player, Shot, ShotResult, ShotStatus, ShotSource, ShotType
 
 
 def make_client(tmp_path):
@@ -57,6 +57,35 @@ def test_list_persists_and_marks_missing_video(tmp_path):
     new_client, _, _ = make_client(tmp_path)
     with new_client:
         assert len(new_client.get("/api/analyses").json()["analyses"]) == 2
+
+
+def test_resume_skips_solo_player_setup_but_keeps_multiplayer_setup(tmp_path):
+    client, factory, settings = make_client(tmp_path)
+    with factory() as session:
+        ids = {}
+        for play_type in (PlayType.SOLO, PlayType.ONE_ON_ONE):
+            analysis = Analysis(title=play_type.value, play_type=play_type, original_name="sample.mp4", stored_path="uploads/sample/original.mp4", file_size=4, duration_ms=3000, status=AnalysisStatus.SETUP_REQUIRED)
+            session.add(analysis)
+            session.flush()
+            session.add(CourtCalibration(analysis_id=analysis.id, frame_time_ms=0, image_points=[[0, 0], [1, 0], [1, 1], [0, 1]], court_points=[[0, 0], [50, 0], [50, 47], [0, 47]], hoop_point=[.5, .2], transform=[[1, 0, 0], [0, 1, 0], [0, 0, 1]], source=CalibrationSource.USER))
+            player = Player(analysis_id=analysis.id, display_name="선수 A")
+            session.add(player)
+            ids[play_type] = (analysis.id, player)
+        session.commit()
+        solo_id = ids[PlayType.SOLO][0]
+        multi_id, multi_player = ids[PlayType.ONE_ON_ONE]
+        for analysis_id in (solo_id, multi_id):
+            folder = settings.upload_path / analysis_id
+            folder.mkdir(parents=True)
+            (folder / "original.mp4").write_bytes(b"video")
+        with client:
+            items = {item["id"]: item for item in client.get("/api/analyses").json()["analyses"]}
+            assert items[solo_id]["next_path"] == f"/progress/{solo_id}"
+            assert items[multi_id]["next_path"] == f"/players/{multi_id}"
+            multi_player.initial_box = [.1, .2, .2, .4]
+            session.commit()
+            items = {item["id"]: item for item in client.get("/api/analyses").json()["analyses"]}
+            assert items[multi_id]["next_path"] == f"/progress/{multi_id}"
 
 
 def test_delete_removes_related_data_and_files(tmp_path):

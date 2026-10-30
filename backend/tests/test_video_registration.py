@@ -96,6 +96,22 @@ def test_valid_mp4_is_saved_with_metadata_and_default_player(tmp_path) -> None:
     engine.dispose()
 
 
+def test_multiplayer_name_is_saved_as_first_player(tmp_path) -> None:
+    video = make_mp4(tmp_path / "source.mp4")
+    client, engine, _ = create_client(tmp_path)
+    with client:
+        response = client.post(
+            "/api/analyses",
+            data=valid_form(play_type="one_on_one", player_name="  민수  "),
+            files={"video": ("practice.mp4", video, "video/mp4")},
+        )
+        assert response.status_code == 201
+        players = client.get(f"/api/analyses/{response.json()['id']}/players")
+        assert players.status_code == 200
+        assert [player["display_name"] for player in players.json()["players"]] == ["민수"]
+    engine.dispose()
+
+
 @pytest.mark.parametrize(
     ("form", "expected_code"),
     [

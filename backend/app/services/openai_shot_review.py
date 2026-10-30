@@ -10,6 +10,7 @@ import cv2
 from pydantic import BaseModel, Field
 
 from app.core.config import Settings
+from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
 
 
 FRAME_OFFSETS_MS = (
@@ -20,7 +21,8 @@ OUTCOME_EXTENSION_OFFSETS_MS = (4500, 5500)
 FOCUS_OFFSETS_MS = (-1000, -300, 300, 700)
 OUTCOME_OFFSETS_MS = (800, 1200, 1600, 2000, 2400, 2800, 3500, 4500)
 ESCALATION_CONFIDENCE = 0.65
-POSITION_ESCALATION_CONFIDENCE = 0.75
+CAMERA_CONTEXT_CONFIDENCE = 0.75
+POSITION_ESCALATION_CONFIDENCE = POSITION_AUTO_CONFIRM_CONFIDENCE
 
 CourtZone = Literal[
     "restricted", "paint_left", "paint_center", "paint_right",
@@ -384,7 +386,7 @@ def _review_camera_context_once(
 def _camera_context_is_unclear(context: CameraContextDecision) -> bool:
     return (
         context.camera_view == "unclear"
-        or context.confidence < POSITION_ESCALATION_CONFIDENCE
+        or context.confidence < CAMERA_CONTEXT_CONFIDENCE
         or context.court_left_direction_on_screen == "unclear"
         or context.toward_half_court_direction_on_screen == "unclear"
     )
