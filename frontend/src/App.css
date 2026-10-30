@@ -618,7 +618,6 @@ h1 {
 .heatmap-heading strong { color: #fff; font-size: .98rem; }
 .heatmap-heading span { color: #849188; font-size: .7rem; text-align: right; }
 .shot-heatmap { width: 100%; max-height: 820px; display: block; }
-.court-surface { fill: url(#courtWood); }
 .heat-zone { cursor: pointer; outline: none; }
 .heat-zone > path { fill-opacity: .84; stroke: #2f3130; stroke-width: 3; transition: filter .16s ease, stroke .16s ease; }
 .heat-zone.hot path { fill: #329b65; }
@@ -651,6 +650,10 @@ h1 {
 .stat-breakdowns strong { color: #e8eeea; text-align: right; }
 .stat-breakdowns p { margin: 0; color: #77847c; font-size: .78rem; }
 .review-layout { display: grid; grid-template-columns: minmax(340px, .75fr) minmax(540px, 1.25fr); gap: 18px; align-items: start; }
+.review-layout-single { grid-template-columns: minmax(0, 1fr); }
+.review-layout[hidden] { display: none; }
+.shot-form-basic .shot-form-grid > label:nth-child(n+3):nth-child(-n+6) { display: none; }
+.shot-advanced-toggle { margin: 8px 0 12px; }
 .shot-list-panel .panel-title p { margin: 5px 0 0; color: #849188; font-size: .78rem; }
 .review-shot-list { display: grid; gap: 8px; max-height: 720px; margin: 20px 0 0; padding: 0; overflow-y: auto; list-style: none; }
 .review-shot-list button { width: 100%; display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: #0f1814; color: #e8eeea; text-align: left; cursor: pointer; }

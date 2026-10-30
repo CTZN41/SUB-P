@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
+from time import perf_counter
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ from app.models import Analysis, AnalysisJob, AnalysisStatus, CourtCalibration, 
 from app.analysis.phase7_pipeline import Phase7Canceled, Phase7Error, analyze_video, save_result
 from app.core.config import Settings
 from app.services.openai_shot_review import review_candidates_with_openai
+from app.services.candidate_enrichment import enrich_candidates
 from app.services.phase8_shots import materialize_shots_from_candidates
 
 
@@ -26,6 +28,7 @@ STAGES = [
     "완료",
 ]
 ACTIVE_JOB_STATUSES = (JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.CANCEL_REQUESTED)
+SHOT_DETECTION_MODEL = "models/basketball-yolo26n-pilot-v4.pt"
 
 
 def utc_now() -> datetime:
@@ -83,7 +86,7 @@ def start_phase7(session: Session, analysis: Analysis, settings: Settings) -> tu
         return existing, False
     if analysis.play_type.value != "solo":
         raise Phase7Error("Phase 7 실제 후보 분석은 개인 연습 영상만 지원합니다.")
-    model_path = settings.resolve_path("models/basketball-yolo26n-pilot-v3.pt")
+    model_path = settings.resolve_path(SHOT_DETECTION_MODEL)
     if not model_path.is_file():
         raise Phase7Error("학습된 탐지 모델을 찾을 수 없습니다.")
     now = utc_now()
@@ -152,11 +155,40 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
 
     try:
         video_path = settings.upload_path / analysis_id / "original.mp4"
-        result = analyze_video(video_path,
-                               settings.resolve_path("models/basketball-yolo26n-pilot-v3.pt"), hoop_point,
-                               pose_model_path=settings.resolve_path("models/yolo26n-pose.pt"),
-                               progress=progress, cancelled=cancelled)
+        model_path = settings.resolve_path(SHOT_DETECTION_MODEL)
+        pose_model_path = settings.resolve_path("models/yolo26n-pose.pt")
+        started = perf_counter()
+        result = analyze_video(video_path, model_path, hoop_point,
+                               pose_model_path=pose_model_path,
+                               progress=progress, cancelled=cancelled,
+                               collect_motion_hints=True)
+        local_seconds = perf_counter() - started
+        with session_factory() as session:
+            job = session.get(AnalysisJob, job_id)
+            analysis = session.get(Analysis, analysis_id)
+            if job is None or analysis is None or job.cancel_requested:
+                raise Phase7Canceled("사용자가 분석을 취소했습니다.")
+            job.stage = analysis.current_stage = STAGES[4]
+            job.processed_ms = analysis.processed_ms = analysis.duration_ms
+            job.heartbeat_at = utc_now()
+            session.commit()
+        started = perf_counter()
+        result = enrich_candidates(video_path, model_path, pose_model_path,
+                                   hoop_point, result, settings, cancelled=cancelled)
+        enrichment_seconds = perf_counter() - started
+        started = perf_counter()
         result = review_candidates_with_openai(video_path, result, settings)
+        result["timing_seconds"] = {
+            "local_candidates": round(local_seconds, 2),
+            "focused_rescan_and_shot_gate": round(enrichment_seconds, 2),
+            "detailed_ai_review": round(perf_counter() - started, 2),
+        }
+        gate_usage = result.get("shot_gate_summary", {}).get("usage", {})
+        detail_usage = result.get("ai_review", {}).get("usage", {})
+        result["api_usage"] = {
+            key: int(gate_usage.get(key, 0) or 0) + int(detail_usage.get(key, 0) or 0)
+            for key in ("input_tokens", "output_tokens")
+        }
         with session_factory() as session:
             job = session.get(AnalysisJob, job_id)
             if job is None or job.cancel_requested:

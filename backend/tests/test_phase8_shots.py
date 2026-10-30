@@ -71,7 +71,7 @@ def test_confident_review_becomes_complete_shot(tmp_path) -> None:
                     "is_shot": True,
                     "confidence": .9,
                     "outcome": "made",
-                    "shot_type": "set_shot",
+                    "shot_type": "dunk",
                     "sequence_start_offset_ms": -2000,
                     "sequence_end_offset_ms": 2000,
                     "review_required": False,
@@ -83,7 +83,7 @@ def test_confident_review_becomes_complete_shot(tmp_path) -> None:
 
         assert len(shots) == 1
         assert shots[0].result is ShotResult.MADE
-        assert shots[0].shot_type is ShotType.SET_SHOT
+        assert shots[0].shot_type is ShotType.DUNK
         assert shots[0].status is ShotStatus.AUTO
         assert shots[0].zone_code == "paint_center"
         assert (shots[0].sequence_start_ms, shots[0].sequence_end_ms) == (3000, 7000)
@@ -188,6 +188,29 @@ def test_unknown_outcome_keeps_agreed_shot_type_for_partial_automation(tmp_path)
         assert shot.court_x == 25
         assert "성공·실패" in shot.review_reason
         assert shot.confidence_data["diagnostic_reasons"]
+    engine.dispose()
+
+
+def test_non_shot_gate_candidate_is_preserved_with_clear_review_reason(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{(tmp_path / 'phase8.db').as_posix()}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        analysis, calibration = analysis_setup(session)
+        shot = materialize_shots_from_candidates(
+            session, analysis, calibration,
+            {"candidates": [{
+                "time_ms": 5000,
+                "shot_gate": {"verdict": "not_shot", "confidence": .97},
+                "ai_review": {"is_shot": False, "shot_type": "needs_review"},
+            }]},
+        )[0]
+        session.commit()
+
+        assert shot.status is ShotStatus.NEEDS_REVIEW
+        assert shot.result is ShotResult.NEEDS_REVIEW
+        assert "리바운드·패스" in shot.review_reason
+        assert shot.confidence_data["shot_gate"]["verdict"] == "not_shot"
+        assert analysis.status is AnalysisStatus.REVIEW_REQUIRED
     engine.dispose()
 
 

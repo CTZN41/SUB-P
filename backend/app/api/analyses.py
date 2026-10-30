@@ -61,6 +61,7 @@ from app.services.analysis_jobs import ACTIVE_JOB_STATUSES, cancel_job, current_
 from app.analysis.phase7_pipeline import Phase7Error
 from app.services.court_zones import ZONE_LABELS, ZoneCode, classify_zone
 from app.services.shot_statistics import calculate_statistics
+from app.services.monthly_statistics import monthly_statistics
 
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
@@ -71,6 +72,21 @@ PLAYER_LIMITS = {
     PlayType.TWO_ON_TWO: 4,
     PlayType.THREE_ON_THREE: 6,
 }
+
+
+@router.get("/monthly")
+def get_monthly_statistics(
+    session: Annotated[Session, Depends(get_db_session)],
+    month: str | None = None,
+) -> dict:
+    if month is not None:
+        try:
+            if len(month) != 7 or month[4] != "-":
+                raise ValueError
+            date.fromisoformat(f"{month}-01")
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail={"code": "MONTH_INVALID", "message": "월은 YYYY-MM 형식으로 입력해 주세요."}) from error
+    return monthly_statistics(session, month)
 
 
 def find_analysis(session: Session, analysis_id: str) -> Analysis:

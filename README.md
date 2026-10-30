@@ -28,7 +28,7 @@ npm run dev
 - `backend/work`: 슛 후보 결과와 분석 과정 파일 보관 위치
 - `backend/data`: 전환 전에 사용한 SQLite 데이터베이스 보관 위치
 
-실제 슛 후보 분석에는 현재 PC의 `backend/models/basketball-yolo26n-pilot-v3.pt`가 필요합니다. 모델 파일은 Git에서 제외되어 있으므로 다른 PC에서 저장소만 내려받으면 이 기능은 바로 실행되지 않습니다.
+실제 슛 후보 분석에는 현재 PC의 `backend/models/basketball-yolo26n-pilot-v4.pt`가 필요합니다. 모델 파일은 Git에서 제외되어 있으므로 다른 PC에서 저장소만 내려받으면 이 기능은 바로 실행되지 않습니다. 기존 v3 파일은 비교용으로 보존합니다.
 
 ## 백엔드 실행
 

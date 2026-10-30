@@ -61,6 +61,7 @@ class ShotReviewDecision(BaseModel):
         "set_shot",
         "dribble_pull_up",
         "layup",
+        "dunk",
         "fadeaway",
         "step_back",
         "turnaround",
@@ -104,6 +105,7 @@ class ShotDetailDecision(BaseModel):
         "set_shot",
         "dribble_pull_up",
         "layup",
+        "dunk",
         "fadeaway",
         "step_back",
         "turnaround",
@@ -429,6 +431,11 @@ def _review_once(
                     "The local YOLO and pose pipeline already confirmed that this is a shot attempt. "
                     "Do not re-judge or reject the shot. Judge shot type, outcome, and the shooter's court "
                     "location independently, with a confidence for each. "
+                    "For shot type, a running one-handed close finish that releases the ball upward beside "
+                    "the rim is a layup, even when the shooter's hand reaches rim height. Use shot_type=dunk "
+                    "only if the player keeps hold of the ball at rim height and forces it directly down "
+                    "through the hoop. "
+                    "Do not infer a dunk from proximity to the rim alone. "
                     + _camera_context_prompt(camera_context) + " "
                     "Location must now follow two steps: (1) project the shooter's actual release shoes using "
                     "the shared camera orientation into an overhead relation to the lane; (2) choose the "
@@ -838,6 +845,17 @@ def review_candidates_with_openai(
     )
     failed = 0
     for candidate in candidates:
+        gate = candidate.get("shot_gate") or {}
+        if gate.get("verdict") == "not_shot" and gate.get("confidence", 0) >= .9:
+            candidate["ai_review"] = {
+                "is_shot": False,
+                "review_required": True,
+                "local_ai_conflict": True,
+                "reason": "독립적인 슛 여부 판정에서 슛을 확인하지 못함. 기록은 확인 필요로 보존",
+                "shot_gate": gate,
+            }
+            reviewed += 1
+            continue
         attempts: list[dict] = []
         try:
             camera_context = camera_contexts.get(int(candidate.get("scene_id", 0)))
@@ -950,6 +968,16 @@ def review_candidates_with_openai(
 
     camera_conflicts = _invalidate_inconsistent_camera_views(candidates)
 
+    usage_totals = {"input_tokens": 0, "output_tokens": 0}
+    for candidate in candidates:
+        for attempt in (candidate.get("ai_review") or {}).get("attempts", []):
+            for key in usage_totals:
+                usage_totals[key] += int((attempt.get("usage") or {}).get(key, 0) or 0)
+    for context in camera_context_records:
+        for attempt in context.get("attempts", []):
+            for key in usage_totals:
+                usage_totals[key] += int((attempt.get("usage") or {}).get(key, 0) or 0)
+
     result["ai_review"] = {
         "status": "complete" if failed == 0 else "partial",
         "reviewed": reviewed,
@@ -960,5 +988,6 @@ def review_candidates_with_openai(
         "candidate_limit": settings.openai_max_candidate_reviews,
         "camera_conflicts": camera_conflicts,
         "camera_contexts": camera_context_records,
+        "usage": usage_totals,
     }
     return result

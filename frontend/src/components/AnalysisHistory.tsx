@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './AnalysisHistory.css'
 
@@ -64,14 +64,16 @@ export function AnalysisHistory({ recent = false }: { recent?: boolean }) {
     {!loading && !error && records.length === 0 && <p>아직 저장된 분석 기록이 없습니다.</p>}
     {notice && <p className="success-note" role="status">{notice}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
-    <div className="history-list">{visible.map((item) => <article className="history-item" key={item.id}>
+    <div className="history-list">{visible.map((item, index) => <Fragment key={item.id}>
+      {!recent && (index === 0 || new Date(visible[index - 1].created_at).toLocaleDateString('ko-KR') !== new Date(item.created_at).toLocaleDateString('ko-KR')) && <h3 className="history-day-heading">{new Date(item.created_at).toLocaleDateString('ko-KR')}</h3>}
+      <article className="history-item">
       <div><h3>{item.title}</h3><p>{new Date(item.created_at).toLocaleString('ko-KR')} · {item.original_name} · {(item.duration_ms / 1000).toFixed(1)}초</p>
         <span className={`history-state ${item.video_available ? '' : 'broken'}`}>{item.state_label}</span>
         {item.state_detail && <p className="history-detail">{item.state_detail}</p>}
       </div>
       <div className="history-actions">{item.video_available && <Link className="button secondary" to={item.next_path}>{item.status === 'completed' || item.status === 'review_required' ? '결과 보기' : '이어하기'}</Link>}
         <button className="button secondary" onClick={() => { setDeleting(item); setError(''); setNotice('') }}>삭제</button></div>
-    </article>)}</div>
+    </article></Fragment>)}</div>
     {deleting && <div className="history-dialog-backdrop"><div className="history-dialog" role="dialog" aria-modal="true" aria-label="분석 기록 삭제 확인">
       <h2>‘{deleting.title}’ 삭제</h2><p>원본 영상과 코트 설정, 선수, 슛 기록, 분석 결과를 함께 삭제합니다. 복구할 수 없습니다.</p>
       <div className="actions"><button className="button secondary" disabled={busy} onClick={() => setDeleting(null)}>취소</button>

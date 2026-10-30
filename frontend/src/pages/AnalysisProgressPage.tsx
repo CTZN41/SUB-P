@@ -83,7 +83,7 @@ export function AnalysisProgressPage() {
     <header className="setup-header"><div><p className="eyebrow">ANALYSIS FLOW</p><h1>{analysis?.title ?? '분석 준비'}</h1>
       <p className="lead">실제 영상에서 슛 후보를 찾거나 개발용 작업 흐름을 점검합니다.</p></div><span className="step-chip">3 / 3 설정</span></header>
     <div className="simulation-banner"><strong>{simulation ? '개발용 흐름 점검' : 'Phase 7 슛 후보 분석'}</strong>
-      <span>{simulation ? '실제 슛을 찾거나 결과를 저장하지 않습니다.' : '초기 학습 모델이 찾은 후보입니다. 실제 슛인지 직접 확인해야 하며 성공 여부와 슛 종류는 아직 판단하지 않습니다.'}</span></div>
+      <span>{simulation ? '실제 슛을 찾거나 결과를 저장하지 않습니다.' : '로컬 모델이 슛 후보를 찾고 AI가 슛 여부·종류·결과를 검토합니다. 확신이 부족한 기록은 확인 필요로 남깁니다.'}</span></div>
     <section className="setup-card progress-card"><div className="progress-summary"><div><span>현재 상태</span><strong>{job?.stage ?? '시작 전'}</strong></div>
       <div><span>{simulation ? '점검 화면의 예시 구간' : '처리한 원본 영상 구간'}</span><strong>{job ? `${(job.processed_ms / 1000).toFixed(1)}초 / ${((analysis?.duration_ms ?? 0) / 1000).toFixed(1)}초` : '-'}</strong></div></div>
       <ol className="stage-list">{STAGES.map((stage, index) => <li key={stage} className={index < activeIndex || (simulation && job?.status === 'succeeded') ? 'done' : index === activeIndex && job ? 'active' : ''}><span>{index + 1}</span><strong>{stage}</strong></li>)}</ol>

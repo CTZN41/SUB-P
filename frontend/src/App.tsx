@@ -8,6 +8,7 @@ import { PlayerSetupPage } from './pages/PlayerSetupPage'
 import { AnalysisProgressPage } from './pages/AnalysisProgressPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ShotReviewPage } from './pages/ShotReviewPage'
+import { MonthlyResultsPage } from './pages/MonthlyResultsPage'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="progress/:analysisId" element={<AnalysisProgressPage />} />
         <Route path="results/:analysisId" element={<ShotReviewPage />} />
         <Route path="history" element={<HistoryPage />} />
+        <Route path="history/monthly" element={<MonthlyResultsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

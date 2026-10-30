@@ -151,7 +151,7 @@ def test_overlapping_trajectory_evidence_keeps_later_release() -> None:
     candidates = merge_candidate_evidence([early, release], 1920, 1080)
     assert len(candidates) == 1
     assert candidates[0]["time_ms"] == 9333
-    assert candidates[0]["confidence"] == .6
+    assert candidates[0]["confidence"] == .45
 
 
 def test_weak_ball_only_trace_after_pose_release_is_not_second_shot() -> None:
@@ -187,6 +187,89 @@ def test_second_pose_backed_release_is_preserved() -> None:
         second, {**second, "candidate_source": "pose_shot_motion"},
     ], 1920, 1080)
     assert len(candidates) == 2
+
+
+def test_late_release_pose_keeps_its_time_foot_and_confidence() -> None:
+    def item(time, next_time, source, confidence, foot):
+        return {
+            "time_ms": time, "next_time_ms": next_time,
+            "frame_index": round(time * .024), "candidate_source": source,
+            "confidence": confidence, "foot_point_px": foot,
+            "ball_point_px": [300, 100], "scene_id": 0,
+            "review_reasons": [],
+        }
+
+    candidates = merge_candidate_evidence([
+        item(2127, 2502, "pose_shot_motion", .2296, [608, 720]),
+        item(2753, 3754, "trajectory", .672, [686, 628]),
+        item(3754, 4630, "rim_approach_backtrack", .6966, [561, 514]),
+        item(4004, 4004, "pose_shot_motion", .8219, [536, 465]),
+    ], 1280, 720)
+
+    assert len(candidates) == 1
+    assert candidates[0]["time_ms"] == 4004
+    assert candidates[0]["foot_point_px"] == [536, 465]
+    assert candidates[0]["confidence"] == .8219
+    assert candidates[0]["release_basis"] == "pose_after_ball_flight"
+
+
+def test_existing_release_keeps_trajectory_when_pose_is_before_flight_end() -> None:
+    def item(time, next_time, source, confidence, foot):
+        return {
+            "time_ms": time, "next_time_ms": next_time,
+            "frame_index": round(time * .03), "candidate_source": source,
+            "confidence": confidence, "foot_point_px": foot,
+            "ball_point_px": [300, 100], "scene_id": 0,
+            "review_reasons": [],
+        }
+
+    candidates = merge_candidate_evidence([
+        item(3733, 5200, "pose_shot_motion", .6546, [793, 883]),
+        item(4400, 5200, "trajectory", .5102, [830, 961]),
+        item(4933, 5200, "pose_shot_motion", .6546, [809, 946]),
+        item(5867, 6800, "rim_approach_backtrack", .3855, [802, 1076]),
+    ], 1920, 1080)
+
+    assert len(candidates) == 1
+    assert candidates[0]["time_ms"] == 4400
+    assert candidates[0]["foot_point_px"] == [830, 961]
+    assert candidates[0]["confidence"] == .5102
+    assert candidates[0]["release_basis"] == "trajectory_start"
+
+
+def test_trajectory_rejects_impossible_ball_jump() -> None:
+    person = {"xyxy": [500, 500, 700, 1080], "confidence": .9}
+    start = {"xyxy": [590, 640, 610, 660], "confidence": .8}
+    jump = {"xyxy": [810, -10, 830, 10], "confidence": .7}
+    records = [
+        {"time_ms": 1000, "frame_index": 30, "person": person,
+         "balls": [start], "tracked_hoop": [600, 100], "hoop_valid": True,
+         "scene_id": 0, "rim_missing": False},
+        {"time_ms": 1125, "frame_index": 34, "person": person,
+         "balls": [jump], "tracked_hoop": [600, 100], "hoop_valid": True,
+         "scene_id": 0, "rim_missing": False},
+    ]
+    assert trajectory_candidates(records, [600, 100], 1080) == []
+
+
+def test_trajectory_rejects_ball_returning_toward_camera() -> None:
+    person = {"xyxy": [100, 120, 200, 360], "confidence": .9}
+    start = {"xyxy": [140, 180, 160, 200], "confidence": .8}
+    ordinary_flight = {"xyxy": [135, 80, 155, 100], "confidence": .7}
+    approaching_camera = {"xyxy": [125, 70, 165, 110], "confidence": .7}
+
+    def records(end_ball):
+        return [
+            {"time_ms": 1000, "frame_index": 30, "person": person,
+             "balls": [start], "tracked_hoop": [280, 60], "hoop_valid": True,
+             "scene_id": 0, "rim_missing": False},
+            {"time_ms": 1250, "frame_index": 38, "person": person,
+             "balls": [end_ball], "tracked_hoop": [280, 60], "hoop_valid": True,
+             "scene_id": 0, "rim_missing": False},
+        ]
+
+    assert len(trajectory_candidates(records(ordinary_flight), [280, 60], 480)) == 1
+    assert trajectory_candidates(records(approaching_camera), [280, 60], 480) == []
 
 
 def test_pose_motion_requires_preparation_and_later_ball_flight() -> None:
@@ -318,7 +401,10 @@ def test_phase8_worker_saves_candidates_as_reviewable_shots(tmp_path, monkeypatc
         job = AnalysisJob(analysis_id=analysis_id, status=JobStatus.QUEUED, stage="영상 준비", is_simulation=False)
         session.add(job); session.commit(); job_id = job.id
     result = {"candidates": [{"time_ms": 1000, "foot_point_px": [150, 400]}], "issues": {}}
-    monkeypatch.setattr("app.services.analysis_jobs.analyze_video", lambda *args, **kwargs: result)
+    def analyze_with_current_model(*args, **kwargs):
+        assert args[1].name == "basketball-yolo26n-pilot-v4.pt"
+        return result
+    monkeypatch.setattr("app.services.analysis_jobs.analyze_video", analyze_with_current_model)
     run_phase7_job(factory, client.app.state.settings, analysis_id, job_id)
     with factory() as session:
         assert session.get(AnalysisJob, job_id).status is JobStatus.SUCCEEDED

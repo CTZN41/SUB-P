@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     openai_timeout_seconds: int = 60
     openai_shot_review_enabled: bool = True
     openai_max_candidate_reviews: int = 40
+    openai_max_shot_gate_reviews: int = 12
     log_level: str = "INFO"
 
     model_config = SettingsConfigDict(

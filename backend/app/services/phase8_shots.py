@@ -30,6 +30,7 @@ SHOT_TYPE_MAP = {
     "set_shot": ShotType.SET_SHOT,
     "dribble_pull_up": ShotType.DRIBBLE_PULL_UP,
     "layup": ShotType.LAYUP,
+    "dunk": ShotType.DUNK,
     "fadeaway": ShotType.FADEAWAY,
     "step_back": ShotType.STEP_BACK,
     "turnaround": ShotType.TURNAROUND,
@@ -102,7 +103,7 @@ def _court_position(
 
 def _result(ai_review: dict, reasons: list[str]) -> ShotResult:
     if not ai_review.get("is_shot"):
-        _append_reason(reasons, "로컬 후보와 AI 슛 여부 판정이 다르거나 판정이 없음")
+        _append_reason(reasons, "AI가 새 슛 동작을 확인하지 못했습니다. 리바운드·패스 등일 수 있으니 원본을 확인해 주세요.")
         return ShotResult.NEEDS_REVIEW
     outcome = ai_review.get("outcome")
     if outcome == "made":
@@ -205,6 +206,7 @@ def materialize_shots_from_candidates(
             "calibration_shifted": bool(candidate.get("calibration_shifted")),
             "diagnostic_reasons": diagnostic_reasons,
             "ai_review": ai_review,
+            "shot_gate": candidate.get("shot_gate"),
         }
         shots.append(shot)
 

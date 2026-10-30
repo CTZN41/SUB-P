@@ -135,6 +135,40 @@ def test_review_update_add_delete_and_statistics(tmp_path) -> None:
     engine.dispose()
 
 
+def test_dunk_is_saved_and_counted_separately_from_layup(tmp_path) -> None:
+    client, engine, (analysis_id, player_id, shot_id) = make_client(tmp_path)
+    with client:
+        base = {
+            "player_id": player_id,
+            "candidate_time_ms": 3000,
+            "sequence_start_ms": 1000,
+            "sequence_end_ms": 5000,
+            "court_x": 25,
+            "court_y": 6,
+            "result": "made",
+        }
+        layup = client.patch(
+            f"/api/analyses/{analysis_id}/shots/{shot_id}",
+            json={**base, "shot_type": "layup"},
+        )
+        assert layup.status_code == 200
+        dunk = client.post(
+            f"/api/analyses/{analysis_id}/shots",
+            json={**base, "candidate_time_ms": 8000, "sequence_start_ms": 6000,
+                  "sequence_end_ms": 10_000, "shot_type": "dunk"},
+        )
+        assert dunk.status_code == 201
+        assert dunk.json()["shot_type"] == "dunk"
+        listed = client.get(f"/api/analyses/{analysis_id}/shots").json()
+        assert listed["statistics"]["by_shot_type"]["layup"]["attempts"] == 1
+        assert listed["statistics"]["by_shot_type"]["dunk"]["attempts"] == 1
+        filtered = client.get(
+            f"/api/analyses/{analysis_id}/shots", params={"shot_type": "dunk"}
+        ).json()
+        assert [shot["id"] for shot in filtered["shots"]] == [dunk.json()["id"]]
+    engine.dispose()
+
+
 def test_invalid_time_position_player_and_unconfirmed_values_are_rejected(tmp_path) -> None:
     client, engine, (analysis_id, player_id, shot_id) = make_client(tmp_path)
     base = {

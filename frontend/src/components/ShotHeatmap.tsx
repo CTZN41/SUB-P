@@ -33,12 +33,17 @@ const ZONES: ZoneShape[] = [
   { code: 'restricted', label: '골밑', path: 'M210 53A40 40 0 1 0 290 53A40 40 0 1 0 210 53Z', cardX: 250, cardY: 55, cardWidth: 60 },
 ]
 
-function zoneTone(stat: ZoneStat | undefined, totalAttempts: number) {
+function zoneTarget(code: string): number {
+  if (code === 'restricted') return 80
+  if (code.startsWith('paint_')) return 60
+  if (code.startsWith('mid_')) return 45
+  return 35
+}
+
+function zoneTone(stat: ZoneStat | undefined, code: string) {
   if (!stat?.attempts) return 'empty'
-  if (totalAttempts < 5 || stat.success_rate == null || stat.difference_from_overall == null) return 'neutral'
-  if (stat.difference_from_overall >= 0) return 'hot'
-  if (stat.difference_from_overall <= -10) return 'cold'
-  return 'neutral'
+  if (stat.success_rate == null) return 'neutral'
+  return stat.success_rate >= zoneTarget(code) ? 'hot' : 'cold'
 }
 
 function percent(value: number | null | undefined) {
@@ -47,36 +52,36 @@ function percent(value: number | null | undefined) {
 
 export function ShotHeatmap({
   statistics,
-  overallRate,
   selectedZone,
   onSelect,
+  patternId = 'courtWood',
 }: {
   statistics: Record<string, ZoneStat>
-  overallRate: number | null
   selectedZone: string | null
   onSelect: (zone: string) => void
+  patternId?: string
 }) {
   const selected = ZONES.find((zone) => zone.code === selectedZone)
   const selectedStat = selectedZone ? statistics[selectedZone] : undefined
-  const totalAttempts = Object.values(statistics).reduce((sum, stat) => sum + stat.attempts, 0)
   return <div className="heatmap-wrap">
-    <div className="heatmap-heading"><strong>구역별 슈팅 효율</strong><span>AVG: 현재 필터 전체 성공률 · DST: 전체 슛 중 해당 구역 비중</span></div>
+    <div className="heatmap-heading"><strong>구역별 슈팅 효율</strong><span>목표: 개인 연습용 기준 · DST: 전체 슛 중 해당 구역 비중</span></div>
     <svg className="shot-heatmap" viewBox="-12 -12 524 494" role="img" aria-label="14개 구역 슈팅 히트맵">
       <defs>
-        <pattern id="courtWood" width="18" height="470" patternUnits="userSpaceOnUse">
+        <pattern id={patternId} width="18" height="470" patternUnits="userSpaceOnUse">
           <rect width="18" height="470" fill="#d5b77d" />
           <path d="M1 0V470M17 0V470" stroke="#efd7a9" strokeWidth="1" opacity=".48" />
           <path d="M5 0V470M12 0V470" stroke="#a88757" strokeWidth=".55" opacity=".25" />
         </pattern>
       </defs>
-      <rect className="court-surface" x="0" y="0" width="500" height="470" rx="8" />
+      <rect className="court-surface" x="0" y="0" width="500" height="470" rx="8" fill={`url(#${patternId})`} />
       {ZONES.map((zone) => {
         const stat = statistics[zone.code]
         const rate = stat?.success_rate
         const selectedNow = selectedZone === zone.code
-        const detail = rate == null ? '데이터 없음' : `${rate.toFixed(1)}% · 비중 ${(stat?.attempt_share ?? 0).toFixed(1)}% · 전체 대비 ${(stat?.difference_from_overall ?? 0).toFixed(1)}%p`
+        const target = zoneTarget(zone.code)
+        const detail = rate == null ? '데이터 없음' : `${rate.toFixed(1)}% · 목표 ${target}% · 목표 대비 ${(rate - target).toFixed(1)}%p`
         return <g
-          className={`heat-zone ${zoneTone(stat, totalAttempts)}${selectedNow ? ' selected' : ''}`}
+          className={`heat-zone ${zoneTone(stat, zone.code)}${selectedNow ? ' selected' : ''}`}
           key={zone.code}
           role="button"
           tabIndex={0}
@@ -110,16 +115,16 @@ export function ShotHeatmap({
           <rect width={width} height="68" rx="5" />
           <text className="zone-fraction" x={width / 2} y="19">{stat?.made ?? 0}/{stat?.attempts ?? 0}</text>
           <text x={width / 2} y="34">{percent(stat?.success_rate)}</text>
-          <text x={width / 2} y="48">AVG {percent(overallRate)}</text>
+          <text x={width / 2} y="48">목표 {zoneTarget(zone.code)}%</text>
           <text x={width / 2} y="61">DST {percent(stat?.attempt_share ?? 0)}</text>
         </g>
       })}
     </svg>
     <div className="selected-zone-detail" aria-live="polite">
-      {selected ? <><strong>{selected.label}</strong><span>성공/시도 {selectedStat?.made ?? 0}/{selectedStat?.attempts ?? 0}</span><span>성공률 {percent(selectedStat?.success_rate)}</span><span>슛 비중 {percent(selectedStat?.attempt_share ?? 0)}</span><span>전체 대비 {selectedStat?.difference_from_overall == null ? '-' : `${selectedStat.difference_from_overall > 0 ? '+' : ''}${selectedStat.difference_from_overall.toFixed(1)}%p`}</span></> : <span>구역을 선택하면 해당 구역의 슛 목록과 상세 수치를 볼 수 있습니다.</span>}
+      {selected ? <><strong>{selected.label}</strong><span>성공/시도 {selectedStat?.made ?? 0}/{selectedStat?.attempts ?? 0}</span><span>성공률 {percent(selectedStat?.success_rate)}</span><span>슛 비중 {percent(selectedStat?.attempt_share ?? 0)}</span><span>개인 목표 {zoneTarget(selected.code)}%</span></> : <span>구역을 선택하면 해당 구역의 슛 목록과 상세 수치를 볼 수 있습니다.</span>}
     </div>
     <div className="heatmap-legend" aria-label="히트맵 색상 설명">
-      <span><i className="hot" />전체 평균 이상</span><span><i className="cold" />전체보다 10%p 이상 낮음</span><span><i className="neutral" />5회 미만·판단 보류</span><span><i className="empty" />데이터 없음</span>
+      <span><i className="hot" />목표 이상</span><span><i className="cold" />목표 미만</span><span><i className="neutral" />성공·실패 판단 불가</span><span><i className="empty" />시도 없음</span>
     </div>
   </div>
 }

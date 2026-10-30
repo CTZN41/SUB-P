@@ -407,12 +407,15 @@ New/
 - `set_shot`
 - `dribble_pull_up`
 - `layup`
+- `dunk`
 - `fadeaway`
 - `step_back`
 - `turnaround`
 - `hook_shot`
 - `other`
 - `needs_review`
+
+`layup`과 `dunk`는 별도 값입니다. 움직이면서 공을 림 옆에서 위로 놓는 장면은 `layup`, 공을 쥐고 림 높이에서 아래로 밀어 넣는 장면은 `dunk`로 구분합니다. 판정 근거가 부족하면 `needs_review`로 둡니다.
 
 ### 응답 검사
 
