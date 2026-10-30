@@ -154,6 +154,41 @@ def test_overlapping_trajectory_evidence_keeps_later_release() -> None:
     assert candidates[0]["confidence"] == .6
 
 
+def test_weak_ball_only_trace_after_pose_release_is_not_second_shot() -> None:
+    release = {
+        "time_ms": 9333, "next_time_ms": 9467, "confidence": .7571,
+        "foot_point_px": [1361, 845], "candidate_source": "trajectory",
+        "scene_id": 0, "review_reasons": [],
+    }
+    pose = {**release, "candidate_source": "pose_shot_motion"}
+    trace = {
+        "time_ms": 10333, "next_time_ms": 10467, "confidence": .1465,
+        "foot_point_px": [1110, 837], "candidate_source": "trajectory",
+        "scene_id": 0, "review_reasons": [],
+    }
+    candidates = merge_candidate_evidence([release, pose, trace], 1920, 1080)
+    assert len(candidates) == 1
+    assert candidates[0]["time_ms"] == 9333
+    assert "같은 슛으로 병합" in candidates[0]["review_reasons"][-1]
+
+
+def test_second_pose_backed_release_is_preserved() -> None:
+    first = {
+        "time_ms": 9333, "next_time_ms": 9467, "confidence": .75,
+        "foot_point_px": [1361, 845], "candidate_source": "trajectory",
+        "scene_id": 0, "review_reasons": [],
+    }
+    second = {
+        **first, "time_ms": 10333, "next_time_ms": 10467,
+        "confidence": .65, "foot_point_px": [1110, 837],
+    }
+    candidates = merge_candidate_evidence([
+        first, {**first, "candidate_source": "pose_shot_motion"},
+        second, {**second, "candidate_source": "pose_shot_motion"},
+    ], 1920, 1080)
+    assert len(candidates) == 2
+
+
 def test_pose_motion_requires_preparation_and_later_ball_flight() -> None:
     person = {"xyxy": [100, 100, 200, 400], "confidence": .9}
     lower_pose = {

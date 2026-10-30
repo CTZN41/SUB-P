@@ -342,17 +342,30 @@ def merge_candidate_evidence(
             existing["confidence"] = round(max(existing["confidence"], incoming["confidence"]), 4)
             continue
         consolidated.append(incoming)
-    return [
-        candidate for candidate in consolidated
-        if not (
-            candidate.get("candidate_sources") == ["pose_shot_motion"]
-            or (
-                candidate["confidence"] < .35
-                and candidate.get("calibration_shifted")
-                and "rim_approach_backtrack" not in candidate.get("candidate_sources", [])
-            )
-        )
-    ]
+    filtered: list[dict[str, Any]] = []
+    for candidate in consolidated:
+        sources = set(candidate.get("candidate_sources", [candidate.get("candidate_source", "trajectory")]))
+        if sources == {"pose_shot_motion"} or (
+            candidate["confidence"] < .35
+            and candidate.get("calibration_shifted")
+            and "rim_approach_backtrack" not in sources
+        ):
+            continue
+        preceding = filtered[-1] if filtered else None
+        # A weak ball-only trace immediately after a strong pose-backed release
+        # is usually the same ball in flight. Keep a second pose-backed release.
+        if preceding and sources == {"trajectory"} and candidate["confidence"] < .25 and (
+            "pose_shot_motion" in preceding.get("candidate_sources", [])
+            and preceding["confidence"] >= .5
+            and preceding.get("scene_id", 0) == candidate.get("scene_id", 0)
+            and 0 < candidate["time_ms"] - preceding["time_ms"] <= 1200
+        ):
+            preceding["review_reasons"] = list(dict.fromkeys(
+                preceding.get("review_reasons", []) + ["약한 후속 공 궤적을 같은 슛으로 병합"]
+            ))
+            continue
+        filtered.append(candidate)
+    return filtered
 
 
 def _ball_cell(box: dict[str, Any], width: int, height: int) -> tuple[int, int]:

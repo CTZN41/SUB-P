@@ -16,6 +16,7 @@ from app.models import (
     Analysis,
     AnalysisJob,
     AnalysisStatus,
+    JobStatus,
     CalibrationSource,
     CourtCalibration,
     Player,
@@ -79,9 +80,8 @@ def find_analysis(session: Session, analysis_id: str) -> Analysis:
     return analysis
 
 
-def _list_item(session: Session, analysis: Analysis, upload_path) -> AnalysisListItem:
+def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *, has_calibration: bool, has_player: bool) -> AnalysisListItem:
     video_available = (upload_path / analysis.id / "original.mp4").is_file()
-    job = current_job(session, analysis.id)
     if not video_available:
         label, detail = "원본 영상 없음", "원본 파일이 없어 재생하거나 다시 분석할 수 없습니다. 기록을 삭제할 수 있습니다."
     elif analysis.status == AnalysisStatus.FAILED:
@@ -104,15 +104,13 @@ def _list_item(session: Session, analysis: Analysis, upload_path) -> AnalysisLis
         label, detail = "분석 중", analysis.current_stage
     else:
         label, detail = "설정 필요", None
-    calibration = session.scalar(select(CourtCalibration.id).where(CourtCalibration.analysis_id == analysis.id))
-    player = session.scalar(select(Player.id).where(Player.analysis_id == analysis.id))
     if analysis.status in (AnalysisStatus.COMPLETED, AnalysisStatus.REVIEW_REQUIRED) and video_available:
         next_path = f"/results/{analysis.id}"
-    elif (job and job.status in ACTIVE_JOB_STATUSES) or analysis.status in (AnalysisStatus.FAILED, AnalysisStatus.CANCELED):
+    elif job_status in ACTIVE_JOB_STATUSES or analysis.status in (AnalysisStatus.FAILED, AnalysisStatus.CANCELED):
         next_path = f"/progress/{analysis.id}"
-    elif not calibration:
+    elif not has_calibration:
         next_path = f"/court/{analysis.id}"
-    elif not player:
+    elif not has_player:
         next_path = f"/players/{analysis.id}"
     else:
         next_path = f"/progress/{analysis.id}"
@@ -126,8 +124,18 @@ def _list_item(session: Session, analysis: Analysis, upload_path) -> AnalysisLis
 
 @router.get("", response_model=AnalysisListResponse)
 def list_analyses(request: Request, session: Annotated[Session, Depends(get_db_session)]) -> AnalysisListResponse:
-    analyses = session.scalars(select(Analysis).order_by(Analysis.created_at.desc(), Analysis.id.desc())).all()
-    return AnalysisListResponse(analyses=[_list_item(session, analysis, request.app.state.settings.upload_path) for analysis in analyses])
+    has_calibration = select(CourtCalibration.id).where(CourtCalibration.analysis_id == Analysis.id).exists()
+    has_player = select(Player.id).where(Player.analysis_id == Analysis.id).exists()
+    job_status = (select(AnalysisJob.status).where(AnalysisJob.analysis_id == Analysis.id)
+                  .order_by(AnalysisJob.started_at.desc(), AnalysisJob.id.desc()).limit(1).scalar_subquery())
+    rows = session.execute(select(Analysis, has_calibration, has_player, job_status)
+                           .order_by(Analysis.created_at.desc(), Analysis.id.desc())).all()
+    return AnalysisListResponse(analyses=[
+        _list_item(
+            analysis, request.app.state.settings.upload_path, latest_job_status,
+            has_calibration=calibration_ready, has_player=player_ready,
+        ) for analysis, calibration_ready, player_ready, latest_job_status in rows
+    ])
 
 
 @router.delete("/{analysis_id}", status_code=204)
