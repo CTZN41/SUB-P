@@ -33,8 +33,8 @@ export function AppLayout() {
 
         <div className="sidebar-note">
           <span>현재 단계</span>
-          <strong>Phase 9</strong>
-          <p>원본 장면을 보며 자동 슛 기록을 확인·수정할 수 있습니다.</p>
+          <strong>Phase 12</strong>
+          <p>저장된 영상과 분석 결과를 다시 열고 관리할 수 있습니다.</p>
         </div>
       </aside>
 

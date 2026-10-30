@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { AnalysisHistory } from '../components/AnalysisHistory'
 
 const statusItems = [
   { label: 'React 화면', state: '준비 완료' },
@@ -53,6 +54,7 @@ export function HomePage() {
           코트 기준점, 선수 추적, 슛 판정과 결과 지도는 다음 Phase부터 연결합니다.
         </p>
       </section>
+      <AnalysisHistory recent />
     </div>
   )
 }

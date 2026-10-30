@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models import Analysis, AnalysisJob, AnalysisStatus, CourtCalibration, JobStatus, Shot
@@ -168,9 +168,19 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
             if analysis is None or calibration is None:
                 raise Phase7Error("분석 또는 코트 위치 정보를 찾을 수 없습니다.")
             job.stage = analysis.current_stage = STAGES[4]
+            # Replace the previous run atomically with this run's shots. A failed
+            # retry keeps the old data until a complete result can be committed.
+            session.execute(delete(Shot).where(Shot.analysis_id == analysis_id))
+            session.flush()
             materialize_shots_from_candidates(
                 session, analysis, calibration, result
             )
+            ai_state = result.get("ai_review", {}).get("status")
+            if ai_state in ("partial", "not_configured"):
+                analysis.failure_code = "OPENAI_PARTIAL"
+                analysis.failure_message = "외부 AI 판정을 완료하지 못한 슛은 확인 필요로 보존했습니다."
+            else:
+                analysis.failure_code = analysis.failure_message = None
             save_result(settings.work_path, analysis_id, result)
             job.status = JobStatus.SUCCEEDED
             job.stage = STAGES[-1]

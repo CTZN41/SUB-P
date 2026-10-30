@@ -2,6 +2,7 @@ from datetime import date
 from typing import Annotated
 
 from datetime import datetime, timezone
+import shutil
 
 import cv2
 import numpy as np
@@ -27,6 +28,8 @@ from app.models import (
 )
 from app.schemas.analyses import (
     AnalysisRegistrationResponse,
+    AnalysisListItem,
+    AnalysisListResponse,
     AnalysisJobResponse,
     CourtCalibrationRequest,
     CourtCalibrationResponse,
@@ -53,7 +56,7 @@ from app.services.court_landmark_detection import (
     detect_court_landmarks_temporally,
 )
 from app.services.video_registration import RegistrationError, playback_video_path, register_video
-from app.services.analysis_jobs import cancel_job, current_job, read_phase7_result, refresh_simulation, run_phase7_job, start_phase7, start_simulation
+from app.services.analysis_jobs import ACTIVE_JOB_STATUSES, cancel_job, current_job, read_phase7_result, refresh_simulation, run_phase7_job, start_phase7, start_simulation
 from app.analysis.phase7_pipeline import Phase7Error
 from app.services.court_zones import ZONE_LABELS, ZoneCode, classify_zone
 from app.services.shot_statistics import calculate_statistics
@@ -74,6 +77,85 @@ def find_analysis(session: Session, analysis_id: str) -> Analysis:
     if analysis is None:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "분석 기록을 찾을 수 없습니다."})
     return analysis
+
+
+def _list_item(session: Session, analysis: Analysis, upload_path) -> AnalysisListItem:
+    video_available = (upload_path / analysis.id / "original.mp4").is_file()
+    job = current_job(session, analysis.id)
+    if not video_available:
+        label, detail = "원본 영상 없음", "원본 파일이 없어 재생하거나 다시 분석할 수 없습니다. 기록을 삭제할 수 있습니다."
+    elif analysis.status == AnalysisStatus.FAILED:
+        if analysis.failure_code == "PROCESS_INTERRUPTED":
+            label, detail = "분석 중단", "프로그램 종료로 중단되었습니다. 다시 분석할 수 있습니다."
+        elif analysis.failure_code and "OPENAI" in analysis.failure_code.upper():
+            label, detail = "외부 AI 연결 실패", analysis.failure_message
+        else:
+            label, detail = "분석 불가", analysis.failure_message or "분석을 완료하지 못했습니다."
+    elif analysis.status == AnalysisStatus.REVIEW_REQUIRED:
+        if analysis.failure_code == "OPENAI_PARTIAL":
+            label, detail = "외부 AI 연결 실패", analysis.failure_message
+        else:
+            label, detail = "일부 확인 필요", "확인이 필요한 슛 기록이 있습니다."
+    elif analysis.status == AnalysisStatus.COMPLETED:
+        label, detail = "완료", None
+    elif analysis.status == AnalysisStatus.CANCELED:
+        label, detail = "취소됨", "설정을 유지한 채 다시 분석할 수 있습니다."
+    elif analysis.status in (AnalysisStatus.QUEUED, AnalysisStatus.ANALYZING):
+        label, detail = "분석 중", analysis.current_stage
+    else:
+        label, detail = "설정 필요", None
+    calibration = session.scalar(select(CourtCalibration.id).where(CourtCalibration.analysis_id == analysis.id))
+    player = session.scalar(select(Player.id).where(Player.analysis_id == analysis.id))
+    if analysis.status in (AnalysisStatus.COMPLETED, AnalysisStatus.REVIEW_REQUIRED) and video_available:
+        next_path = f"/results/{analysis.id}"
+    elif (job and job.status in ACTIVE_JOB_STATUSES) or analysis.status in (AnalysisStatus.FAILED, AnalysisStatus.CANCELED):
+        next_path = f"/progress/{analysis.id}"
+    elif not calibration:
+        next_path = f"/court/{analysis.id}"
+    elif not player:
+        next_path = f"/players/{analysis.id}"
+    else:
+        next_path = f"/progress/{analysis.id}"
+    return AnalysisListItem(
+        id=analysis.id, title=analysis.title, original_name=analysis.original_name,
+        play_type=analysis.play_type, status=analysis.status, created_at=analysis.created_at,
+        duration_ms=analysis.duration_ms, video_available=video_available,
+        next_path=next_path, state_label=label, state_detail=detail,
+    )
+
+
+@router.get("", response_model=AnalysisListResponse)
+def list_analyses(request: Request, session: Annotated[Session, Depends(get_db_session)]) -> AnalysisListResponse:
+    analyses = session.scalars(select(Analysis).order_by(Analysis.created_at.desc(), Analysis.id.desc())).all()
+    return AnalysisListResponse(analyses=[_list_item(session, analysis, request.app.state.settings.upload_path) for analysis in analyses])
+
+
+@router.delete("/{analysis_id}", status_code=204)
+def delete_analysis(
+    request: Request, analysis_id: str, session: Annotated[Session, Depends(get_db_session)]
+) -> Response:
+    analysis = find_analysis(session, analysis_id)
+    job = current_job(session, analysis_id)
+    if job and job.status in ACTIVE_JOB_STATUSES:
+        raise HTTPException(status_code=409, detail={"code": "ANALYSIS_ACTIVE", "message": "분석 중에는 삭제할 수 없습니다. 먼저 취소해 주세요."})
+    settings = request.app.state.settings
+    # A failed file removal leaves the database record visible for retry.
+    for folder in (settings.upload_path / analysis_id, settings.work_path / analysis_id):
+        try:
+            if folder.exists():
+                shutil.rmtree(folder)
+        except OSError as error:
+            raise HTTPException(status_code=500, detail={
+                "code": "PARTIAL_DELETE", "message": "일부 파일을 삭제하지 못했습니다. 기록은 남아 있습니다. 저장 폴더의 권한을 확인한 뒤 다시 삭제해 주세요.",
+                "remaining": "원본 영상 폴더" if folder.parent == settings.upload_path else "분석 작업 폴더",
+            }) from error
+    try:
+        session.delete(analysis)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise HTTPException(status_code=500, detail={"code": "DATABASE_DELETE_FAILED", "message": "파일은 삭제됐지만 기록을 지우지 못했습니다. 기록 목록에서 다시 삭제해 주세요."})
+    return Response(status_code=204)
 
 
 @router.post("", response_model=AnalysisRegistrationResponse, status_code=status.HTTP_201_CREATED)

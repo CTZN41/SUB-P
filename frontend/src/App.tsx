@@ -6,7 +6,7 @@ import { NewAnalysisPage } from './pages/NewAnalysisPage'
 import { CourtCalibrationPage } from './pages/CourtCalibrationPage'
 import { PlayerSetupPage } from './pages/PlayerSetupPage'
 import { AnalysisProgressPage } from './pages/AnalysisProgressPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
+import { HistoryPage } from './pages/HistoryPage'
 import { ShotReviewPage } from './pages/ShotReviewPage'
 
 function App() {
@@ -19,16 +19,7 @@ function App() {
         <Route path="players/:analysisId" element={<PlayerSetupPage />} />
         <Route path="progress/:analysisId" element={<AnalysisProgressPage />} />
         <Route path="results/:analysisId" element={<ShotReviewPage />} />
-        <Route
-          path="history"
-          element={
-            <PlaceholderPage
-              eyebrow="저장 기록"
-              title="분석 기록"
-              description="저장된 영상과 분석 결과 목록은 Phase 12에서 연결합니다."
-            />
-          }
-        />
+        <Route path="history" element={<HistoryPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

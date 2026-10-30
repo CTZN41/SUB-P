@@ -1,0 +1,18 @@
+.history-section { margin-top: 28px; }
+.history-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.history-heading h2 { margin: 0 0 16px; }
+.history-heading a { color: #d8ff4f; }
+.history-list { display: grid; gap: 12px; }
+.history-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: #101a15; }
+.history-item h3 { margin: 0 0 7px; }
+.history-item p { margin: 0 0 8px; color: #9da9a1; font-size: .82rem; overflow-wrap: anywhere; }
+.history-item .history-detail { color: #ffd993; }
+.history-state { display: inline-block; padding: 4px 8px; border-radius: 7px; background: #2b4033; font-size: .75rem; }
+.history-state.broken { background: #6a352f; }
+.history-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: 0 0 auto; }
+.history-dialog-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.75); }
+.history-dialog { width: min(480px, 100%); padding: 24px; border: 1px solid rgba(255,255,255,.2); border-radius: 16px; background: #152018; }
+.history-dialog h2 { margin-top: 0; }
+.history-dialog p { line-height: 1.6; }
+.history-dialog .actions { justify-content: flex-end; margin-top: 20px; }
+@media (max-width: 700px) { .history-item { align-items: flex-start; flex-direction: column; } }

@@ -35,6 +35,24 @@ class AnalysisRegistrationResponse(BaseModel):
     created_at: datetime
 
 
+class AnalysisListItem(BaseModel):
+    id: str
+    title: str
+    original_name: str
+    play_type: PlayType
+    status: AnalysisStatus
+    created_at: datetime
+    duration_ms: int
+    video_available: bool
+    next_path: str
+    state_label: str
+    state_detail: str | None
+
+
+class AnalysisListResponse(BaseModel):
+    analyses: list[AnalysisListItem]
+
+
 class WarningAcceptanceResponse(BaseModel):
     id: str
     warnings_accepted: bool
