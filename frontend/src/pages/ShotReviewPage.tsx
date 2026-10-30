@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ShotHeatmap } from '../components/ShotHeatmap'
+
+const ShotCourt3D = lazy(() => import('../components/ShotCourt3D').then((module) => ({ default: module.ShotCourt3D })))
 
 const API_BASE = 'http://127.0.0.1:8000/api'
 const SHOT_TYPES = [
@@ -141,6 +143,14 @@ export function ShotReviewPage() {
         </div>
       </div>
     </section>
+    <Suspense fallback={<p className="inline-warning">3D 코트를 불러오는 중입니다…</p>}><ShotCourt3D
+      shots={visibleShots}
+      selectedShot={selected}
+      jerseyNumber={selected ? players.find((player) => player.id === selected.player_id)?.jersey_number ?? null : null}
+      onSelect={(id) => { const shot = data?.shots.find((item) => item.id === id); if (shot) choose(shot) }}
+      onPlay={playSequence}
+      typeLabels={TYPE_LABEL}
+    /></Suspense>
     <div className="review-layout">
       <section className="setup-card shot-list-panel"><div className="panel-title"><div><h2>{selectedZoneLabel ? `${selectedZoneLabel} 슛 기록` : '슛 기록'}</h2><p>{selectedZone ? `${visibleShots.length}개의 구역 기록을 표시합니다.` : data?.analysis_status === 'completed' ? '모든 기록 확인 완료' : '확인이 필요한 기록이 있습니다.'}</p></div><button className="button primary" onClick={startAdding} disabled={!players.length}>빠진 슛 추가</button></div>
         {!visibleShots.length && <p className="inline-warning">현재 조건에 맞는 슛이 없습니다.{!selectedZone && ' 빠진 슛을 직접 추가할 수 있습니다.'}</p>}

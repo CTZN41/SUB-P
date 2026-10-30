@@ -1,0 +1,78 @@
+.shot-court-3d {
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 16px;
+  background: #0c1410;
+}
+
+.court-3d-heading,
+.court-3d-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.court-3d-heading strong,
+.court-3d-heading span,
+.court-3d-selected strong,
+.court-3d-selected span { display: block; }
+.court-3d-heading strong { font-size: 1rem; }
+.court-3d-heading span,
+.court-3d-selected span { margin-top: 5px; color: #a2b0a8; font-size: .78rem; }
+
+.court-3d-controls { display: flex; gap: 7px; flex: 0 0 auto; }
+.court-3d-controls button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 8px;
+  background: #1a2921;
+  color: #e6f2e9;
+  font: inherit;
+  cursor: pointer;
+}
+.court-3d-controls button:hover,
+.court-3d-controls button:focus-visible { border-color: #d8ff4f; }
+
+.court-3d-canvas {
+  width: 100%;
+  height: clamp(360px, 52vw, 620px);
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #0c1512;
+}
+.court-3d-canvas canvas { display: block; touch-action: none; cursor: grab; }
+.court-3d-canvas canvas:active { cursor: grabbing; }
+.court-3d-unavailable { padding: 30px; color: #ffda91; }
+.court-3d-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 17px;
+  margin: 12px 0 0;
+  color: #a2b0a8;
+  font-size: .76rem;
+}
+.court-3d-footer span { display: inline-flex; align-items: center; gap: 6px; }
+.court-3d-footer i { width: 10px; height: 10px; border-radius: 50%; }
+.court-3d-footer i.made { background: #1fb878; }
+.court-3d-footer i.missed { background: #e3534d; }
+.court-3d-footer i.uncertain { background: #be9342; }
+.court-3d-selected {
+  min-height: 54px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(216, 255, 79, .18);
+  border-radius: 10px;
+  background: rgba(216, 255, 79, .045);
+}
+.court-3d-selected strong { color: #fff; }
+
+@media (max-width: 640px) {
+  .court-3d-heading,
+  .court-3d-selected { align-items: flex-start; flex-direction: column; }
+}
