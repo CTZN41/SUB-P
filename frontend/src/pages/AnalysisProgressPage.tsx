@@ -92,8 +92,9 @@ export function AnalysisProgressPage() {
       {job?.status === 'failed' && <p className="form-error">{job.error_message ?? '분석이 중단되었습니다. 다시 시도할 수 있습니다.'}</p>}
       {job?.status === 'canceled' && <p className="inline-warning">취소되었습니다. 원본 영상과 코트·선수 설정은 그대로 남아 있습니다.</p>}
       {analysis && analysis.play_type !== 'solo' && <p className="inline-warning">실제 슛 후보 분석은 현재 개인 연습 영상만 지원합니다. 여러 선수의 첫 위치 지정과 개발용 흐름은 확인할 수 있습니다.</p>}
+      {analysis && analysis.play_type !== 'solo' && <p className="helper-text">여러 선수의 슛은 원본 영상을 보면서 직접 추가하고 슈터를 지정할 수 있습니다. 자동 선수 추적은 아직 연결 중입니다.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="actions">{job?.status === 'succeeded' && !simulation && <Link className="button primary" to={`/results/${analysisId}`}>슛 기록 검토하기</Link>}{terminal && <><button className="button secondary" onClick={() => start(true)} disabled={busy || analysis?.play_type !== 'solo'}>{job ? '실제 후보 다시 찾기' : '실제 슛 후보 찾기'}</button><button className="button secondary" onClick={() => start(false)} disabled={busy}>개발용 흐름 점검</button></>}
+      <div className="actions">{job?.status === 'succeeded' && !simulation && <Link className="button primary" to={`/results/${analysisId}`}>슛 기록 검토하기</Link>}{analysis && analysis.play_type !== 'solo' && terminal && <Link className="button primary" to={`/results/${analysisId}`}>수동으로 슛 기록하기</Link>}{terminal && <><button className="button secondary" onClick={() => start(true)} disabled={busy || analysis?.play_type !== 'solo'}>{job ? '실제 후보 다시 찾기' : '실제 슛 후보 찾기'}</button><button className="button secondary" onClick={() => start(false)} disabled={busy}>개발용 흐름 점검</button></>}
         {job && !terminal && <button className="button secondary" onClick={cancel} disabled={busy}>{busy ? '취소 요청 중…' : '분석 취소'}</button>}<Link className="button secondary" to="/">화면 나가기</Link></div>
     </section>
     {result && <section className="setup-card progress-card" aria-label="슛 후보 결과"><h2>찾은 슛 후보 {result.candidates.length}개</h2><p>{result.notice}</p>

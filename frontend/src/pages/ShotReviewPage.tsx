@@ -15,7 +15,7 @@ const SHOT_TYPES = [
 const TYPE_LABEL = Object.fromEntries(SHOT_TYPES)
 const RESULT_LABEL: Record<string, string> = { made: '성공', missed: '실패', needs_review: '확인 필요' }
 
-type Analysis = { id: string; title: string; duration_ms: number; fps: number | null }
+type Analysis = { id: string; title: string; duration_ms: number; fps: number | null; play_type: string }
 type Player = { id: string; display_name: string; jersey_number: string | null }
 type Shot = { id: string; player_id: string; player_name: string; candidate_time_ms: number; sequence_start_ms: number; sequence_end_ms: number; court_x: number | null; court_y: number | null; zone_code: string | null; zone_label: string | null; result: string; shot_type: string; status: string; review_reason: string | null; source: string }
 type StatLine = { attempts: number; made: number; missed: number; success_rate: number | null; attempt_share: number | null; difference_from_overall: number | null }
@@ -125,7 +125,7 @@ export function ShotReviewPage() {
     if (first) choose(first)
   }
   return <div className="page shot-review-page">
-    <header className="setup-header"><div><p className="eyebrow">PHASE 10 · RESULTS & HEATMAP</p><h1>{analysis?.title ?? '슛 분석 결과'}</h1><p className="lead">요약과 14개 구역 히트맵을 보고, 필요한 기록은 원본 장면에서 바로 확인합니다.</p></div><Link className="button secondary" to={`/progress/${analysisId}`}>분석 화면</Link></header>
+    <header className="setup-header"><div><p className="eyebrow">RESULTS & HEATMAP</p><h1>{analysis?.title ?? '슛 분석 결과'}</h1><p className="lead">요약과 14개 구역 히트맵을 보고, 필요한 기록은 원본 장면에서 바로 확인합니다.</p>{analysis && analysis.play_type !== 'solo' && <p className="inline-warning">다인원 자동 추적은 아직 지원하지 않습니다. 원본 영상을 보면서 슛과 선수를 직접 기록해 주세요.</p>}</div><Link className="button secondary" to={`/progress/${analysisId}`}>분석 화면</Link></header>
     <section className="review-summary" aria-label="결과 요약"><div><span>전체 후보</span><strong>{stats?.attempts ?? 0}</strong></div><div><span>성공 / 실패</span><strong>{stats?.made ?? 0} / {stats?.missed ?? 0}</strong></div><div><span>확인 필요</span><strong>{reviewCount}</strong></div><div><span>확정 성공률</span><strong>{stats?.success_rate == null ? '-' : `${stats.success_rate.toFixed(1)}%`}</strong></div></section>
     <section className="setup-card results-dashboard">
       <div className="panel-title"><div><h2>14개 구역 히트맵</h2><p>색상뿐 아니라 성공/시도와 성공률을 함께 표시합니다. 구역을 누르면 아래 슛 기록도 같이 좁혀집니다.</p></div></div>
@@ -152,7 +152,7 @@ export function ShotReviewPage() {
       typeLabels={TYPE_LABEL}
     /></Suspense>
     <div className="review-layout">
-      <section className="setup-card shot-list-panel"><div className="panel-title"><div><h2>{selectedZoneLabel ? `${selectedZoneLabel} 슛 기록` : '슛 기록'}</h2><p>{selectedZone ? `${visibleShots.length}개의 구역 기록을 표시합니다.` : data?.analysis_status === 'completed' ? '모든 기록 확인 완료' : '확인이 필요한 기록이 있습니다.'}</p></div><button className="button primary" onClick={startAdding} disabled={!players.length}>빠진 슛 추가</button></div>
+      <section className="setup-card shot-list-panel"><div className="panel-title"><div><h2>{selectedZoneLabel ? `${selectedZoneLabel} 슛 기록` : '슛 기록'}</h2><p>{selectedZone ? `${visibleShots.length}개의 구역 기록을 표시합니다.` : analysis?.play_type !== 'solo' ? '원본을 확인하며 슛과 선수를 직접 기록합니다.' : data?.analysis_status === 'completed' ? '모든 기록 확인 완료' : '확인이 필요한 기록이 있습니다.'}</p></div><button className="button primary" onClick={startAdding} disabled={!players.length}>{analysis?.play_type !== 'solo' ? '슛 직접 추가' : '빠진 슛 추가'}</button></div>
         {!visibleShots.length && <p className="inline-warning">현재 조건에 맞는 슛이 없습니다.{!selectedZone && ' 빠진 슛을 직접 추가할 수 있습니다.'}</p>}
         <ol className="review-shot-list">{visibleShots.map((shot, index) => <li key={shot.id}><button className={selected?.id === shot.id ? 'selected' : ''} onClick={() => choose(shot)}><span className={`result-mark ${shot.result}`}>{shot.result === 'made' ? 'O' : shot.result === 'missed' ? 'X' : '?'}</span><span><strong>{index + 1}. {seconds(shot.candidate_time_ms)}초 · {shot.player_name}</strong><small>{RESULT_LABEL[shot.result]} · {TYPE_LABEL[shot.shot_type] ?? shot.shot_type} · {shot.zone_label ?? '위치 확인 필요'}</small></span><em>{shot.status === 'needs_review' ? '확인 필요' : shot.status === 'user_confirmed' ? '사용자 확인' : '자동 판정'}</em></button></li>)}</ol>
       </section>

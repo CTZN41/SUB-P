@@ -97,7 +97,10 @@ def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *,
         else:
             label, detail = "일부 확인 필요", "확인이 필요한 슛 기록이 있습니다."
     elif analysis.status == AnalysisStatus.COMPLETED:
-        label, detail = "완료", None
+        if analysis.play_type == PlayType.SOLO:
+            label, detail = "완료", None
+        else:
+            label, detail = "수동 기록", "등록된 슛은 직접 입력한 결과입니다. 자동 선수 추적은 아직 지원하지 않습니다."
     elif analysis.status == AnalysisStatus.CANCELED:
         label, detail = "취소됨", "설정을 유지한 채 다시 분석할 수 있습니다."
     elif analysis.status in (AnalysisStatus.QUEUED, AnalysisStatus.ANALYZING):
