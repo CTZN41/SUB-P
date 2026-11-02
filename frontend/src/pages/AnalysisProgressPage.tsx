@@ -90,7 +90,7 @@ export function AnalysisProgressPage() {
   }
 
   const terminal = !job || ['succeeded', 'failed', 'canceled'].includes(job.status)
-  const activeIndex = Math.max(0, STAGES.indexOf(job?.stage ?? STAGES[0]))
+  const activeIndex = Math.max(0, STAGES.findIndex(stage => job?.stage === stage || job?.stage?.startsWith(`${stage} ·`)))
   const simulation = job?.is_simulation ?? false
   const elapsed = job?.started_at ? ((job.finished_at ? Date.parse(job.finished_at) : now) - Date.parse(job.started_at)) / 1000 : null
   const candidateSeconds = result?.timing_seconds?.local_candidates ?? result?.performance?.total_seconds

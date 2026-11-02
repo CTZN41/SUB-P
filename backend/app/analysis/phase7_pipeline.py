@@ -651,7 +651,8 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
                   start_ms: int = 0, end_ms: int | None = None,
                   progress: Callable[[int], None] | None = None, cancelled: Callable[[], bool] | None = None,
                   collect_motion_hints: bool = False,
-                  inference_device: str = "cpu") -> dict[str, Any]:
+                  inference_device: str = "cpu", prefetch_frames: bool = False,
+                  model_reuse=None) -> dict[str, Any]:
     """Read source frames at fixed intervals and retain their original timestamps."""
     if not source.is_file() or not model_path.exists():
         raise Phase7Error("원본 영상 또는 탐지 모델 파일을 찾을 수 없습니다.")
@@ -662,8 +663,9 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
     from ultralytics import YOLO  # Torch must load before OpenCV on Windows.
     import cv2
     started = perf_counter()
-    model = YOLO(str(model_path), task="detect")
-    pose_model = YOLO(str(pose_model_path), task="pose") if pose_model_path and pose_model_path.exists() else None
+    model = model_reuse.get(model_path, "detect", inference_device) if model_reuse else YOLO(str(model_path), task="detect")
+    pose_model = (model_reuse.get(pose_model_path, "pose", inference_device) if model_reuse else
+                  YOLO(str(pose_model_path), task="pose") if pose_model_path and pose_model_path.exists() else None)
     timings["model_load"] += perf_counter() - started
     if model_path.is_dir():
         import yaml
@@ -676,6 +678,7 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
         raise Phase7Error("탐지 모델에 사람 또는 농구공 항목이 없습니다.")
     wanted = [key for key, value in names.items() if value in {"person", "basketball", "rim"}]
     cap = cv2.VideoCapture(str(source))
+    frame_reader = None
     if not cap.isOpened():
         raise Phase7Error("원본 영상을 읽을 수 없습니다.")
     try:
@@ -705,6 +708,9 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
         if first_frame and not cap.set(cv2.CAP_PROP_POS_FRAMES, first_frame):
             raise Phase7Error("분석 구간의 시작 프레임으로 이동하지 못했습니다.")
         next_frame_index = first_frame
+        if prefetch_frames:
+            from app.analysis.frame_prefetch_trial import FramePrefetchTrial
+            frame_reader = FramePrefetchTrial(cap, first_frame, last_frame, step)
         for frame_index in range(first_frame, last_frame, step):
             started = perf_counter()
             should_cancel = cancelled and cancelled()
@@ -712,13 +718,21 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
             if should_cancel:
                 raise Phase7Canceled("사용자가 분석을 취소했습니다.")
             started = perf_counter()
-            while next_frame_index < frame_index:
-                if not cap.grab():
-                    raise Phase7Error("분석 구간의 영상 프레임을 건너뛰지 못했습니다.")
+            if frame_reader is not None:
+                item = frame_reader.next()
+                if item is None or item[0] != frame_index:
+                    raise Phase7Error("프레임 순서가 달라 시험을 중단했습니다.")
+                _, ok, frame, decode_seconds = item
+                timings["frame_wait"] += perf_counter() - started
+                timings["decode"] += decode_seconds
+            else:
+                while next_frame_index < frame_index:
+                    if not cap.grab():
+                        raise Phase7Error("분석 구간의 영상 프레임을 건너뛰지 못했습니다.")
+                    next_frame_index += 1
+                ok, frame = cap.read()
                 next_frame_index += 1
-            ok, frame = cap.read()
-            next_frame_index += 1
-            timings["decode"] += perf_counter() - started
+                timings["decode"] += perf_counter() - started
             if not ok:
                 issues["읽지 못한 프레임"] += 1
                 continue
@@ -861,6 +875,8 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
         }
         return result
     finally:
+        if frame_reader is not None:
+            frame_reader.close()
         cap.release()
 
 

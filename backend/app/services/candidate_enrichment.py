@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from math import ceil
 
 from app.analysis.adaptive_trial import add_focused_candidates
 from app.analysis.phase7_pipeline import Phase7Canceled, analyze_video
@@ -13,7 +14,8 @@ from app.core.config import Settings
 def enrich_candidates(
     video_path: Path, model_path: Path, pose_model_path: Path,
     hoop_point: list[float], result: dict, settings: Settings,
-    *, cancelled=None, inference_device: str = "cpu",
+    *, cancelled=None, inference_device: str = "cpu", prefetch_frames: bool = False,
+    model_reuse=None, gate_workers: int = 1, gate_client=None, gate_progress=None,
 ) -> dict:
     """Improve candidates while keeping uncertain or rejected ones reviewable."""
     if result.get("motion_hints"):
@@ -22,6 +24,7 @@ def enrich_candidates(
                 video_path, model_path, hoop_point, pose_model_path, result,
                 cancelled=cancelled,
                 inference_device=inference_device,
+                prefetch_frames=prefetch_frames, model_reuse=model_reuse,
             )
         except Phase7Canceled:
             raise
@@ -71,21 +74,52 @@ def enrich_candidates(
         candidate["release_basis"] = basis
         candidate["shot_gate"]["detector_candidate_time_ms"] = reference_time
 
+    if gate_workers not in (1, 2):
+        raise ValueError("trial gate workers must be one or two")
     max_calls = settings.openai_max_shot_gate_reviews
-    max_rescans = max(4, min(48, len(result["candidates"]) // 8))
-    for candidate in result["candidates"][:settings.openai_max_candidate_reviews]:
+    primary_results = None
+    if gate_workers == 2:
+        from app.services.ordered_review_trial import bounded_ordered_map
+        from threading import Lock
+        progress_lock, completed = Lock(), [0]
+        items = result["candidates"][:min(settings.openai_max_candidate_reviews,max_calls)]
+        def initial_gate(candidate):
+            if cancelled and cancelled():
+                raise Phase7Canceled("trial canceled")
+            try:
+                value = review_shot_existence(video_path,int(candidate["time_ms"]),settings,client=gate_client)
+            except Exception:
+                value = {"status":"failed"}
+            with progress_lock:
+                completed[0] += 1
+                if gate_progress:
+                    gate_progress(completed[0],len(items))
+            return value
+        primary_results = bounded_ordered_map(initial_gate,items,workers=2)
+        calls = len(primary_results)
+    max_rescans = min(48, max(4, len(result["candidates"]) // 8,
+                              ceil(int(result["duration_ms"])/60000)*2))
+    for candidate_index, candidate in enumerate(result["candidates"][:settings.openai_max_candidate_reviews]):
         if cancelled and cancelled():
             raise Phase7Canceled("사용자가 분석을 취소했습니다.")
-        if calls >= max_calls:
+        if primary_results is None and calls >= max_calls:
+            break
+        if primary_results is not None and candidate_index >= len(primary_results):
             break
         reviewed_candidates += 1
         time_ms = int(candidate["time_ms"])
-        calls += 1
-        try:
-            gate = review_shot_existence(video_path, time_ms, settings)
-        except Exception:
-            candidate["shot_gate"] = {"status": "failed"}
-            continue
+        if primary_results is not None:
+            gate = primary_results[candidate_index]
+            if gate.get("status") == "failed":
+                candidate["shot_gate"] = gate
+                continue
+        else:
+            calls += 1
+            try:
+                gate = review_shot_existence(video_path, time_ms, settings, **({"client":gate_client} if gate_client is not None else {}))
+            except Exception:
+                candidate["shot_gate"] = {"status": "failed"}
+                continue
         count_result(gate)
         candidate["shot_gate"] = gate
         apply_release_offset(candidate, gate, time_ms, "ai_shot_gate_window")
@@ -103,9 +137,10 @@ def enrich_candidates(
                 video_path, model_path, hoop_point,
                 pose_model_path=pose_model_path, sample_fps=30,
                 start_ms=max(0, time_ms - 2000),
-                end_ms=min(int(result["duration_ms"]), time_ms + 2000),
+                end_ms=min(int(result["duration_ms"]), time_ms + 3500),
                 cancelled=cancelled,
                 inference_device=inference_device,
+                prefetch_frames=prefetch_frames, model_reuse=model_reuse,
             )
         except Phase7Canceled:
             raise
@@ -114,7 +149,7 @@ def enrich_candidates(
             continue
         alternatives = sorted(
             (item for item in high["candidates"]
-             if abs(int(item["time_ms"]) - time_ms) <= 1800),
+             if -2000 <= int(item["time_ms"]) - time_ms <= 3500),
             key=lambda item: abs(int(item["time_ms"]) - time_ms),
         )
         for alternative in alternatives[:3]:
@@ -125,7 +160,7 @@ def enrich_candidates(
                 continue
             calls += 1
             try:
-                alt_gate = review_shot_existence(video_path, alt_time, settings)
+                alt_gate = review_shot_existence(video_path, alt_time, settings, **({"client":gate_client} if gate_client is not None else {}))
             except Exception:
                 continue
             count_result(alt_gate)
@@ -150,7 +185,7 @@ def enrich_candidates(
                 continue
             calls += 1
             try:
-                prior_gate = review_prior_shot_existence(video_path, time_ms, settings)
+                prior_gate = review_prior_shot_existence(video_path, time_ms, settings, **({"client":gate_client} if gate_client is not None else {}))
             except Exception:
                 continue
             count_result(prior_gate)

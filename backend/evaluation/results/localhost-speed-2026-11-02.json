@@ -1,0 +1,74 @@
+{
+  "total_elapsed_seconds": 1242.781321,
+  "candidate_count": 90,
+  "saved_count": 90,
+  "statuses": {
+    "auto": 74,
+    "needs_review": 16
+  },
+  "results": {
+    "made": 68,
+    "missed": 12,
+    "needs_review": 10
+  },
+  "position_missing": 14,
+  "matched": 84,
+  "judged": 80,
+  "wrong": [],
+  "unmatched": [
+    {
+      "time_ms": 62195,
+      "result": "needs_review",
+      "status": "needs_review"
+    },
+    {
+      "time_ms": 100820,
+      "result": "needs_review",
+      "status": "needs_review"
+    },
+    {
+      "time_ms": 162198,
+      "result": "needs_review",
+      "status": "needs_review"
+    },
+    {
+      "time_ms": 261967,
+      "result": "needs_review",
+      "status": "needs_review"
+    },
+    {
+      "time_ms": 361970,
+      "result": "needs_review",
+      "status": "needs_review"
+    },
+    {
+      "time_ms": 461973,
+      "result": "needs_review",
+      "status": "needs_review"
+    }
+  ],
+  "timing_seconds": {
+    "local_candidates": 233.48,
+    "focused_rescan_and_shot_gate": 465.26,
+    "camera_view_validation": 28.72,
+    "detailed_ai_review": 478.36
+  },
+  "status_io": {
+    "cancel_queries": 295,
+    "progress_writes": 147,
+    "db_seconds": 613.2756830992294
+  },
+  "api_usage": {
+    "input_tokens": 2881076,
+    "output_tokens": 38891
+  },
+  "runtime_options": {
+    "gate_workers": 2,
+    "detail_workers": 2,
+    "prefetch": true,
+    "model_reuse": true,
+    "async_status": true,
+    "scoring_rim_evidence": true,
+    "camera_view_guard": true
+  }
+}

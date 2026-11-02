@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from math import ceil
 from time import perf_counter
 from typing import Any
 
@@ -10,11 +11,14 @@ from .phase7_pipeline import analyze_video
 
 
 def select_rescan_windows(
-    result: dict[str, Any], *, max_windows: int = 4,
+    result: dict[str, Any], *, max_windows: int | None = None,
 ) -> list[tuple[int, int]]:
     """Rescan strong pose clues that are not already represented by a shot."""
     start = int(result["range_start_ms"])
     end = int(result["range_end_ms"])
+    budget = max_windows if max_windows is not None else min(24, max(4, ceil((end-start)/60000)*2))
+    if budget < 1:
+        return []
     candidates = result.get("candidates", [])
     hints = sorted(result.get("motion_hints", []), key=lambda item: item["time_ms"])
     windows: list[tuple[int, int]] = []
@@ -31,16 +35,20 @@ def select_rescan_windows(
             continue
         if windows and proposed[0] <= windows[-1][1]:
             windows[-1] = (windows[-1][0], max(windows[-1][1], proposed[1]))
-        elif len(windows) < max_windows:
+        else:
             windows.append(proposed)
-    return windows
+    if len(windows) <= budget:
+        return windows
+    # Spread a bounded budget over the full video instead of dropping its tail.
+    return [windows[round(i*(len(windows)-1)/(budget-1))] for i in range(budget)] if budget > 1 else [windows[len(windows)//2]]
 
 
 def add_focused_candidates(
     source: Path, model_path: Path, hoop_point: list[float],
     pose_model_path: Path, result: dict[str, Any], *,
-    cancelled=None, max_windows: int = 4, rescan_fps: float = 30,
+    cancelled=None, max_windows: int | None = None, rescan_fps: float = 30,
     inference_device: str = "cpu",
+    prefetch_frames: bool = False, model_reuse=None,
 ) -> dict[str, Any]:
     """Add only distinct high-fps candidates; preserve every original candidate."""
     windows = select_rescan_windows(result, max_windows=max_windows)
@@ -52,6 +60,7 @@ def add_focused_candidates(
             sample_fps=rescan_fps, start_ms=start_ms, end_ms=end_ms,
             cancelled=cancelled,
             inference_device=inference_device,
+            prefetch_frames=prefetch_frames, model_reuse=model_reuse,
         )
         for candidate in high["candidates"]:
             if any(

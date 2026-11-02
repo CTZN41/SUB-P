@@ -18,6 +18,10 @@ from app.services.candidate_enrichment import enrich_candidates
 from app.services.phase8_shots import materialize_shots_from_candidates
 from app.services.job_progress import JobProgressReporter
 from app.analysis.candidate_runtime import candidate_models
+from app.analysis.model_reuse_trial import ModelReuseTrial
+from app.services.async_progress_trial import AsyncProgressTrial
+from app.services.view_alignment_trial import group_camera_views
+from app.services.non_shot_recovery import separate_recovery_motion
 
 
 STAGES = [
@@ -133,43 +137,87 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         analysis.current_stage = job.stage
         hoop_point = list(calibration.hoop_point)
         calibration_transform = [list(row) for row in calibration.transform]
+        calibration_payload = {"frame_time_ms":calibration.frame_time_ms,"transform":calibration_transform}
+        duration_ms = int(analysis.duration_ms)
         session.commit()
 
     reporter = JobProgressReporter(session_factory, analysis_id, job_id, STAGES[3])
     cancelled, progress = reporter.cancelled, reporter.progress
 
+    api_client = None
     try:
         video_path = settings.upload_path / analysis_id / "original.mp4"
         model_path, pose_model_path, inference_device = candidate_models(settings)
+        models = ModelReuseTrial()
+        review_settings = settings.model_copy(update={"openai_vision_fallback_model":None})
+        if settings.openai_api_key and settings.openai_shot_review_enabled:
+            from openai import OpenAI
+            api_client = OpenAI(api_key=settings.openai_api_key,
+                                timeout=settings.openai_timeout_seconds,max_retries=0)
         started = perf_counter()
-        result = analyze_video(video_path, model_path, hoop_point,
-                               pose_model_path=pose_model_path,
-                               progress=progress, cancelled=cancelled,
-                               collect_motion_hints=True, inference_device=inference_device)
+        with AsyncProgressTrial(reporter) as monitor:
+            result = analyze_video(video_path, model_path, hoop_point,
+                                   pose_model_path=pose_model_path,
+                                   progress=monitor.progress, cancelled=monitor.cancelled,
+                                   collect_motion_hints=True, inference_device=inference_device,
+                                   prefetch_frames=True, model_reuse=models)
         local_seconds = perf_counter() - started
+        reporter.stage = STAGES[4] + " · 슛 여부 확인·추가 재탐지"
         with session_factory() as session:
             job = session.get(AnalysisJob, job_id)
             analysis = session.get(Analysis, analysis_id)
             if job is None or analysis is None or job.cancel_requested:
                 raise Phase7Canceled("사용자가 분석을 취소했습니다.")
-            job.stage = analysis.current_stage = STAGES[4]
-            job.processed_ms = analysis.processed_ms = analysis.duration_ms
+            job.stage = analysis.current_stage = reporter.stage
+            job.processed_ms = analysis.processed_ms = duration_ms
             job.heartbeat_at = utc_now()
             session.commit()
         started = perf_counter()
-        result = enrich_candidates(video_path, model_path, pose_model_path,
-                                   hoop_point, result, settings, cancelled=cancelled,
-                                   inference_device=inference_device)
+        with AsyncProgressTrial(reporter) as monitor:
+            monitor.progress(duration_ms)
+            def gate_progress(done,total):
+                reporter.stage = STAGES[4] + f" · 슛 여부 확인 {done}/{total}"
+                if monitor.cancelled():
+                    raise Phase7Canceled("사용자가 분석을 취소했습니다.")
+            result = enrich_candidates(video_path, model_path, pose_model_path,
+                                       hoop_point, result, review_settings, cancelled=monitor.cancelled,
+                                       inference_device=inference_device,prefetch_frames=True,
+                                       model_reuse=models,gate_workers=2,gate_client=api_client,gate_progress=gate_progress)
         enrichment_seconds = perf_counter() - started
         started = perf_counter()
-        result = review_candidates_with_openai(
-            video_path, result, settings, calibration_transform=calibration_transform,
-        )
+        view_calibrations = None
+        reporter.stage = STAGES[4] + " · 카메라 구도 확인"
+        if settings.openai_shot_review_enabled and settings.openai_api_key:
+            with AsyncProgressTrial(reporter) as monitor:
+                monitor.progress(duration_ms)
+                view_calibrations,view_reports = group_camera_views(video_path,result["candidates"],calibration_payload)
+                result["camera_view_validation"] = view_reports
+                if monitor.cancelled():
+                    raise Phase7Canceled("사용자가 분석을 취소했습니다.")
+        camera_seconds = perf_counter()-started
+        started = perf_counter()
+        reporter.stage = STAGES[4] + " · 상세 AI 판정"
+        with AsyncProgressTrial(reporter) as monitor:
+            monitor.progress(duration_ms)
+            def detail_progress(done,total):
+                reporter.stage = STAGES[4] + f" · 상세 AI 판정 {done}/{total}"
+                if monitor.cancelled():
+                    raise Phase7Canceled("사용자가 분석을 취소했습니다.")
+            result = review_candidates_with_openai(
+                video_path,result,review_settings,client=api_client,calibration_transform=calibration_transform,
+                camera_view_calibrations=view_calibrations,detail_workers=2,
+                fast_image_sampling=True,require_outcome_evidence=True,scoring_rim_evidence=True,
+                review_progress=detail_progress,
+            )
         result["timing_seconds"] = {
-            "local_candidates": round(local_seconds, 2),
-            "focused_rescan_and_shot_gate": round(enrichment_seconds, 2),
-            "detailed_ai_review": round(perf_counter() - started, 2),
+            "local_candidates":round(local_seconds,2),
+            "focused_rescan_and_shot_gate":round(enrichment_seconds,2),
+            "camera_view_validation":round(camera_seconds,2),
+            "detailed_ai_review":round(perf_counter()-started,2),
         }
+        result["runtime_options"] = {"gate_workers":2,"detail_workers":2,"prefetch":True,
+                                     "model_reuse":True,"async_status":True,"scoring_rim_evidence":True,
+                                     "camera_view_guard":True}
         result["status_io"] = dict(reporter.stats)
         gate_usage = result.get("shot_gate_summary", {}).get("usage", {})
         detail_usage = result.get("ai_review", {}).get("usage", {})
@@ -177,6 +225,7 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
             key: int(gate_usage.get(key, 0) or 0) + int(detail_usage.get(key, 0) or 0)
             for key in ("input_tokens", "output_tokens")
         }
+        result = separate_recovery_motion(result)
         with session_factory() as session:
             job = session.get(AnalysisJob, job_id)
             if job is None or job.cancel_requested:
@@ -226,6 +275,9 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
             analysis.failure_code = job.error_code
             analysis.failure_message = job.error_message
             session.commit()
+    finally:
+        if api_client is not None:
+            api_client.close()
 
 
 def refresh_simulation(session: Session, analysis: Analysis, job: AnalysisJob) -> AnalysisJob:

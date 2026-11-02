@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+from time import perf_counter
+from app.services.ordered_review_trial import bounded_ordered_map
 from pathlib import Path
 from typing import Literal
 
@@ -179,6 +181,10 @@ class PositionReviewDecision(BaseModel):
 
 class OpenAIShotReviewError(RuntimeError):
     pass
+
+
+class InsufficientOutcomeEvidenceError(OpenAIShotReviewError):
+    """The video ends before enough scoring evidence can be extracted."""
 
 
 def _encode_frame(frame) -> str:
@@ -1020,6 +1026,12 @@ def review_candidates_with_openai(
     *,
     client=None,
     calibration_transform: list[list[float]] | None = None,
+    detail_workers: int = 1,
+    fast_image_sampling: bool = False,
+    require_outcome_evidence: bool = False,
+    review_progress=None,
+    scoring_rim_evidence: bool = False,
+    camera_view_calibrations: dict[int, list[list[float]] | None] | None = None,
 ) -> dict:
     """Attach AI review metadata without making local analysis depend on the API."""
     if not settings.openai_shot_review_enabled:
@@ -1033,14 +1045,44 @@ def review_candidates_with_openai(
 
         client = OpenAI(api_key=settings.openai_api_key, timeout=settings.openai_timeout_seconds)
 
+    if detail_workers not in (1, 2):
+        raise ValueError("trial supports one or two workers")
     candidates = result.get("candidates", [])[: settings.openai_max_candidate_reviews]
     reviewed = 0
     calibration_left_direction = _calibrated_court_left_direction(calibration_transform)
-    camera_contexts, camera_context_records, escalated = _build_shared_camera_contexts(
-        client, video_path, candidates, settings, calibration_left_direction,
-    )
+    if camera_view_calibrations is None:
+        camera_contexts, camera_context_records, escalated = _build_shared_camera_contexts(
+            client, video_path, candidates, settings, calibration_left_direction,
+        )
+    else:
+        camera_contexts, camera_context_records, escalated = {}, [], 0
+        for scene in sorted({int(c.get("scene_id",0)) for c in candidates}):
+            transform = camera_view_calibrations.get(scene)
+            contexts, records, count = _build_shared_camera_contexts(
+                client, video_path, [c for c in candidates if int(c.get("scene_id",0))==scene],
+                settings, _calibrated_court_left_direction(transform),
+            )
+            camera_contexts.update(contexts)
+            camera_context_records.extend(records)
+            escalated += count
     failed = 0
-    for candidate in candidates:
+    from app.services.review_frame_trial import fast_candidate_frame_inputs, fast_outcome_frame_inputs, dense_rim_inputs, evidence_rich_detail_inputs
+    from app.services.outcome_evidence_trial import needs_direct_outcome_check, strict_outcome_once, scoring_evidence_client
+    prepare_detail = fast_candidate_frame_inputs if fast_image_sampling else candidate_frame_inputs
+    prepare_outcome = (dense_rim_inputs if (require_outcome_evidence or scoring_rim_evidence) else
+                       fast_outcome_frame_inputs if fast_image_sampling else candidate_outcome_frame_inputs)
+    outcome_function = strict_outcome_once if (require_outcome_evidence or scoring_rim_evidence) else _review_outcome_once
+    detail_client = scoring_evidence_client(client) if scoring_rim_evidence else client
+    def review_one(candidate):
+        reviewed = failed = escalated = 0
+        task_started = perf_counter()
+        steps = []
+        def timed(label, function, *args, **kwargs):
+            started = perf_counter()
+            try:
+                return function(*args, **kwargs)
+            finally:
+                steps.append({"task": label, "seconds": round(perf_counter() - started, 4)})
         gate = candidate.get("shot_gate") or {}
         if gate.get("verdict") == "not_shot" and gate.get("confidence", 0) >= .9:
             candidate["ai_review"] = {
@@ -1051,19 +1093,21 @@ def review_candidates_with_openai(
                 "shot_gate": gate,
             }
             reviewed += 1
-            continue
+            return reviewed, failed, escalated
         attempts: list[dict] = []
         try:
             camera_context = camera_contexts.get(int(candidate.get("scene_id", 0)))
-            projected_foot = _projected_foot_position(calibration_transform, candidate)
-            projected_plant, plant_time_ms = _projected_plant_position(calibration_transform, candidate)
-            images = candidate_frame_inputs(
-                video_path,
-                int(candidate["time_ms"]),
-                candidate.get("foot_point_px"),
-            )
-            primary, usage = _review_once(
-                client,
+            local_transform = (camera_view_calibrations.get(int(candidate.get("scene_id",0)))
+                               if camera_view_calibrations is not None else calibration_transform)
+            projected_foot = _projected_foot_position(local_transform, candidate)
+            projected_plant, plant_time_ms = _projected_plant_position(local_transform, candidate)
+            images = (timed("prepare_images", evidence_rich_detail_inputs, video_path,
+                            int(candidate["time_ms"]), candidate.get("foot_point_px"),
+                            candidate.get("tracked_hoop_px")) if scoring_rim_evidence else
+                      timed("prepare_images", prepare_detail, video_path,
+                            int(candidate["time_ms"]), candidate.get("foot_point_px")))
+            primary, usage = timed("shot_review", _review_once,
+                detail_client,
                 settings.openai_vision_model,
                 images,
                 camera_context=camera_context,
@@ -1076,7 +1120,7 @@ def review_candidates_with_openai(
             model_decisions = {"primary": primary.model_dump()}
             if _position_zone_mismatch(primary):
                 try:
-                    position, usage = _review_position_once(
+                    position, usage = timed("position_review", _review_position_once,
                         client, settings.openai_vision_model, images,
                         camera_context=camera_context,
                         projected_foot=projected_foot,
@@ -1098,7 +1142,7 @@ def review_candidates_with_openai(
                     pass  # The existing position review flag remains in place.
             if _projection_lateral_conflict(primary, projected_foot):
                 try:
-                    position, usage = _review_position_once(
+                    position, usage = timed("position_review", _review_position_once,
                         client, settings.openai_vision_model, images,
                         camera_context=camera_context,
                         projected_foot=projected_foot,
@@ -1131,7 +1175,7 @@ def review_candidates_with_openai(
                     _invalidate_conflicting_position(primary)
             if _layup_plant_conflict(primary, projected_plant, shot_type=primary.shot_type):
                 try:
-                    position, usage = _review_position_once(
+                    position, usage = timed("position_review", _review_position_once,
                         client, settings.openai_vision_model, images,
                         camera_context=camera_context,
                         projected_foot=projected_foot,
@@ -1163,50 +1207,58 @@ def review_candidates_with_openai(
                     )
             extended_to_ms = 3500
             outcome_path_used = False
-            if _outcome_needs_dedicated_review(primary):
+            if _outcome_needs_dedicated_review(primary) or ((require_outcome_evidence or scoring_rim_evidence) and needs_direct_outcome_check(primary)):
                 outcome_path_used = True
-                outcome_images = candidate_outcome_frame_inputs(
-                    video_path,
-                    int(candidate["time_ms"]),
-                    candidate.get("tracked_hoop_px"),
-                    candidate.get("evidence_end_ms"),
-                )
-                outcome_review, usage = _review_outcome_once(
-                    client,
-                    settings.openai_vision_model,
-                    outcome_images,
-                )
-                attempts.append({
-                    "model": settings.openai_vision_model,
-                    "task": "outcome_only",
-                    "effort": "low",
-                    "usage": usage,
-                })
-                model_decisions["outcome_primary"] = outcome_review.model_dump()
-                extended_to_ms = 4500
-                if (
-                    outcome_review.outcome in {"made", "missed"}
-                    and outcome_review.confidence >= ESCALATION_CONFIDENCE
-                ):
-                    _apply_outcome_review(primary, outcome_review)
-                elif settings.openai_vision_fallback_model:
-                    outcome_fallback, usage = _review_outcome_once(
+                try:
+                    outcome_images = timed("prepare_outcome_images", prepare_outcome,
+                        video_path,
+                        int(candidate["time_ms"]),
+                        candidate.get("tracked_hoop_px"),
+                        candidate.get("evidence_end_ms"),
+                    )
+                except InsufficientOutcomeEvidenceError:
+                    outcome_images = []
+                    primary.outcome = "unclear"
+                    primary.outcome_confidence = 0
+                    primary.review_required = True
+                    primary.reason += "; 영상 끝부분의 득점 장면이 부족해 성공·실패만 확인 필요"
+                if outcome_images:
+                    outcome_review, usage = timed("outcome_review", outcome_function,
                         client,
-                        settings.openai_vision_fallback_model,
+                        settings.openai_vision_model,
                         outcome_images,
                     )
                     attempts.append({
-                        "model": settings.openai_vision_fallback_model,
+                        "model": settings.openai_vision_model,
                         "task": "outcome_only",
                         "effort": "low",
                         "usage": usage,
                     })
-                    model_decisions["outcome_fallback"] = outcome_fallback.model_dump()
-                    final_model = settings.openai_vision_fallback_model
-                    escalated += 1
-                    _apply_outcome_review(primary, outcome_fallback)
-                else:
-                    _apply_outcome_review(primary, outcome_review)
+                    model_decisions["outcome_primary"] = outcome_review.model_dump()
+                    extended_to_ms = 4500
+                    if (
+                        outcome_review.outcome in {"made", "missed"}
+                        and outcome_review.confidence >= ESCALATION_CONFIDENCE
+                    ):
+                        _apply_outcome_review(primary, outcome_review)
+                    elif settings.openai_vision_fallback_model:
+                        outcome_fallback, usage = timed("outcome_review", outcome_function,
+                            client,
+                            settings.openai_vision_fallback_model,
+                            outcome_images,
+                        )
+                        attempts.append({
+                            "model": settings.openai_vision_fallback_model,
+                            "task": "outcome_only",
+                            "effort": "low",
+                            "usage": usage,
+                        })
+                        model_decisions["outcome_fallback"] = outcome_fallback.model_dump()
+                        final_model = settings.openai_vision_fallback_model
+                        escalated += 1
+                        _apply_outcome_review(primary, outcome_fallback)
+                    else:
+                        _apply_outcome_review(primary, outcome_review)
             if _position_needs_fallback(primary):
                 primary.review_required = True
             final_review = primary.model_dump()
@@ -1216,8 +1268,8 @@ def review_candidates_with_openai(
                 and not outcome_path_used
             ):
                 fallback_effort = "medium" if not primary.is_shot else "low"
-                fallback, usage = _review_once(
-                    client,
+                fallback, usage = timed("shot_review", _review_once,
+                    detail_client,
                     settings.openai_vision_fallback_model,
                     images,
                     effort=fallback_effort,
@@ -1250,13 +1302,27 @@ def review_candidates_with_openai(
                 "input_window_ms": [-2500, extended_to_ms],
             }
             reviewed += 1
-        except Exception:
+        except Exception as exc:
             candidate["ai_review"] = {
                 "status": "failed",
+                "error_type": type(exc).__name__,
                 "message": "AI 보조 판정을 완료하지 못했습니다. 로컬 후보는 그대로 유지됩니다.",
                 "attempts": attempts,
             }
             failed += 1
+
+        candidate["detail_trial_metrics"] = {"seconds": round(perf_counter() - task_started, 4), "steps": steps}
+        return reviewed, failed, escalated
+
+    completed = [0]
+    def on_completed(index, value):
+        completed[0] += 1
+        if review_progress:
+            review_progress(completed[0],len(candidates))
+    counts = bounded_ordered_map(review_one, candidates, workers=detail_workers,on_completed=on_completed)
+    reviewed = sum(item[0] for item in counts)
+    failed = sum(item[1] for item in counts)
+    escalated += sum(item[2] for item in counts)
 
     camera_conflicts = _invalidate_inconsistent_camera_views(candidates)
 
