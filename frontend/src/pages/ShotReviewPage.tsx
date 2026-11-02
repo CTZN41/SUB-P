@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { ShotHeatmap } from '../components/ShotHeatmap'
 import { ShotPositionPicker } from '../components/ShotPositionPicker'
+import { ShotResultSummary } from '../components/ShotResultSummary'
+import { hasShotPosition, shotCategory, shotNumbers, SHOT_CATEGORY_LABELS } from '../utils/shotPresentation'
 
 const ShotCourt3D = lazy(() => import('../components/ShotCourt3D').then((module) => ({ default: module.ShotCourt3D })))
 
@@ -14,7 +16,7 @@ const SHOT_TYPES = [
   ['turnaround', '턴어라운드'], ['hook_shot', '훅슛'], ['other', '기타'],
 ]
 const TYPE_LABEL = Object.fromEntries(SHOT_TYPES)
-const RESULT_LABEL: Record<string, string> = { made: '성공', missed: '실패', needs_review: '확인 필요' }
+const RESULT_LABEL: Record<string, string> = { made: '성공', missed: '실패', needs_review: '결과 확인 필요' }
 
 type Analysis = { id: string; title: string; duration_ms: number; fps: number | null; play_type: string }
 type Player = { id: string; display_name: string; jersey_number: string | null }
@@ -41,8 +43,8 @@ function possibleNonShot(shot: Shot) {
 }
 
 function statLine(shots: Shot[], totalAttempts?: number, overallRate?: number | null): StatLine {
-  const made = shots.filter((shot) => shot.result === 'made').length
-  const missed = shots.filter((shot) => shot.result === 'missed').length
+  const made = shots.filter((shot) => shotCategory(shot) === 'made').length
+  const missed = shots.filter((shot) => shotCategory(shot) === 'missed').length
   const successRate = made + missed ? made / (made + missed) * 100 : null
   return {
     attempts: shots.length, made, missed, success_rate: successRate,
@@ -63,9 +65,8 @@ function shotStatistics(shots: Shot[], zones: string[]): Stats {
 }
 
 function filteredShotList(source: ShotList, playerId: string, result: string, shotType: string): ShotList {
-  if (!playerId && !result && !shotType) return source
   const shots = source.shots.filter((shot) =>
-    (!playerId || shot.player_id === playerId) && (!result || shot.result === result) && (!shotType || shot.shot_type === shotType))
+    (!playerId || shot.player_id === playerId) && (!result || shotCategory(shot) === result) && (!shotType || shot.shot_type === shotType))
   return { ...source, shots, statistics: shotStatistics(shots, Object.keys(source.statistics.by_zone)) }
 }
 
@@ -94,6 +95,7 @@ export function ShotReviewPage() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const data = useMemo(() => sourceData ? filteredShotList(sourceData, playerFilter, resultFilter, typeFilter) : null, [sourceData, playerFilter, resultFilter, typeFilter])
   const selected = data?.shots.find((shot) => shot.id === selectedId) ?? null
+  const numbers = useMemo(() => shotNumbers(sourceData?.shots ?? []), [sourceData?.shots])
 
   const load = useCallback(async () => {
     const [analysisResponse, playerResponse, shotResponse] = await Promise.all([fetch(`${API_BASE}/analyses/${analysisId}`), fetch(`${API_BASE}/analyses/${analysisId}/players`), fetch(`${API_BASE}/analyses/${analysisId}/shots`)])
@@ -184,8 +186,6 @@ export function ShotReviewPage() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : '삭제하지 못했습니다.') } finally { setBusy(false) }
   }
 
-  const stats = data?.statistics.overall
-  const reviewCount = data?.shots.filter((shot) => shot.status === 'needs_review').length ?? 0
   const visibleShots = selectedZone ? data?.shots.filter((shot) => shot.zone_code === selectedZone) ?? [] : data?.shots ?? []
   const selectedZoneLabel = visibleShots[0]?.zone_label ?? (selectedZone ? '선택한 구역' : null)
   function selectZone(zone: string) {
@@ -195,12 +195,12 @@ export function ShotReviewPage() {
   if (!data) return <div className="page shot-review-page"><p role="status" className="inline-warning">{error || '분석 결과를 불러오는 중입니다…'}</p></div>
   return <div className="page shot-review-page">
     <header className="setup-header"><div><p className="eyebrow">RESULTS & HEATMAP</p><h1>{analysis?.title ?? '슛 분석 결과'}</h1>{analysis && analysis.play_type !== 'solo' && <p className="inline-warning">다인원 자동 추적은 아직 지원하지 않습니다. 원본 영상을 보면서 슛과 선수를 직접 기록해 주세요.</p>}</div></header>
-    <section className="review-summary" aria-label="결과 요약"><div><span>전체 후보</span><strong>{stats?.attempts ?? 0}</strong></div><div><span>성공 / 실패</span><strong>{stats?.made ?? 0} / {stats?.missed ?? 0}</strong></div><div><span>확인 필요</span><strong>{reviewCount}</strong></div><div><span>확정 성공률</span><strong>{stats?.success_rate == null ? '-' : `${stats.success_rate.toFixed(1)}%`}</strong></div></section>
+    <ShotResultSummary shots={data.shots} />
     <section className="setup-card results-dashboard">
       <div className="panel-title"><div><h2>14개 구역 히트맵</h2></div></div>
       {showShotList && <div className="result-filters" aria-label="결과 필터">
         <label>선수<select value={playerFilter} onChange={(event) => setPlayerFilter(event.target.value)}><option value="">전체 선수</option>{players.map((player) => <option key={player.id} value={player.id}>{player.display_name}{player.jersey_number ? ` #${player.jersey_number}` : ''}</option>)}</select></label>
-        <label>성공 여부<select value={resultFilter} onChange={(event) => setResultFilter(event.target.value)}><option value="">전체 결과</option><option value="made">성공</option><option value="missed">실패</option><option value="needs_review">판단 불가</option></select></label>
+        <label>기록 구분<select value={resultFilter} onChange={(event) => setResultFilter(event.target.value)}><option value="">전체 결과</option>{Object.entries(SHOT_CATEGORY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>슛 종류<select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="">전체 종류</option>{SHOT_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <button className="button secondary" type="button" onClick={() => { setPlayerFilter(''); setResultFilter(''); setTypeFilter(''); setSelectedZone(null) }}>필터 초기화</button>
       </div>}
@@ -214,6 +214,7 @@ export function ShotReviewPage() {
     </section>
     <Suspense fallback={<p className="inline-warning">3D 코트를 불러오는 중입니다…</p>}><ShotCourt3D
       shots={visibleShots}
+      numbers={numbers}
       selectedShot={selected}
       jerseyNumber={selected ? players.find((player) => player.id === selected.player_id)?.jersey_number ?? null : null}
       onSelect={(id) => { const shot = data?.shots.find((item) => item.id === id); if (shot) playShot(shot) }}
@@ -227,12 +228,12 @@ export function ShotReviewPage() {
     <div className="review-layout" hidden={!showShotList}>
       {showShotList && <section className="setup-card shot-list-panel"><div className="panel-title"><div><h2>{selectedZoneLabel ? `${selectedZoneLabel} 슛 기록` : '슛 기록'}</h2><p>{selectedZone ? `${visibleShots.length}개의 구역 기록을 표시합니다.` : analysis?.play_type !== 'solo' ? '원본을 확인하며 슛과 선수를 직접 기록합니다.' : data?.analysis_status === 'completed' ? '모든 기록 확인 완료' : '확인이 필요한 기록이 있습니다.'}</p></div><div className="actions"><button className="button primary" onClick={startAdding} disabled={!players.length}>{analysis?.play_type !== 'solo' ? '슛 직접 추가' : '빠진 슛 추가'}</button><button className="button secondary" onClick={() => { videoRef.current?.pause(); setShowShotList(false); setSelectedId(null) }}>닫기</button></div></div>
         {!visibleShots.length && <p className="inline-warning">현재 조건에 맞는 슛이 없습니다.{!selectedZone && ' 빠진 슛을 직접 추가할 수 있습니다.'}</p>}
-        <ol className="review-shot-list">{visibleShots.map((shot, index) => <li key={shot.id}><button className={selected?.id === shot.id ? 'selected' : ''} onClick={() => playShot(shot)}><span className={`result-mark ${shot.result}`}>{shot.result === 'made' ? 'O' : shot.result === 'missed' ? 'X' : '?'}</span><span><strong>{index + 1}. {seconds(shot.candidate_time_ms)}초 · {shot.player_name}</strong><small>{possibleNonShot(shot) ? '슛이 아닐 수 있음 · 원본 확인 필요' : `${RESULT_LABEL[shot.result]} · ${TYPE_LABEL[shot.shot_type] ?? shot.shot_type} · ${shot.zone_label ?? '위치 확인 필요'}`}</small></span><em>{shot.status === 'needs_review' ? '확인 필요' : shot.status === 'user_confirmed' ? '사용자 확인' : '자동 판정'}</em></button></li>)}</ol>
+        <ol className="review-shot-list">{visibleShots.map((shot) => <li key={shot.id}><button className={selected?.id === shot.id ? 'selected' : ''} onClick={() => playShot(shot)}><span className={`result-mark ${shotCategory(shot)}`}>{numbers[shot.id]}</span><span><strong>{numbers[shot.id]}번 · {seconds(shot.candidate_time_ms)}초 · {shot.player_name}</strong><small>{possibleNonShot(shot) ? '슛이 아닐 수 있음 · 원본 확인 필요' : `${RESULT_LABEL[shot.result]} · ${TYPE_LABEL[shot.shot_type] ?? shot.shot_type} · ${shot.zone_label ?? '위치 확인 필요'}`}</small></span><em>{SHOT_CATEGORY_LABELS[shotCategory(shot)]}<small>{shot.status === 'user_confirmed' ? '사용자 확인' : '자동 판정'}</small></em></button></li>)}</ol>
       </section>}
       <section className="setup-card shot-detail-panel">
         <video ref={videoRef} src={`${API_BASE}/analyses/${analysisId}/video`} controls preload="metadata" onTimeUpdate={onVideoTime} />
         <div className="video-review-toolbar"><span>원본 {data?.fps ? `${data.fps.toFixed(2)}fps` : 'fps 확인 불가'} · 인위적인 60fps 변환 없음</span></div>
-        {selected?.status === 'needs_review' && !adding && <p className="inline-warning"><strong>확인할 이유:</strong> {readableReason(selected.review_reason)}</p>}
+        {selected && (!hasShotPosition(selected) || shotCategory(selected) === 'outcome_review' || selected.status === 'needs_review') && !adding && <p className="inline-warning"><strong>확인할 이유:</strong> {readableReason(selected.review_reason)}</p>}
         {selected && possibleNonShot(selected) && !adding && <p className="helper-text">원본을 보고 슛이 맞으면 아래에서 결과·종류·위치를 선택해 저장하세요. 슛이 아니면 이 후보 기록을 삭제할 수 있습니다.</p>}
         {!form && <p className="helper-text">왼쪽에서 슛을 선택하거나 빠진 슛을 추가해 주세요.</p>}
         {form && <form ref={addFormRef} className={`shot-edit-form${showAdvanced ? '' : ' shot-form-basic'}`} onSubmit={save} onInvalidCapture={() => { setShowAdvanced(true); setError('필수 항목을 확인해 주세요. 코트 위치가 비어 있다면 가로·세로 값을 입력해야 합니다.') }}><h2>{adding ? '빠진 슛 추가' : '선택한 슛 확인·수정'}</h2>

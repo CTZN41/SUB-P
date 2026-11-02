@@ -103,7 +103,7 @@ function addCourt(scene: THREE.Scene) {
   scene.add(arm)
 }
 
-function markerTexture(result: string, selected: boolean) {
+function markerTexture(result: string, selected: boolean, number: number) {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = 128
   const context = canvas.getContext('2d')!
@@ -118,8 +118,8 @@ function markerTexture(result: string, selected: boolean) {
   context.fillStyle = '#fff'
   context.textAlign = 'center'
   context.textBaseline = 'middle'
-  context.font = '900 70px system-ui'
-  context.fillText(result === 'made' ? 'O' : result === 'missed' ? 'X' : '?', 64, 67)
+  context.font = `900 ${number < 10 ? 70 : number < 100 ? 58 : 44}px system-ui`
+  context.fillText(String(number), 64, 67)
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   return texture
@@ -137,8 +137,9 @@ function spreadOverlaps(shots: CourtShot[]) {
   })
 }
 
-export function ShotCourt3D({ shots, selectedShot, jerseyNumber, onSelect, onOpenDetails, detailsOpen = false, typeLabels }: {
+export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSelect, onOpenDetails, detailsOpen = false, typeLabels }: {
   shots: CourtShot[]
+  numbers: Record<string, number>
   selectedShot: CourtShot | null
   jerseyNumber: string | null
   onSelect: (shotId: string) => void
@@ -291,9 +292,10 @@ export function ShotCourt3D({ shots, selectedShot, jerseyNumber, onSelect, onOpe
     for (const { shot, offsetX, offsetY } of spreadOverlaps(located)) {
       const point = courtPosition(shot.court_x!, shot.court_y!)
       const selected = shot.id === selectedShot?.id
-      const key = `${shot.result}-${selected}`
+      const number = numbers[shot.id]
+      const key = `${shot.result}-${selected}-${number}`
       let texture = texturesRef.current.get(key)
-      if (!texture) { texture = markerTexture(shot.result, selected); texturesRef.current.set(key, texture) }
+      if (!texture) { texture = markerTexture(shot.result, selected, number); texturesRef.current.set(key, texture) }
       const size = selected ? 3.8 : 3.3
       const marker = new THREE.Mesh(
         new THREE.PlaneGeometry(size, size),
@@ -310,7 +312,7 @@ export function ShotCourt3D({ shots, selectedShot, jerseyNumber, onSelect, onOpe
       markers.add(marker)
     }
     render()
-  }, [shots, selectedShot?.id])
+  }, [shots, numbers, selectedShot?.id])
 
   function zoom(factor: number) {
     const camera = cameraRef.current
@@ -335,9 +337,9 @@ export function ShotCourt3D({ shots, selectedShot, jerseyNumber, onSelect, onOpe
 
   const locatedCount = shots.filter((shot) => shot.court_x != null && shot.court_y != null).length
   return <div className="shot-court-3d">
-    <div className="court-3d-heading"><div><strong>3D 슈팅 맵</strong><span>코트를 끌어 회전하고, O·X를 눌러 슛 영상을 확인하세요.</span></div><div className="court-3d-controls"><button type="button" onClick={() => zoom(.8)} aria-label="3D 코트 확대">+</button><button type="button" onClick={() => zoom(1.25)} aria-label="3D 코트 축소">−</button><button type="button" onClick={reset}>초기 시점</button>{onOpenDetails && <button type="button" onClick={onOpenDetails} aria-expanded={detailsOpen}>{detailsOpen ? '기록 관리 닫기' : '기록 관리'}</button>}</div></div>
+    <div className="court-3d-heading"><div><strong>3D 슈팅 맵</strong><span>코트를 끌어 회전하고, 슛 번호를 눌러 영상을 확인하세요.</span></div><div className="court-3d-controls"><button type="button" onClick={() => zoom(.8)} aria-label="3D 코트 확대">+</button><button type="button" onClick={() => zoom(1.25)} aria-label="3D 코트 축소">−</button><button type="button" onClick={reset}>초기 시점</button>{onOpenDetails && <button type="button" onClick={onOpenDetails} aria-expanded={detailsOpen}>{detailsOpen ? '기록 관리 닫기' : '기록 관리'}</button>}</div></div>
     {renderError ? <p className="court-3d-unavailable">이 브라우저에서는 3D 코트를 표시할 수 없습니다. 아래 슛 목록에서 기록을 확인할 수 있습니다.</p> : <div ref={mountRef} className="court-3d-canvas" role="img" aria-label={`슛 ${locatedCount}개가 표시된 3D 반코트`} />}
-    <div className="court-3d-footer"><span><i className="made" /> 성공 O</span><span><i className="missed" /> 실패 X</span><span><i className="uncertain" /> 판단 불가 ?</span>{shots.some((shot) => shot.court_x == null || shot.court_y == null) && <span>위치 없는 기록은 기록 관리에서 확인</span>}</div>
-    {selectedShot && <div className="court-3d-selected"><div><strong>{selectedShot.player_name}{jerseyNumber ? ` #${jerseyNumber}` : ''} · {(selectedShot.candidate_time_ms / 1000).toFixed(2)}초</strong><span>{selectedShot.zone_label ?? '위치 확인 필요'} · {selectedShot.result === 'made' ? '성공' : selectedShot.result === 'missed' ? '실패' : '판단 불가'} · {typeLabels[selectedShot.shot_type] ?? selectedShot.shot_type} · {selectedShot.status === 'user_confirmed' ? '사용자 확인' : selectedShot.status === 'needs_review' ? '확인 필요' : '자동 판정'}</span></div></div>}
+    <div className="court-3d-footer"><span><i className="made" /> 성공</span><span><i className="missed" /> 실패</span><span><i className="uncertain" /> 결과 확인 필요</span><span>숫자는 슛 목록과 같은 번호입니다.</span>{shots.some((shot) => shot.court_x == null || shot.court_y == null) && <span>위치 없는 기록은 기록 관리에서 확인</span>}</div>
+    {selectedShot && <div className="court-3d-selected"><div><strong>{numbers[selectedShot.id]}번 · {selectedShot.player_name}{jerseyNumber ? ` #${jerseyNumber}` : ''} · {(selectedShot.candidate_time_ms / 1000).toFixed(2)}초</strong><span>{selectedShot.zone_label ?? '위치 확인 필요'} · {selectedShot.result === 'made' ? '성공' : selectedShot.result === 'missed' ? '실패' : '결과 확인 필요'} · {typeLabels[selectedShot.shot_type] ?? selectedShot.shot_type} · {selectedShot.status === 'user_confirmed' ? '사용자 확인' : selectedShot.status === 'needs_review' ? '확인 필요' : '자동 판정'}</span></div></div>}
   </div>
 }
