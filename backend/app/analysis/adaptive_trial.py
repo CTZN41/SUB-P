@@ -40,6 +40,7 @@ def add_focused_candidates(
     source: Path, model_path: Path, hoop_point: list[float],
     pose_model_path: Path, result: dict[str, Any], *,
     cancelled=None, max_windows: int = 4, rescan_fps: float = 30,
+    inference_device: str = "cpu",
 ) -> dict[str, Any]:
     """Add only distinct high-fps candidates; preserve every original candidate."""
     windows = select_rescan_windows(result, max_windows=max_windows)
@@ -50,6 +51,7 @@ def add_focused_candidates(
             source, model_path, hoop_point, pose_model_path=pose_model_path,
             sample_fps=rescan_fps, start_ms=start_ms, end_ms=end_ms,
             cancelled=cancelled,
+            inference_device=inference_device,
         )
         for candidate in high["candidates"]:
             if any(

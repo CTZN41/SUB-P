@@ -7,6 +7,7 @@ import math
 import os
 from collections import Counter
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Callable
 
 SAMPLE_FPS = 8.0
@@ -613,21 +614,64 @@ def rim_approach_candidates(
     return merge_candidates(raw)
 
 
+def attach_candidate_foot_tracks(
+    candidates: list[dict[str, Any]], records: list[dict[str, Any]],
+    frame_width: int, frame_height: int,
+) -> None:
+    """Keep nearby pre-release feet so a layup's late trigger is not its location."""
+    max_distance = math.hypot(frame_width, frame_height) * .2
+    for candidate in candidates:
+        candidate_time = int(candidate["time_ms"])
+        candidate_foot = candidate.get("foot_point_px")
+        if not isinstance(candidate_foot, (list, tuple)) or len(candidate_foot) != 2:
+            continue
+        track = []
+        for record in records:
+            if not candidate_time - 1800 <= record["time_ms"] <= candidate_time + 300:
+                continue
+            if record.get("scene_id") != candidate.get("scene_id") or record.get("calibration_shifted"):
+                continue
+            person = record.get("person")
+            if not person:
+                continue
+            x1, _, x2, y2 = person["xyxy"]
+            foot = [(x1 + x2) / 2, y2]
+            if math.dist(foot, candidate_foot) > max_distance:
+                continue
+            track.append({
+                "time_ms": record["time_ms"],
+                "foot_point_px": [round(foot[0], 2), round(foot[1], 2)],
+            })
+        if track:
+            candidate["foot_track"] = track
+
+
 def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, pose_model_path: Path | None = None,
                   sample_fps: float = SAMPLE_FPS,
                   start_ms: int = 0, end_ms: int | None = None,
                   progress: Callable[[int], None] | None = None, cancelled: Callable[[], bool] | None = None,
-                  collect_motion_hints: bool = False) -> dict[str, Any]:
+                  collect_motion_hints: bool = False,
+                  inference_device: str = "cpu") -> dict[str, Any]:
     """Read source frames at fixed intervals and retain their original timestamps."""
-    if not source.is_file() or not model_path.is_file():
+    if not source.is_file() or not model_path.exists():
         raise Phase7Error("원본 영상 또는 탐지 모델 파일을 찾을 수 없습니다.")
     if sample_fps <= 0 or len(hoop_point) != 2:
         raise Phase7Error("분석 간격 또는 골대 기준점을 확인해 주세요.")
+    total_started = perf_counter()
+    timings: Counter[str] = Counter()
     from ultralytics import YOLO  # Torch must load before OpenCV on Windows.
     import cv2
-    model = YOLO(str(model_path))
-    pose_model = YOLO(str(pose_model_path)) if pose_model_path and pose_model_path.is_file() else None
-    names = {int(key): str(value) for key, value in model.names.items()}
+    started = perf_counter()
+    model = YOLO(str(model_path), task="detect")
+    pose_model = YOLO(str(pose_model_path), task="pose") if pose_model_path and pose_model_path.exists() else None
+    timings["model_load"] += perf_counter() - started
+    if model_path.is_dir():
+        import yaml
+        metadata = yaml.safe_load((model_path / "metadata.yaml").read_text(encoding="utf-8"))
+        raw_names = metadata["names"]
+    else:
+        raw_names = model.names
+    names = {int(key): str(value) for key, value in raw_names.items()}
     if not {"person", "basketball"}.issubset(names.values()):
         raise Phase7Error("탐지 모델에 사람 또는 농구공 항목이 없습니다.")
     wanted = [key for key, value in names.items() if value in {"person", "basketball", "rim"}]
@@ -662,21 +706,28 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
             raise Phase7Error("분석 구간의 시작 프레임으로 이동하지 못했습니다.")
         next_frame_index = first_frame
         for frame_index in range(first_frame, last_frame, step):
-            if cancelled and cancelled():
+            started = perf_counter()
+            should_cancel = cancelled and cancelled()
+            timings["cancel_callback"] += perf_counter() - started
+            if should_cancel:
                 raise Phase7Canceled("사용자가 분석을 취소했습니다.")
+            started = perf_counter()
             while next_frame_index < frame_index:
                 if not cap.grab():
                     raise Phase7Error("분석 구간의 영상 프레임을 건너뛰지 못했습니다.")
                 next_frame_index += 1
             ok, frame = cap.read()
             next_frame_index += 1
+            timings["decode"] += perf_counter() - started
             if not ok:
                 issues["읽지 못한 프레임"] += 1
                 continue
+            started = perf_counter()
             result = model.predict(
                 frame, classes=wanted, conf=.12, imgsz=640,
-                device="cpu", verbose=False
+                device=inference_device, verbose=False
             )[0]
+            timings["detector_640"] += perf_counter() - started
             inference_sizes[640] += 1
             groups = _detections(result, names)
             person = choose(groups["person"], person_last, width, height, .18)
@@ -685,10 +736,12 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
                 or person["xyxy"][3] - person["xyxy"][1]
                 < height * DETAILED_PERSON_HEIGHT_RATIO
             ):
+                started = perf_counter()
                 detailed = model.predict(
                     frame, classes=wanted, conf=.12, imgsz=960,
-                    device="cpu", verbose=False
+                    device=inference_device, verbose=False
                 )[0]
+                timings["detector_960"] += perf_counter() - started
                 inference_sizes[960] += 1
                 detailed_groups = _detections(detailed, names)
                 detailed_person = choose(
@@ -698,10 +751,12 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
                     groups, person = detailed_groups, detailed_person
             pose = None
             if pose_model is not None and person is not None:
+                started = perf_counter()
                 pose_result = pose_model.predict(
                     frame, classes=[0], conf=.2, imgsz=640,
-                    device="cpu", verbose=False,
+                    device=inference_device, verbose=False,
                 )[0]
+                timings["pose"] += perf_counter() - started
                 pose = _pose_for_person(pose_result, person)
             time_ms = round(frame_index / fps * 1000)
             diagonal = math.hypot(width, height)
@@ -753,7 +808,10 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
             })
             person_last = person
             if progress and (sampled % 8 == 0 or frame_index + step >= last_frame):
+                started = perf_counter()
                 progress(time_ms)
+                timings["progress_callback"] += perf_counter() - started
+        started = perf_counter()
         static_balls = remove_static_ball_detections(records, width, height)
         ball_frames = sum(bool(record["balls"]) for record in records)
         issues["공 가림 또는 탐지 실패"] += sampled - ball_frames
@@ -772,6 +830,7 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
             candidate for candidate in candidates
             if candidate_overlaps_range(candidate, start_ms, range_end_ms)
         ]
+        attach_candidate_foot_tracks(candidates, records, width, height)
         if not candidates:
             issues["슛 후보 없음 — 직접 확인 필요"] += 1
         if rim_frames == 0:
@@ -794,6 +853,12 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
                 for item in motion_candidates
                 if start_ms <= item["time_ms"] < range_end_ms
             ]
+        timings["candidate_rules"] += perf_counter() - started
+        result["performance"] = {
+            "device": inference_device,
+            "seconds": {key: round(value, 4) for key, value in timings.items()},
+            "total_seconds": round(perf_counter() - total_started, 4),
+        }
         return result
     finally:
         cap.release()

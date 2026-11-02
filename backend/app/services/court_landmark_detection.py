@@ -10,9 +10,14 @@ import cv2
 import numpy as np
 
 from app.services.court_landmark_consensus import court_landmark_consensus
+from app.services.court_zones import FREE_THROW_LINE_Y_FT, PAINT_LEFT_X_FT, PAINT_RIGHT_X_FT
 
 
-LANE_COURT_POINTS = [[17.0, 0.0], [33.0, 0.0], [33.0, 19.0], [17.0, 19.0]]
+LANE_COURT_POINTS = [
+    [PAINT_LEFT_X_FT, 0.0], [PAINT_RIGHT_X_FT, 0.0],
+    [PAINT_RIGHT_X_FT, FREE_THROW_LINE_Y_FT],
+    [PAINT_LEFT_X_FT, FREE_THROW_LINE_Y_FT],
+]
 LANDMARK_NAMES = [
     "베이스라인 왼쪽",
     "베이스라인 오른쪽",

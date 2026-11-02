@@ -13,7 +13,7 @@ from app.core.config import Settings
 def enrich_candidates(
     video_path: Path, model_path: Path, pose_model_path: Path,
     hoop_point: list[float], result: dict, settings: Settings,
-    *, cancelled=None,
+    *, cancelled=None, inference_device: str = "cpu",
 ) -> dict:
     """Improve candidates while keeping uncertain or rejected ones reviewable."""
     if result.get("motion_hints"):
@@ -21,6 +21,7 @@ def enrich_candidates(
             add_focused_candidates(
                 video_path, model_path, hoop_point, pose_model_path, result,
                 cancelled=cancelled,
+                inference_device=inference_device,
             )
         except Phase7Canceled:
             raise
@@ -42,9 +43,37 @@ def enrich_candidates(
             usage[key] += int(reported.get(key, 0) or 0)
         api_seconds += float(decision.get("seconds", 0) or 0)
 
-    max_calls = min(settings.openai_max_candidate_reviews,
-                    settings.openai_max_shot_gate_reviews)
-    for candidate in result["candidates"][:max_calls]:
+    def apply_release_offset(candidate: dict, gate: dict, reference_time: int, basis: str) -> None:
+        offset = gate.get("release_offset_ms")
+        if (
+            gate.get("verdict") != "shot" or gate.get("confidence", 0) < .9
+            or not isinstance(offset, int) or isinstance(offset, bool)
+            or not -1400 <= offset <= 900 or abs(offset) < 200
+        ):
+            return
+        release_time = reference_time + offset
+        if not 0 <= release_time <= int(result["duration_ms"]):
+            return
+        if any(
+            other is not candidate
+            and int(other.get("scene_id", 0)) == int(candidate.get("scene_id", 0))
+            and abs(int(other["time_ms"]) - release_time) <= 1000
+            for other in result["candidates"]
+        ):
+            return
+        candidate["time_ms"] = release_time
+        candidate["frame_index"] = round(
+            release_time / 1000 * float(result.get("source_fps", 0) or 0)
+        )
+        candidate["next_time_ms"] = max(
+            release_time, int(candidate.get("next_time_ms", release_time))
+        )
+        candidate["release_basis"] = basis
+        candidate["shot_gate"]["detector_candidate_time_ms"] = reference_time
+
+    max_calls = settings.openai_max_shot_gate_reviews
+    max_rescans = max(4, min(48, len(result["candidates"]) // 8))
+    for candidate in result["candidates"][:settings.openai_max_candidate_reviews]:
         if cancelled and cancelled():
             raise Phase7Canceled("사용자가 분석을 취소했습니다.")
         if calls >= max_calls:
@@ -59,12 +88,13 @@ def enrich_candidates(
             continue
         count_result(gate)
         candidate["shot_gate"] = gate
+        apply_release_offset(candidate, gate, time_ms, "ai_shot_gate_window")
         if gate.get("verdict") != "not_shot" or gate.get("confidence", 0) < .9:
             continue
 
         # A narrow window can miss an early or late release. Recheck nearby
         # frames before marking this candidate uncertain; never delete it.
-        if rescans >= 4 or calls >= max_calls:
+        if rescans >= max_rescans or calls >= max_calls:
             candidate["shot_gate"]["resolution"] = "needs_review"
             continue
         rescans += 1
@@ -75,6 +105,7 @@ def enrich_candidates(
                 start_ms=max(0, time_ms - 2000),
                 end_ms=min(int(result["duration_ms"]), time_ms + 2000),
                 cancelled=cancelled,
+                inference_device=inference_device,
             )
         except Phase7Canceled:
             raise
@@ -111,6 +142,7 @@ def enrich_candidates(
                 **alt_gate, "resolution": "retimed_after_rescan",
                 "original_time_ms": time_ms,
             }
+            apply_release_offset(candidate, alt_gate, alt_time, "ai_rescan_window")
             break
         else:
             candidate["shot_gate"]["resolution"] = "needs_review"

@@ -8,7 +8,7 @@ const ShotCourt3D = lazy(() => import('../components/ShotCourt3D').then((module)
 const API_BASE = 'http://127.0.0.1:8000/api'
 const SHOT_TYPES = [
   ['catch_and_shoot', '캐치 앤 슛'], ['set_shot', '제자리 슛'],
-  ['dribble_pull_up', '드리블 풀업'], ['layup', '레이업'], ['dunk', '덩크'],
+  ['dribble_pull_up', '드리블 풀업'], ['side_step', '사이드 스텝'], ['layup', '레이업'], ['dunk', '덩크'],
   ['fadeaway', '페이더웨이'], ['step_back', '스텝백'],
   ['turnaround', '턴어라운드'], ['hook_shot', '훅슛'], ['other', '기타'],
 ]

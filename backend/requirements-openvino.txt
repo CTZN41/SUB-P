@@ -1,0 +1,2 @@
+# Optional Intel inference runtime; the original .pt weights remain usable.
+openvino==2026.4.1

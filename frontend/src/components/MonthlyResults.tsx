@@ -6,7 +6,7 @@ import './MonthlyResults.css'
 
 const ShotCourt3D = lazy(() => import('./ShotCourt3D').then((module) => ({ default: module.ShotCourt3D })))
 const TYPE_LABELS: Record<string, string> = {
-  catch_and_shoot: '캐치 앤 슛', set_shot: '제자리 슛', dribble_pull_up: '드리블 풀업',
+  catch_and_shoot: '캐치 앤 슛', set_shot: '제자리 슛', dribble_pull_up: '드리블 풀업', side_step: '사이드 스텝',
   layup: '레이업', dunk: '덩크', fadeaway: '페이더웨이', step_back: '스텝백',
   turnaround: '턴어라운드', hook_shot: '훅슛', other: '기타', needs_review: '확인 필요',
 }

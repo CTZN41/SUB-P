@@ -63,3 +63,35 @@ npm run dev
 ## 비밀정보와 로컬 데이터
 
 실제 API 키와 데이터베이스 연결 문자열은 `backend/.env`에만 입력합니다. `.env`, 업로드 영상, 분석 임시 파일, 기존 SQLite 파일은 Git에 포함되지 않도록 설정했습니다.
+
+## 긴 영상의 AI 비용 목표
+
+향후 1~1시간 반 연습 영상은 슛 약 100개를 기본 사례로 보고, **한 번 분석할 때 OpenAI API 비용을 약 5천원 이내**로 맞추는 것을 목표로 합니다. 현재 짧은 영상의 사용량을 긴 영상에 단순 적용하면 Terra만 쓸 때 슛 100개는 약 4천~6,500원, 270개는 약 1만~1만 6천원으로 추정됩니다. 실제 비용은 후보 수, 재검사, 환율에 따라 달라집니다.
+
+먼저 AI에 보내는 장면 수를 줄여 정확도를 비교합니다. 슛이 많은 영상은 저렴한 Luna로 쉬운 장면을 판단하고, 애매한 장면만 Terra로 다시 보는 방식을 **사람이 정답을 확인한 영상으로 검증한 뒤** 도입할지 결정합니다. 지금은 Terra 중심이며 Luna 혼합 방식과 1~1시간 반 원본 분석은 구현되지 않았습니다. 현재 등록 가능 길이는 최대 10분입니다.
+
+## 최근 영상 검증
+
+2026-11-02 실내 75초 영상의 별도 새 분석에서 화면으로 확인한 슛 7개와 성공 6·실패 1이 저장 결과와 일치했습니다. 레이업 2개의 구역은 발을 디딘 측면 페인트존 대신 골밑으로 기록돼 위치 검증이 남았습니다. 여러 구도 영상의 후보 시각, 처리 시간, 재현 명령과 정확도 해석 범위는 [Phase 14 측정 기록](docs/phase14-evaluation-2026-11-02.md)을 참고하세요. 이 수치는 전체 서비스의 공식 정확도가 아닙니다.
+
+## 빠른 로컬 후보 탐지 (OpenVINO)
+
+이 PC의 앞 3분 비교는 PyTorch CPU 168.7초, OpenVINO CPU 83.2초, Intel 내장 GPU 170.4초였습니다. 짧은 영상 6개의 후보 11개는 OpenVINO CPU에서도 시각·발 좌표가 같았습니다. 이는 기존 결과 유지 시험이며 모든 영상의 정확도 보장은 아닙니다. [상세 측정과 한계](docs/candidate-performance-review-2026-11-02.md)를 참고하세요.
+
+새 PC에서 기존 `.pt` 모델을 준비한 뒤 백엔드 폴더에서 아래 명령으로 변환합니다. 학습과 OpenAI 호출은 하지 않습니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-openvino.txt
+.\.venv\Scripts\python.exe evaluation\export_candidate_openvino.py
+```
+
+`backend/.env`에 `CANDIDATE_RUNTIME=openvino_cpu`를 설정하고 백엔드를 재실행하면 같은 실행 방식을 사용합니다. `torch`로 기존 방식에 복귀할 수 있습니다. 원본·변환 가중치와 MP4는 로컬 파일이며 Git에는 포함하지 않습니다.
+
+유료 AI와 DB 저장 없이 후보만 시험하려면 백엔드 폴더에서 다음 명령을 실행합니다. 골대 좌표는 이 시험 영상에만 해당합니다.
+
+```powershell
+$env:PYTHONPATH = (Get-Location).Path
+.\.venv\Scripts\python.exe evaluation\candidate_speed.py C:\Users\aicam\Downloads\IvMhOQO9ros-fixed-camera-repeat-10min-upload.mp4 --seconds 180 --hoop-x 748 --hoop-y 310 --model models\basketball-yolo26n-pilot-v4_openvino_model --pose models\yolo26n-pose_openvino_model --device intel:cpu --output work\performance\manual-180s.json
+```
+
+웹 화면의 **AI 포함 전체 분석 (유료)** 버튼은 후보 탐지 뒤 OpenAI 판정까지 진행합니다. 분석 화면에는 실제 경과 시간과 완료 후 후보 탐지 소요 시간을 표시합니다.

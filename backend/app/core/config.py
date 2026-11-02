@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,13 +16,14 @@ class Settings(BaseSettings):
     work_dir: str = "./work"
     max_video_minutes: int = 10
     max_video_bytes: int = 5 * 1024 * 1024 * 1024
+    candidate_runtime: Literal["torch", "openvino_cpu", "openvino_gpu"] = "torch"
     openai_api_key: str | None = None
     openai_vision_model: str = "gpt-6.1-terra"
     openai_vision_fallback_model: str | None = "gpt-6.1-sol"
     openai_timeout_seconds: int = 60
     openai_shot_review_enabled: bool = True
-    openai_max_candidate_reviews: int = 40
-    openai_max_shot_gate_reviews: int = 12
+    openai_max_candidate_reviews: int = 300
+    openai_max_shot_gate_reviews: int = 600
     log_level: str = "INFO"
 
     model_config = SettingsConfigDict(

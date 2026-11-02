@@ -1,0 +1,232 @@
+{
+  "date": "2026-11-02",
+  "cpu": "Intel Core i7-12700",
+  "gpu": "Intel UHD 770",
+  "method": "Same v4/pose FP32 weights and frame sampling. One sequential run per configuration; no DB callbacks.",
+  "openai_calls": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "runs_180s": [
+    {
+      "runtime": "torch-180s",
+      "seconds": 168.7202,
+      "candidate_times_ms": [
+        11669,
+        15870,
+        20421,
+        29172,
+        36991,
+        43408,
+        50293,
+        56944,
+        62195,
+        67213,
+        77948,
+        85650,
+        92768,
+        98252,
+        100820,
+        104904,
+        111672,
+        115989,
+        120540,
+        128825,
+        136877,
+        143411,
+        150296,
+        157881,
+        162198,
+        167566,
+        177951
+      ],
+      "performance": {
+        "device": "cpu",
+        "seconds": {
+          "model_load": 0.0816,
+          "cancel_callback": 0.0009,
+          "decode": 12.267,
+          "detector_640": 57.4126,
+          "pose": 62.4345,
+          "progress_callback": 0.0006,
+          "detector_960": 33.668,
+          "candidate_rules": 0.0138
+        },
+        "total_seconds": 168.7047
+      },
+      "inference_sizes": {
+        "640": 1543,
+        "960": 629
+      }
+    },
+    {
+      "runtime": "openvino-cpu-180s",
+      "seconds": 83.2205,
+      "candidate_times_ms": [
+        11669,
+        15870,
+        20421,
+        29172,
+        36991,
+        43408,
+        50293,
+        56944,
+        62195,
+        67213,
+        77948,
+        85650,
+        92768,
+        98252,
+        100820,
+        104904,
+        111672,
+        115989,
+        120540,
+        128825,
+        136877,
+        143411,
+        150296,
+        157881,
+        162198,
+        167566,
+        177951
+      ],
+      "performance": {
+        "device": "intel:cpu",
+        "seconds": {
+          "model_load": 0.012,
+          "cancel_callback": 0.0008,
+          "decode": 12.7448,
+          "detector_640": 24.7419,
+          "pose": 25.7872,
+          "progress_callback": 0.0006,
+          "detector_960": 17.6014,
+          "candidate_rules": 0.0136
+        },
+        "total_seconds": 83.1725
+      },
+      "inference_sizes": {
+        "640": 1543,
+        "960": 629
+      }
+    },
+    {
+      "runtime": "openvino-gpu-180s",
+      "seconds": 170.4258,
+      "candidate_times_ms": [
+        11552,
+        15870,
+        20421,
+        29172,
+        36991,
+        43408,
+        50293,
+        56944,
+        61962,
+        67213,
+        77948,
+        85650,
+        92768,
+        98252,
+        100820,
+        104904,
+        111672,
+        115989,
+        120540,
+        128825,
+        136877,
+        143411,
+        150296,
+        157881,
+        161965,
+        167566,
+        177951
+      ],
+      "performance": {
+        "device": "intel:gpu",
+        "seconds": {
+          "model_load": 0.0011,
+          "cancel_callback": 0.001,
+          "decode": 12.4962,
+          "detector_640": 75.2877,
+          "pose": 51.5893,
+          "progress_callback": 0.0006,
+          "detector_960": 28.4985,
+          "candidate_rules": 0.0819
+        },
+        "total_seconds": 170.3049
+      },
+      "inference_sizes": {
+        "640": 1543,
+        "960": 630
+      }
+    }
+  ],
+  "short_clips": [
+    {
+      "clip": "indoor27",
+      "before_seconds": 20.2008,
+      "after_seconds": 12.5151,
+      "candidate_times_ms": [
+        1600,
+        15733,
+        22933
+      ],
+      "same_times": true,
+      "same_foot_points": true
+    },
+    {
+      "clip": "outdoor18",
+      "before_seconds": 13.4837,
+      "after_seconds": 6.123,
+      "candidate_times_ms": [
+        8000,
+        14667
+      ],
+      "same_times": true,
+      "same_foot_points": true
+    },
+    {
+      "clip": "solo22",
+      "before_seconds": 15.729,
+      "after_seconds": 8.7555,
+      "candidate_times_ms": [
+        4933,
+        19600
+      ],
+      "same_times": true,
+      "same_foot_points": true
+    },
+    {
+      "clip": "mixkit2278",
+      "before_seconds": 9.6193,
+      "after_seconds": 4.3516,
+      "candidate_times_ms": [
+        3375,
+        11000
+      ],
+      "same_times": true,
+      "same_foot_points": true
+    },
+    {
+      "clip": "mixkit44448",
+      "before_seconds": 4.2573,
+      "after_seconds": 2.2896,
+      "candidate_times_ms": [
+        4004
+      ],
+      "same_times": true,
+      "same_foot_points": true
+    },
+    {
+      "clip": "pexels5191594",
+      "before_seconds": 14.4915,
+      "after_seconds": 5.9726,
+      "candidate_times_ms": [
+        14681
+      ],
+      "same_times": true,
+      "same_foot_points": true
+    }
+  ],
+  "limitation": "Agreement with previous candidates is not a general shot-detection accuracy estimate. No new independent ground truth for the 180-second loop."
+}

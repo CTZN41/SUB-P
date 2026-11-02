@@ -16,6 +16,8 @@ from app.core.config import Settings
 from app.services.openai_shot_review import review_candidates_with_openai
 from app.services.candidate_enrichment import enrich_candidates
 from app.services.phase8_shots import materialize_shots_from_candidates
+from app.services.job_progress import JobProgressReporter
+from app.analysis.candidate_runtime import candidate_models
 
 
 STAGES = [
@@ -86,8 +88,8 @@ def start_phase7(session: Session, analysis: Analysis, settings: Settings) -> tu
         return existing, False
     if analysis.play_type.value != "solo":
         raise Phase7Error("Phase 7 실제 후보 분석은 개인 연습 영상만 지원합니다.")
-    model_path = settings.resolve_path(SHOT_DETECTION_MODEL)
-    if not model_path.is_file():
+    model_path, _, _ = candidate_models(settings)
+    if not model_path.exists():
         raise Phase7Error("학습된 탐지 모델을 찾을 수 없습니다.")
     now = utc_now()
     job = AnalysisJob(analysis_id=analysis.id, status=JobStatus.QUEUED, stage=STAGES[0],
@@ -130,38 +132,20 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         analysis.status = AnalysisStatus.ANALYZING
         analysis.current_stage = job.stage
         hoop_point = list(calibration.hoop_point)
+        calibration_transform = [list(row) for row in calibration.transform]
         session.commit()
 
-    checks = 0
-
-    def cancelled() -> bool:
-        nonlocal checks
-        checks += 1
-        if checks % 8:
-            return False
-        with session_factory() as session:
-            job = session.get(AnalysisJob, job_id)
-            return job is None or job.cancel_requested
-
-    def progress(time_ms: int) -> None:
-        with session_factory() as session:
-            job = session.get(AnalysisJob, job_id)
-            analysis = session.get(Analysis, analysis_id)
-            if job and analysis and not job.cancel_requested:
-                job.processed_ms = analysis.processed_ms = time_ms
-                job.stage = analysis.current_stage = STAGES[3]
-                job.heartbeat_at = utc_now()
-                session.commit()
+    reporter = JobProgressReporter(session_factory, analysis_id, job_id, STAGES[3])
+    cancelled, progress = reporter.cancelled, reporter.progress
 
     try:
         video_path = settings.upload_path / analysis_id / "original.mp4"
-        model_path = settings.resolve_path(SHOT_DETECTION_MODEL)
-        pose_model_path = settings.resolve_path("models/yolo26n-pose.pt")
+        model_path, pose_model_path, inference_device = candidate_models(settings)
         started = perf_counter()
         result = analyze_video(video_path, model_path, hoop_point,
                                pose_model_path=pose_model_path,
                                progress=progress, cancelled=cancelled,
-                               collect_motion_hints=True)
+                               collect_motion_hints=True, inference_device=inference_device)
         local_seconds = perf_counter() - started
         with session_factory() as session:
             job = session.get(AnalysisJob, job_id)
@@ -174,15 +158,19 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
             session.commit()
         started = perf_counter()
         result = enrich_candidates(video_path, model_path, pose_model_path,
-                                   hoop_point, result, settings, cancelled=cancelled)
+                                   hoop_point, result, settings, cancelled=cancelled,
+                                   inference_device=inference_device)
         enrichment_seconds = perf_counter() - started
         started = perf_counter()
-        result = review_candidates_with_openai(video_path, result, settings)
+        result = review_candidates_with_openai(
+            video_path, result, settings, calibration_transform=calibration_transform,
+        )
         result["timing_seconds"] = {
             "local_candidates": round(local_seconds, 2),
             "focused_rescan_and_shot_gate": round(enrichment_seconds, 2),
             "detailed_ai_review": round(perf_counter() - started, 2),
         }
+        result["status_io"] = dict(reporter.stats)
         gate_usage = result.get("shot_gate_summary", {}).get("usage", {})
         detail_usage = result.get("ai_review", {}).get("usage", {})
         result["api_usage"] = {

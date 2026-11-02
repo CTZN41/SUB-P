@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.core.config import Settings
+from app.services.court_calibration import calculate_transform
 from app.services.openai_shot_review import (
     CameraContextDecision,
     OutcomeReviewDecision,
@@ -10,6 +11,7 @@ from app.services.openai_shot_review import (
     ShotReviewDecision,
     _build_shared_camera_contexts,
     _camera_context_is_unclear,
+    _calibrated_court_left_direction,
     review_candidates_with_openai,
 )
 
@@ -32,12 +34,170 @@ def test_camera_orientation_keeps_75_percent_threshold() -> None:
     assert not _camera_context_is_unclear(context.model_copy(update={"confidence": .75}))
 
 
+def test_confirmed_court_points_anchor_lateral_direction() -> None:
+    transform = calculate_transform(
+        [[750, 700], [1270, 700], [1550, 960], [490, 960]],
+        [[19, 0], [31, 0], [31, 19], [19, 19]],
+    )
+    assert _calibrated_court_left_direction(transform) == "left"
+
+
+def test_inconsistent_zone_coordinates_get_one_terra_position_retry(tmp_path, monkeypatch) -> None:
+    first = decision(.9, False)
+    first.court_zone = "mid_center"
+    first.court_x = 24.5
+    first.court_y = 17.0  # This is inside the paint, despite the named zone.
+    corrected = PositionReviewDecision(
+        court_zone="mid_center", court_x=24.5, court_y=21.5,
+        confidence=.9, reason="Shoes are beyond the free-throw line",
+        camera_view="left_sideline", overhead_lateral_relation="aligned_with_lane",
+        distance_band="midrange", projection_evidence=["visible free-throw line"],
+    )
+    responses = FakeResponses([first, corrected])
+    monkeypatch.setattr(
+        "app.services.openai_shot_review.candidate_frame_inputs",
+        lambda *args, **kwargs: [{"type": "input_image", "image_url": "data:image/jpeg;base64,test", "detail": "high"}],
+    )
+    result = review_candidates_with_openai(
+        tmp_path / "video.mp4", {"candidates": [{"time_ms": 1000}]},
+        Settings(_env_file=None, openai_api_key="test-key"),
+        client=SimpleNamespace(responses=responses),
+    )
+    review = result["candidates"][0]["ai_review"]
+    assert (review["court_zone"], review["court_x"], review["court_y"]) == (
+        "mid_center", 24.5, 21.5,
+    )
+    assert [attempt["task"] for attempt in review["attempts"]] == [
+        "shot_review", "position_consistency",
+    ]
+
+
+def test_position_retry_can_correct_wrong_zone_name_for_same_coordinates(tmp_path, monkeypatch) -> None:
+    first = decision(.9, False)
+    first.court_zone = "mid_wing_right"
+    first.court_x = 35
+    first.court_y = 12  # The named wing disagrees with these baseline coordinates.
+    corrected = position_decision(
+        .70, zone="mid_baseline_right", court_x=35, court_y=12,
+    )
+    responses = FakeResponses([first, corrected])
+    monkeypatch.setattr(
+        "app.services.openai_shot_review.candidate_frame_inputs",
+        lambda *args, **kwargs: [{"type": "input_image", "image_url": "data:image/jpeg;base64,test", "detail": "high"}],
+    )
+    result = review_candidates_with_openai(
+        tmp_path / "video.mp4",
+        {"candidates": [{"time_ms": 1000, "foot_point_px": [35, 12]}]},
+        Settings(_env_file=None, openai_api_key="test-key"),
+        client=SimpleNamespace(responses=responses),
+        calibration_transform=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    )
+    review = result["candidates"][0]["ai_review"]
+    assert (review["court_zone"], review["court_x"], review["court_y"]) == (
+        "mid_baseline_right", 35, 12,
+    )
+    assert review["review_required"] is False
+    assert [attempt["task"] for attempt in review["attempts"]] == [
+        "shot_review", "position_consistency",
+    ]
+
+
+@pytest.mark.parametrize("retry_confidence, expected_zone", [
+    (.72, "mid_wing_right"),
+    (.68, "needs_review"),
+])
+def test_calibrated_foot_conflict_gets_position_retry(
+    tmp_path, monkeypatch, retry_confidence, expected_zone,
+) -> None:
+    first = decision(.9, False)
+    first.court_zone = "mid_wing_left"
+    first.court_x = 13
+    first.court_y = 18
+    corrected = position_decision(
+        retry_confidence, zone="mid_wing_right", court_x=35, court_y=21,
+    )
+    responses = FakeResponses([first, corrected])
+    monkeypatch.setattr(
+        "app.services.openai_shot_review.candidate_frame_inputs",
+        lambda *args, **kwargs: [{"type": "input_image", "image_url": "data:image/jpeg;base64,test", "detail": "high"}],
+    )
+    result = review_candidates_with_openai(
+        tmp_path / "video.mp4",
+        {"candidates": [{"time_ms": 1000, "foot_point_px": [35, 21]}]},
+        Settings(_env_file=None, openai_api_key="test-key"),
+        client=SimpleNamespace(responses=responses),
+        calibration_transform=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    )
+    review = result["candidates"][0]["ai_review"]
+    assert review["calibrated_foot_projection"] == [35.0, 21.0]
+    assert [attempt["task"] for attempt in review["attempts"]] == [
+        "shot_review", "calibration_lateral_retry",
+    ]
+    assert "(35.0, 21.0)" in responses.calls[0]["input"][0]["content"][0]["text"]
+    assert review["court_zone"] == expected_zone
+    assert review["court_x"] == (35 if retry_confidence >= .70 else None)
+    assert review["outcome"] == "made"
+    assert review["shot_type"] == "set_shot"
+
+
+def test_layup_uses_earlier_plant_and_rechecks_hoop_location(tmp_path, monkeypatch) -> None:
+    first = decision(.9, False, shot_type="layup")
+    first.court_zone, first.court_x, first.court_y = "restricted", 25, 5
+    corrected = position_decision(.85, zone="paint_right", court_x=31, court_y=9)
+    responses = FakeResponses([first, corrected])
+    monkeypatch.setattr(
+        "app.services.openai_shot_review.candidate_frame_inputs",
+        lambda *args, **kwargs: [{"type": "input_image", "image_url": "data:image/jpeg;base64,test", "detail": "high"}],
+    )
+    candidate = {
+        "time_ms": 4500, "foot_point_px": [26, 5],
+        "foot_track": [
+            {"time_ms": 4100, "foot_point_px": [31, 9]},
+            {"time_ms": 4400, "foot_point_px": [27, 6]},
+        ],
+    }
+    result = review_candidates_with_openai(
+        tmp_path / "video.mp4", {"candidates": [candidate]},
+        Settings(_env_file=None, openai_api_key="test-key"),
+        client=SimpleNamespace(responses=responses),
+        calibration_transform=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    )
+    review = result["candidates"][0]["ai_review"]
+    assert (review["court_zone"], review["court_x"], review["court_y"]) == ("paint_right", 31, 9)
+    assert review["calibrated_plant_projection"] == [31.0, 9.0]
+    assert review["plant_sample_time_ms"] == 4100
+    assert [attempt["task"] for attempt in review["attempts"]] == ["shot_review", "layup_plant_retry"]
+    assert "(31.0, 9.0)" in responses.calls[0]["input"][0]["content"][0]["text"]
+
+
+def test_layup_unresolved_plant_conflict_does_not_save_wrong_zone(tmp_path, monkeypatch) -> None:
+    first = decision(.9, False, shot_type="layup")
+    first.court_zone, first.court_x, first.court_y = "restricted", 25, 5
+    retry = position_decision(.85, zone="restricted", court_x=25, court_y=5)
+    monkeypatch.setattr(
+        "app.services.openai_shot_review.candidate_frame_inputs",
+        lambda *args, **kwargs: [{"type": "input_image", "image_url": "data:image/jpeg;base64,test", "detail": "high"}],
+    )
+    result = review_candidates_with_openai(
+        tmp_path / "video.mp4",
+        {"candidates": [{"time_ms": 4500, "foot_point_px": [26, 5],
+                         "foot_track": [{"time_ms": 4100, "foot_point_px": [31, 9]}]}]},
+        Settings(_env_file=None, openai_api_key="test-key"),
+        client=SimpleNamespace(responses=FakeResponses([first, retry])),
+        calibration_transform=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    )
+    review = result["candidates"][0]["ai_review"]
+    assert review["court_zone"] == "needs_review"
+    assert review["court_x"] is None
+    assert review["review_required"] is True
+
+
 @pytest.fixture(autouse=True)
 def use_shared_camera_context(monkeypatch):
     shared = camera_context()
     monkeypatch.setattr(
         "app.services.openai_shot_review._build_shared_camera_contexts",
-        lambda client, video_path, candidates, settings: (
+        lambda client, video_path, candidates, settings, calibration_left_direction=None: (
             {int(candidate.get("scene_id", 0)): shared for candidate in candidates},
             [{"scene_id": 0, "status": "resolved", "decision": shared.model_dump()}],
             0,

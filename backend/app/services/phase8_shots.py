@@ -30,6 +30,7 @@ SHOT_TYPE_MAP = {
     "catch_and_shoot": ShotType.CATCH_AND_SHOOT,
     "set_shot": ShotType.SET_SHOT,
     "dribble_pull_up": ShotType.DRIBBLE_PULL_UP,
+    "side_step": ShotType.SIDE_STEP,
     "layup": ShotType.LAYUP,
     "dunk": ShotType.DUNK,
     "fadeaway": ShotType.FADEAWAY,

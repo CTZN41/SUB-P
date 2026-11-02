@@ -164,6 +164,58 @@ def test_negative_gate_recovers_real_shot_after_rescan(monkeypatch) -> None:
     assert result["shot_gate_summary"]["response_seconds"] == 4.0
 
 
+def test_rescanned_shot_uses_confident_release_offset(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.candidate_enrichment.review_shot_existence",
+        lambda _path, time_ms, _settings: (
+            {"verdict": "shot", "confidence": .97, "release_offset_ms": 700}
+            if time_ms == 14200 else {"verdict": "not_shot", "confidence": .99}
+        ),
+    )
+    monkeypatch.setattr(
+        "app.services.candidate_enrichment.analyze_video",
+        lambda *args, **kwargs: {
+            "candidates": [{"time_ms": 14200, "next_time_ms": 14300,
+                            "frame_index": 426, "scene_id": 0}],
+        },
+    )
+    result = {
+        "duration_ms": 27000, "source_fps": 30,
+        "candidates": [{"time_ms": 15733, "scene_id": 0}],
+    }
+    settings = Settings(_env_file=None, openai_api_key="test-key")
+    enrich_candidates(Path("video.mp4"), Path("model.pt"), Path("pose.pt"),
+                      [10, 20], result, settings)
+    candidate = result["candidates"][0]
+    assert candidate["time_ms"] == 14900
+    assert candidate["frame_index"] == 447
+    assert candidate["next_time_ms"] == 14900
+    assert candidate["release_basis"] == "ai_rescan_window"
+    assert candidate["shot_gate"]["detector_candidate_time_ms"] == 14200
+    assert candidate["shot_gate"]["original_time_ms"] == 15733
+
+
+def test_confirmed_shot_uses_release_offset_without_rescan(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.candidate_enrichment.review_shot_existence",
+        lambda *_: {"verdict": "shot", "confidence": .99, "release_offset_ms": 700},
+    )
+    result = {
+        "duration_ms": 27000, "source_fps": 30,
+        "candidates": [{"time_ms": 22933, "next_time_ms": 23000,
+                        "frame_index": 688, "scene_id": 0}],
+    }
+    settings = Settings(_env_file=None, openai_api_key="test-key")
+    enrich_candidates(Path("video.mp4"), Path("model.pt"), Path("pose.pt"),
+                      [10, 20], result, settings)
+    candidate = result["candidates"][0]
+    assert candidate["time_ms"] == 23633
+    assert candidate["frame_index"] == 709
+    assert candidate["next_time_ms"] == 23633
+    assert candidate["release_basis"] == "ai_shot_gate_window"
+    assert candidate["shot_gate"]["detector_candidate_time_ms"] == 22933
+
+
 def test_negative_gate_keeps_unresolved_candidate(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.candidate_enrichment.review_shot_existence",
@@ -270,3 +322,27 @@ def test_gate_call_limit_counts_rescan_review_and_remaining_candidates(monkeypat
     assert result["shot_gate_summary"]["calls"] == 2
     assert result["shot_gate_summary"]["unreviewed_candidates"] == 1
     assert "shot_gate" not in result["candidates"][1]
+
+
+def test_last_of_twelve_candidates_keeps_a_recheck_call(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.candidate_enrichment.review_shot_existence",
+        lambda _path, time_ms, _settings: {
+            "verdict": "not_shot" if time_ms == 12000 else "shot",
+            "confidence": .99,
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.candidate_enrichment.analyze_video",
+        lambda *args, **kwargs: {"candidates": [{"time_ms": 12800}]},
+    )
+    result = {"duration_ms": 20000, "candidates": [
+        {"time_ms": time_ms} for time_ms in range(1000, 13000, 1000)
+    ]}
+    settings = Settings(_env_file=None, openai_api_key="test-key")
+    enrich_candidates(Path("video.mp4"), Path("model.pt"), Path("pose.pt"),
+                      [10, 20], result, settings)
+    assert result["candidates"][-1]["time_ms"] == 12800
+    assert result["candidates"][-1]["shot_gate"]["resolution"] == "retimed_after_rescan"
+    assert result["shot_gate_summary"]["calls"] == 13
+    assert result["shot_gate_summary"]["unreviewed_candidates"] == 0

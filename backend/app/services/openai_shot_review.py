@@ -7,18 +7,21 @@ from pathlib import Path
 from typing import Literal
 
 import cv2
+import numpy as np
 from pydantic import BaseModel, Field
 
 from app.core.config import Settings
+from app.services.court_calibration import transform_point
+from app.services.court_zones import classify_zone
 from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
 
 
 FRAME_OFFSETS_MS = (
-    -2500, -2000, -1500, -1000, -600, -300,
+    -4000, -3500, -3000, -2500, -2000, -1500, -1000, -600, -300,
     0, 300, 700, 1200, 2000, 3500,
 )
 OUTCOME_EXTENSION_OFFSETS_MS = (4500, 5500)
-FOCUS_OFFSETS_MS = (-1000, -300, 300, 700)
+FOCUS_OFFSETS_MS = (-3500, -2500, -1500, -1000, -300, 300, 700)
 OUTCOME_OFFSETS_MS = (800, 1200, 1600, 2000, 2400, 2800, 3500, 4500)
 ESCALATION_CONFIDENCE = 0.65
 CAMERA_CONTEXT_CONFIDENCE = 0.75
@@ -62,6 +65,7 @@ class ShotReviewDecision(BaseModel):
         "catch_and_shoot",
         "set_shot",
         "dribble_pull_up",
+        "side_step",
         "layup",
         "dunk",
         "fadeaway",
@@ -106,6 +110,7 @@ class ShotDetailDecision(BaseModel):
         "catch_and_shoot",
         "set_shot",
         "dribble_pull_up",
+        "side_step",
         "layup",
         "dunk",
         "fadeaway",
@@ -404,8 +409,123 @@ def _camera_context_prompt(context: CameraContextDecision | None) -> str:
         f"court-left points toward screen {context.court_left_direction_on_screen}; "
         f"half-court points toward screen {context.toward_half_court_direction_on_screen}; "
         f"shared orientation: {context.orientation_summary}. "
-        "Use this exact shared orientation to project the release shoes. Do not replace or reverse it."
+        "Use this exact shared orientation to project the release shoes. The court-left direction "
+        "comes from confirmed court calibration when available. Do not replace or reverse it."
     )
+
+
+def _projected_foot_position(
+    transform: list[list[float]] | None, candidate: dict,
+) -> tuple[float, float] | None:
+    """Return a plausible court projection, never an authoritative shot location."""
+    foot = candidate.get("foot_point_px")
+    if transform is None or candidate.get("calibration_shifted") or not isinstance(foot, (list, tuple)) or len(foot) != 2:
+        return None
+    try:
+        if not np.isfinite(np.asarray(foot, dtype=float)).all():
+            return None
+        x, y = transform_point(transform, list(foot))
+    except (TypeError, ValueError, IndexError, cv2.error):
+        return None
+    if not np.isfinite([x, y]).all() or not (0 <= x <= 50 and 0 <= y <= 47):
+        return None
+    return x, y
+
+
+def _projected_plant_position(
+    transform: list[list[float]] | None, candidate: dict,
+) -> tuple[tuple[float, float] | None, int | None]:
+    """Project a pre-release foot sample; never use a late layup foot as takeoff."""
+    release_ms = int(candidate["time_ms"])
+    track = candidate.get("foot_track") or []
+    samples = [
+        sample for sample in track
+        if release_ms - 700 <= sample.get("time_ms", -1) <= release_ms - 150
+    ]
+    if not samples:
+        return None, None
+    sample = min(samples, key=lambda item: abs(item["time_ms"] - (release_ms - 400)))
+    if abs(sample["time_ms"] - (release_ms - 400)) > 200:
+        return None, None
+    projected = _projected_foot_position(transform, {
+        "foot_point_px": sample.get("foot_point_px"),
+        "calibration_shifted": candidate.get("calibration_shifted"),
+    })
+    return projected, sample["time_ms"] if projected else None
+
+
+def _foot_projection_prompt(
+    projected: tuple[float, float] | None,
+    plant: tuple[float, float] | None = None,
+) -> str:
+    release_text = (
+        f"The local detector's candidate-frame foot projects to ({projected[0]:.1f}, "
+        f"{projected[1]:.1f}) feet. "
+    ) if projected else ""
+    plant_text = (
+        f"A foot sampled about 0.4 seconds before the release projects to ({plant[0]:.1f}, "
+        f"{plant[1]:.1f}) feet. For a layup, determine the shot location from the "
+        "last grounded takeoff/plant shoes, not the player drifting toward the hoop "
+        "after takeoff. Check the visible feet and lines; this earlier sample may still "
+        "be before the actual plant. "
+    ) if plant else ""
+    if not release_text and not plant_text:
+        return ""
+    return (
+        release_text + plant_text +
+        "This is supporting evidence, not ground truth: the detected foot or calibration may be "
+        "inaccurate. Compare it with the visible planted and release shoes and court lines before choosing "
+        "your own coordinates and zone. If they conflict and the image cannot resolve why, "
+        "return needs_review rather than silently reversing court left/right. "
+    )
+
+
+def _clear_lateral_side(x: float | None) -> str | None:
+    if x is None:
+        return None
+    if x <= 20:
+        return "left"
+    if x >= 30:
+        return "right"
+    return None
+
+
+def _projection_lateral_conflict(
+    decision: ShotReviewDecision | PositionReviewDecision,
+    projected: tuple[float, float] | None,
+) -> bool:
+    if projected is None or decision.court_zone == "needs_review":
+        return False
+    projected_side = _clear_lateral_side(projected[0])
+    ai_side = _clear_lateral_side(decision.court_x)
+    return projected_side is not None and ai_side is not None and projected_side != ai_side
+
+
+def _layup_plant_conflict(
+    decision: ShotReviewDecision | PositionReviewDecision,
+    plant: tuple[float, float] | None,
+    *, shot_type: str,
+) -> bool:
+    if shot_type != "layup" or plant is None or decision.court_zone == "needs_review":
+        return False
+    plant_zone = classify_zone(*plant).value
+    return (
+        plant_zone in {"paint_left", "paint_right"}
+        and decision.court_zone in {"restricted", "paint_left", "paint_center", "paint_right"}
+        and decision.court_zone != plant_zone
+    )
+
+
+def _invalidate_conflicting_position(
+    decision: ShotReviewDecision,
+    reason: str = "기준점으로 환산한 발 위치와 AI 위치의 좌우가 달라 위치 확인 필요",
+) -> None:
+    decision.court_zone = "needs_review"
+    decision.court_x = decision.court_y = None
+    decision.position_confidence = 0
+    decision.position_reason = reason
+    decision.review_required = True
+    decision.confidence = 0
 
 
 def _review_once(
@@ -415,6 +535,8 @@ def _review_once(
     *,
     effort: str = "low",
     camera_context: CameraContextDecision | None = None,
+    projected_foot: tuple[float, float] | None = None,
+    projected_plant: tuple[float, float] | None = None,
 ) -> tuple[ShotReviewDecision, dict[str, int]]:
     response = client.responses.parse(
         model=model,
@@ -427,7 +549,7 @@ def _review_once(
                 "text": (
                     "The images are chronological frames from one basketball shot candidate. "
                     "Each image is preceded by its timestamp relative to the local release candidate. "
-                    "The base window covers -2500 through +3500 milliseconds with denser samples "
+                    "The base window covers -4000 through +3500 milliseconds with denser samples "
                     "around release. Optional +4500 and +5500 full-scene frames are supplied only "
                     "when the base pass could not see the outcome. Player crops cover the release. "
                     "The local YOLO and pose pipeline already confirmed that this is a shot attempt. "
@@ -438,17 +560,33 @@ def _review_once(
                     "only if the player keeps hold of the ball at rim height and forces it directly down "
                     "through the hoop. "
                     "Do not infer a dunk from proximity to the rim alone. "
+                    "For shot type, first inspect the feet before the gather. A step_back requires a "
+                    "visible retreating step away from the hoop to create space, a new plant, and then "
+                    "the jump shot. This remains a step_back even when a dribble immediately precedes it; "
+                    "step_back takes precedence over side_step and dribble_pull_up. A side_step requires "
+                    "a deliberate lateral step away from the original shooting lane to create space, "
+                    "a new plant, and then a jumper; a preceding dribble does not change it to "
+                    "dribble_pull_up. Use dribble_pull_up for a jumper after dribbling without a clear "
+                    "retreating or lateral space-creating step. Do not call a camera perspective change "
+                    "or movement after release a step_back or side_step. When the feet or movement "
+                    "direction cannot be seen, use needs_review rather than inferring the type from "
+                    "the presence of a dribble alone. Explain the observed footwork in reason. "
                     + _camera_context_prompt(camera_context) + " "
-                    "Location must now follow two steps: (1) project the shooter's actual release shoes using "
+                    + _foot_projection_prompt(projected_foot, projected_plant) + " "
+                    "Location must now follow two steps: (1) project the shooter's shooting/plant shoes using "
                     "the shared camera orientation into an overhead relation to the lane; (2) choose the "
                     "14-zone result from that projected relation and distance. Do not infer "
                     "overhead left/right from image left/right. Use the visible hoop, paint, free-throw lane "
-                    "and three-point arc. Ignore stored calibration and do not treat the bottom-center of a "
+                    "and three-point arc. Use the confirmed calibration direction only to anchor court "
+                    "left/right; do not blindly copy its projected location. Do not treat the bottom-center of a "
                     "person box as an exact shoe location. Choose one of the supplied 14 court zones and estimate "
                     "standard half-court coordinates in feet: x=0..50 from left to right and y=0..47 from "
                     "the baseline toward half court, with the hoop at (25, 5.25). Left/right are from this "
                     "overhead court perspective. For three-point shots, x=17..33 is the center/top sector; "
-                    "x<17 is left wing and x>33 is right wing. Return court_zone="
+                    "x<17 is left wing and x>33 is right wing. "
+                    "The paint occupies x=17..33 and y=0..19; a center midrange shot beyond the "
+                    "free-throw line must have y>19. Make the numeric coordinates agree with the "
+                    "chosen zone. Return court_zone="
                     "needs_review and null coordinates when the feet or court lines cannot support a reliable "
                     "location. For outcome, first use visible rim passage or rim deflection. If those are not "
                     "clear, consider the ball falling below the rim, the player's rebound behavior, and a "
@@ -525,6 +663,9 @@ def _review_position_once(
     model: str,
     images: list[dict],
     camera_context: CameraContextDecision | None = None,
+    inconsistency: str = "",
+    projected_foot: tuple[float, float] | None = None,
+    projected_plant: tuple[float, float] | None = None,
 ) -> tuple[PositionReviewDecision, dict[str, int]]:
     response = client.responses.parse(
         model=model,
@@ -538,16 +679,21 @@ def _review_position_once(
                     "The local YOLO and pose pipeline already confirmed this basketball shot. Decide only "
                     "the shooter's location at release. "
                     + _camera_context_prompt(camera_context) + " "
+                    + _foot_projection_prompt(projected_foot, projected_plant) + " "
                     "Project the actual release shoes into an overhead left/aligned/right relation to the lane; "
                     "never equate image-left/image-right with court-left/court-right. Third, classify distance "
                     "and choose one of the 14 zones. Use the visible hoop, paint, lane and three-point arc. "
-                    "Ignore stored calibration and do not use the bottom-center of a person box as an exact "
+                    "Use confirmed calibration only for left/right orientation, not exact shot distance. "
+                    "Do not use the bottom-center of a person box as an exact "
                     "foot point. Choose one of the supplied 14 zones and estimate "
                     "standard half-court coordinates in feet: x=0..50 left-to-right and y=0..47 from the "
                     "baseline toward half court, with the hoop at (25, 5.25). Left/right are from the "
                     "overhead court perspective. For three-point shots, x=17..33 is the center/top sector; "
                     "x<17 is left wing and x>33 is right wing. Return needs_review with null coordinates when the shoes "
-                    "or court markings do not support a reliable location."
+                    "or court markings do not support a reliable location. "
+                    "The paint spans x=17..33 and y=0..19; a center midrange shot must have y>19. "
+                    "The numeric coordinates must classify into the named zone. "
+                    + inconsistency
                 ),
             }, *images],
         }],
@@ -607,13 +753,22 @@ def _position_needs_fallback(decision: ShotReviewDecision) -> bool:
     )
 
 
+def _position_zone_mismatch(decision: ShotReviewDecision | PositionReviewDecision) -> bool:
+    if decision.court_zone == "needs_review" or decision.court_x is None or decision.court_y is None:
+        return False
+    return classify_zone(decision.court_x, decision.court_y).value != decision.court_zone
+
+
 def _apply_position_review(
     decision: ShotReviewDecision,
     position: PositionReviewDecision,
+    *,
+    initial_zone_mismatch: bool = False,
 ) -> None:
     terra_zone = decision.court_zone
     models_disagree = (
-        terra_zone != "needs_review"
+        not initial_zone_mismatch
+        and terra_zone != "needs_review"
         and position.court_zone != "needs_review"
         and terra_zone != position.court_zone
     )
@@ -623,7 +778,7 @@ def _apply_position_review(
         decision.court_y = None
         decision.position_confidence = min(decision.position_confidence, position.confidence)
         decision.position_reason = (
-            f"Terra 위치({terra_zone})와 Sol 위치({position.court_zone})가 서로 달라 확인 필요"
+            f"위치 재검토 전({terra_zone})과 후({position.court_zone})가 서로 달라 확인 필요"
         )
         decision.review_required = True
         decision.confidence = min(
@@ -723,11 +878,33 @@ def _consensus(primary: ShotReviewDecision, fallback: ShotReviewDecision) -> dic
     }
 
 
+def _calibrated_court_left_direction(transform: list[list[float]] | None) -> ScreenDirection | None:
+    """Use the confirmed court transform for orientation, not shot coordinates."""
+    if transform is None:
+        return None
+    try:
+        inverse = np.linalg.inv(np.asarray(transform, dtype=np.float64))
+        points = cv2.perspectiveTransform(
+            np.asarray([[[20.0, 19.0], [30.0, 19.0]]], dtype=np.float32), inverse,
+        )[0]
+        dx, dy = (points[0] - points[1]).tolist()
+    except (ValueError, np.linalg.LinAlgError, cv2.error):
+        return None
+    if not np.isfinite([dx, dy]).all() or abs(dx) + abs(dy) < 1:
+        return None
+    if abs(dx) >= 2.5 * abs(dy):
+        return "left" if dx < 0 else "right"
+    if abs(dy) >= 2.5 * abs(dx):
+        return "up" if dy < 0 else "down"
+    return ("upper_" if dy < 0 else "lower_") + ("left" if dx < 0 else "right")
+
+
 def _build_shared_camera_contexts(
     client,
     video_path: Path,
     candidates: list[dict],
     settings: Settings,
+    calibration_left_direction: ScreenDirection | None = None,
 ) -> tuple[dict[int, CameraContextDecision | None], list[dict], int]:
     """Resolve one reusable orientation for each fixed scene before shot review."""
     groups: dict[int, list[dict]] = {}
@@ -743,14 +920,27 @@ def _build_shared_camera_contexts(
             primary, usage = _review_camera_context_once(
                 client, settings.openai_vision_model, images,
             )
+            raw_decision = primary.model_dump()
             attempts.append({
                 "model": settings.openai_vision_model,
                 "task": "camera_context",
                 "effort": "low",
                 "usage": usage,
             })
-            chosen = primary
-            decisions = {"primary": primary.model_dump()}
+            chosen = primary.model_copy(deep=True)
+            conflict = bool(
+                calibration_left_direction
+                and chosen.court_left_direction_on_screen != calibration_left_direction
+            )
+            if calibration_left_direction:
+                chosen.court_left_direction_on_screen = calibration_left_direction
+                if conflict:
+                    chosen.orientation_summary = (
+                        "Confirmed court landmarks override the image-only lateral guess: "
+                        f"court-left points toward screen {calibration_left_direction}. "
+                        f"Visible landmarks: {', '.join(chosen.visible_landmarks)}."
+                    )[:500]
+            decisions = {"primary": raw_decision}
             final_model = settings.openai_vision_model
             resolved = not _camera_context_is_unclear(chosen)
             contexts[scene_id] = chosen if resolved else None
@@ -759,6 +949,8 @@ def _build_shared_camera_contexts(
                 "status": "resolved" if resolved else "needs_review",
                 "model": final_model,
                 "decision": chosen.model_dump(),
+                "calibration_direction": calibration_left_direction,
+                "orientation_conflict": conflict,
                 "attempts": attempts,
                 "model_decisions": decisions,
             })
@@ -827,6 +1019,7 @@ def review_candidates_with_openai(
     settings: Settings,
     *,
     client=None,
+    calibration_transform: list[list[float]] | None = None,
 ) -> dict:
     """Attach AI review metadata without making local analysis depend on the API."""
     if not settings.openai_shot_review_enabled:
@@ -842,8 +1035,9 @@ def review_candidates_with_openai(
 
     candidates = result.get("candidates", [])[: settings.openai_max_candidate_reviews]
     reviewed = 0
+    calibration_left_direction = _calibrated_court_left_direction(calibration_transform)
     camera_contexts, camera_context_records, escalated = _build_shared_camera_contexts(
-        client, video_path, candidates, settings,
+        client, video_path, candidates, settings, calibration_left_direction,
     )
     failed = 0
     for candidate in candidates:
@@ -861,6 +1055,8 @@ def review_candidates_with_openai(
         attempts: list[dict] = []
         try:
             camera_context = camera_contexts.get(int(candidate.get("scene_id", 0)))
+            projected_foot = _projected_foot_position(calibration_transform, candidate)
+            projected_plant, plant_time_ms = _projected_plant_position(calibration_transform, candidate)
             images = candidate_frame_inputs(
                 video_path,
                 int(candidate["time_ms"]),
@@ -871,11 +1067,100 @@ def review_candidates_with_openai(
                 settings.openai_vision_model,
                 images,
                 camera_context=camera_context,
+                projected_foot=projected_foot,
+                projected_plant=projected_plant,
             )
             _apply_shared_camera_context(primary, camera_context)
             attempts.append({"model": settings.openai_vision_model, "task": "shot_review", "effort": "low", "usage": usage})
             final_model = settings.openai_vision_model
             model_decisions = {"primary": primary.model_dump()}
+            if _position_zone_mismatch(primary):
+                try:
+                    position, usage = _review_position_once(
+                        client, settings.openai_vision_model, images,
+                        camera_context=camera_context,
+                        projected_foot=projected_foot,
+                        projected_plant=projected_plant,
+                        inconsistency=(
+                            f"The first pass named {primary.court_zone} but returned "
+                            f"({primary.court_x}, {primary.court_y}), which maps to "
+                            f"{classify_zone(primary.court_x, primary.court_y).value}. "
+                            "Recheck the shoes and court lines; correct the zone or coordinates. "
+                        ),
+                    )
+                    attempts.append({"model": settings.openai_vision_model, "task": "position_consistency", "effort": "low", "usage": usage})
+                    model_decisions["position_consistency"] = position.model_dump()
+                    if not _position_zone_mismatch(position):
+                        _apply_position_review(
+                            primary, position, initial_zone_mismatch=True,
+                        )
+                except Exception:
+                    pass  # The existing position review flag remains in place.
+            if _projection_lateral_conflict(primary, projected_foot):
+                try:
+                    position, usage = _review_position_once(
+                        client, settings.openai_vision_model, images,
+                        camera_context=camera_context,
+                        projected_foot=projected_foot,
+                        projected_plant=projected_plant,
+                        inconsistency=(
+                            f"The first pass placed the release at ({primary.court_x}, {primary.court_y}) "
+                            f"in {primary.court_zone}, opposite the calibrated foot projection "
+                            f"({projected_foot[0]:.1f}, {projected_foot[1]:.1f}). "
+                            "Recheck the visible shoes and court landmarks independently. "
+                            "Explain which evidence supports your final side. If neither source is reliable, "
+                            "return needs_review with null coordinates. "
+                        ),
+                    )
+                    attempts.append({"model": settings.openai_vision_model, "task": "calibration_lateral_retry", "effort": "low", "usage": usage})
+                    model_decisions["calibration_lateral_retry"] = position.model_dump()
+                    if (
+                        position.confidence >= POSITION_AUTO_CONFIRM_CONFIDENCE
+                        and position.court_zone != "needs_review"
+                        and position.court_x is not None
+                        and not _position_zone_mismatch(position)
+                        and not _projection_lateral_conflict(position, projected_foot)
+                        and _clear_lateral_side(position.court_x) == _clear_lateral_side(projected_foot[0])
+                    ):
+                        # The retry explicitly resolved the first pass's opposite-side error.
+                        primary.court_zone = "needs_review"
+                        _apply_position_review(primary, position)
+                    else:
+                        _invalidate_conflicting_position(primary)
+                except Exception:
+                    _invalidate_conflicting_position(primary)
+            if _layup_plant_conflict(primary, projected_plant, shot_type=primary.shot_type):
+                try:
+                    position, usage = _review_position_once(
+                        client, settings.openai_vision_model, images,
+                        camera_context=camera_context,
+                        projected_foot=projected_foot,
+                        projected_plant=projected_plant,
+                        inconsistency=(
+                            f"The first pass placed this layup in {primary.court_zone}, but the "
+                            f"pre-release planted foot projects to {classify_zone(*projected_plant).value} "
+                            f"at ({projected_plant[0]:.1f}, {projected_plant[1]:.1f}). "
+                            "Recheck the last grounded foot before takeoff in the visible frames. "
+                            "Do not locate a layup from the player moving toward the rim in flight. "
+                            "If the plant cannot be confirmed, return needs_review. "
+                        ),
+                    )
+                    attempts.append({"model": settings.openai_vision_model, "task": "layup_plant_retry", "effort": "low", "usage": usage})
+                    model_decisions["layup_plant_retry"] = position.model_dump()
+                    if (
+                        position.confidence >= POSITION_AUTO_CONFIRM_CONFIDENCE
+                        and not _position_zone_mismatch(position)
+                        and not _layup_plant_conflict(position, projected_plant, shot_type="layup")
+                    ):
+                        _apply_position_review(primary, position, initial_zone_mismatch=True)
+                    else:
+                        _invalidate_conflicting_position(
+                            primary, "레이업 발 디딤 위치와 AI 구역이 달라 위치 확인 필요",
+                        )
+                except Exception:
+                    _invalidate_conflicting_position(
+                        primary, "레이업 발 디딤 위치 재판정에 실패해 위치 확인 필요",
+                    )
             extended_to_ms = 3500
             outcome_path_used = False
             if _outcome_needs_dedicated_review(primary):
@@ -937,6 +1222,8 @@ def review_candidates_with_openai(
                     images,
                     effort=fallback_effort,
                     camera_context=camera_context,
+                    projected_foot=projected_foot,
+                    projected_plant=projected_plant,
                 )
                 _apply_shared_camera_context(fallback, camera_context)
                 attempts.append({
@@ -957,6 +1244,9 @@ def review_candidates_with_openai(
                 "model": final_model,
                 "attempts": attempts,
                 "model_decisions": model_decisions,
+                "calibrated_foot_projection": list(projected_foot) if projected_foot else None,
+                "calibrated_plant_projection": list(projected_plant) if projected_plant else None,
+                "plant_sample_time_ms": plant_time_ms,
                 "input_window_ms": [-2500, extended_to_ms],
             }
             reviewed += 1

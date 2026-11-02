@@ -14,7 +14,8 @@ def test_default_video_limits_and_optional_secret() -> None:
     assert settings.openai_vision_model == "gpt-6.1-terra"
     assert settings.openai_vision_fallback_model == "gpt-6.1-sol"
     assert settings.openai_shot_review_enabled is True
-    assert settings.openai_max_candidate_reviews == 40
+    assert settings.openai_max_candidate_reviews == 300
+    assert settings.openai_max_shot_gate_reviews == 600
 
 
 def test_database_url_is_required_when_database_is_used() -> None:

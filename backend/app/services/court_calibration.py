@@ -15,6 +15,13 @@ class CalibrationError(ValueError):
     pass
 
 
+def uses_known_inconsistent_lane_points(court_points: list[list[float]]) -> bool:
+    """Recognize the old 12ft virtual lane that conflicts with the 16ft map."""
+    return len(court_points) == 4 and {tuple(point) for point in court_points} == {
+        (19, 0), (31, 0), (31, 19), (19, 19),
+    }
+
+
 def resolve_video_path(upload_path: Path, analysis_id: str) -> Path:
     path = (upload_path / analysis_id / "original.mp4").resolve()
     if upload_path.resolve() not in path.parents or not path.is_file():
@@ -49,6 +56,8 @@ def validate_points(
 ) -> None:
     if len(image_points) < 4 or len(image_points) != len(court_points):
         raise CalibrationError("바닥 기준점은 서로 대응하는 네 개 이상이 필요합니다.")
+    if uses_known_inconsistent_lane_points(court_points):
+        raise CalibrationError("이전 페인트존 좌표 19~31은 현재 구역 경계 17~33과 다릅니다. 코트 기준점을 다시 맞춰 주세요.")
     if any(len(point) != 2 for point in [*image_points, *court_points]) or len(hoop_point) != 2:
         raise CalibrationError("모든 기준점은 가로와 세로 위치 두 값이어야 합니다.")
     if any(not (0 <= point[0] < width and 0 <= point[1] < height) for point in image_points):

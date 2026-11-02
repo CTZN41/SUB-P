@@ -96,7 +96,9 @@ def _review_shot_gate(
         "the ball toward the basket. Do not assume the detector is right. A rebound, "
         "catch, pass, dribble, or ball returning to the player is not a new shot. "
         "Do not count an earlier or later shot outside this narrow window. If the "
-        "release cannot be seen, return unclear. State only concrete visible evidence."
+        "release cannot be seen, return unclear. For a confirmed shot, give the "
+        "earliest visible release_offset_ms relative to t=0; use null when its "
+        "timing is uncertain. State only concrete visible evidence."
     )
     started = perf_counter()
     response = client.responses.parse(

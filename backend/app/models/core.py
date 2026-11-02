@@ -54,6 +54,7 @@ class ShotType(StringEnum):
     CATCH_AND_SHOOT = "catch_and_shoot"
     SET_SHOT = "set_shot"
     DRIBBLE_PULL_UP = "dribble_pull_up"
+    SIDE_STEP = "side_step"
     LAYUP = "layup"
     DUNK = "dunk"
     FADEAWAY = "fadeaway"
