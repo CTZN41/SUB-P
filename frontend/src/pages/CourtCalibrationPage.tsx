@@ -45,13 +45,16 @@ export function CourtCalibrationPage() {
   const previousLaneOrder = legacyLaneOrder(courtPoints)
   const allPointsPlaced = placedPoints.every(Boolean)
 
-  function chooseLaneTemplate() {
+  function resetCalibration() {
     setPoints(INITIAL_POINTS)
     setCourtPoints(INITIAL_COURT_POINTS)
     setPointNames(INITIAL_POINT_NAMES)
     setPlacedPoints([false, false, false, false, false])
+    setHoop([50, 18])
+    setDraggingPoint(null)
+    setError('')
     setConfirmed(false)
-    setGuideMessage('기존 화면 점은 재사용하지 않습니다. 1~4번을 페인트존 선이 만나는 네 모서리에, 골대 점을 림 중심에 직접 맞춰 주세요.')
+    setGuideMessage('기준점을 재설정했습니다. 페인트존 네 모서리와 림 중심을 다시 맞춰 주세요.')
   }
 
   useEffect(() => {
@@ -110,7 +113,7 @@ export function CourtCalibrationPage() {
   }
 
   return <div className="page setup-page">
-    <header className="setup-header"><div><p className="eyebrow">COURT SETUP</p><h1>코트 위치 확인</h1><p className="lead">페인트존 또는 반코트 네 모서리를 선택하고, 영상의 해당 선 교차점과 골대 중심에 맞게 옮겨 주세요.</p></div><span className="step-chip">{analysis?.play_type === 'solo' ? '1 / 2 설정' : '1 / 3 설정'}</span></header>
+    <header className="setup-header"><div><p className="eyebrow">COURT SETUP</p><h1>코트 위치 확인</h1><p className="lead">네 모서리와 골대 점을 영상의 실제 코트 선과 림 중심에 맞춰 주세요.</p></div><span className="step-chip">{analysis?.play_type === 'solo' ? '1 / 2 설정' : '1 / 3 설정'}</span></header>
     <section className="setup-card">
       <div className="frame-toolbar"><strong>{analysis?.title ?? '영상을 불러오는 중'}</strong><label>대표 장면<input type="range" min="0" max={Math.max(0, (analysis?.duration_ms ?? 0) - 500)} step="500" value={timeMs} onChange={(e) => { setTimeMs(Number(e.target.value)); setPlacedPoints([false, false, false, false, false]); setConfirmed(false); setError(''); setGuideMessage('장면이 바뀌었습니다. 네 모서리와 림을 다시 지정해 주세요.') }} /></label><span>{(timeMs / 1000).toFixed(1)}초</span></div>
       <div className="calibration-frame" style={{ backgroundImage: frameReady ? `url(${frameUrl})` : 'none', aspectRatio: analysis ? `${analysis.width} / ${analysis.height}` : '16 / 9' }} onPointerDown={(event) => {
@@ -133,14 +136,25 @@ export function CourtCalibrationPage() {
         {points.map((point, index) => <button key={index} data-point={index} className="calibration-point" style={{ left: `${point[0]}%`, top: `${point[1]}%` }} aria-label={pointNames[index] ?? `바닥 기준점 ${index + 1}`} title={pointNames[index]}>{index + 1}</button>)}
         <button data-point="4" className="calibration-point hoop-point" style={{ left: `${hoop[0]}%`, top: `${hoop[1]}%` }} aria-label="골대 중심">골대</button>
       </div>
-      <div className="setup-guide"><strong>{supportedTemplate ? '확인 기준' : '기준 선택 필요'}</strong>{supportedTemplate ? <><span>{pointNames.map((name, index) => `${index + 1}: ${name}`).join(' · ')}</span>{laneTemplate && <span>1·2번은 골대 아래 끝선(베이스라인)과 페인트존 좌·우 선의 교차점, 3·4번은 자유투선과 페인트존 우·좌 선의 교차점에 맞추세요.</span>}<span>1→2→3→4 순서가 교차하지 않아야 합니다.</span><span>골대 표시는 림 중심에 놓습니다.</span></> : <span>아래 ‘페인트존 네 모서리’를 누른 뒤 1~4번을 실제 페인트존 선의 네 교차점에, 골대 점을 림 중심에 맞춰 주세요.</span>}</div>
-      <p className="helper-text">안내용 점은 실제 코트 위치가 아닙니다. 선택한 네 모서리가 모두 보이는 장면에서 각 점을 코트 선이 만나는 곳에 직접 맞춰 주세요.</p>
-      {!supportedTemplate && <p className="inline-warning">{previousLaneOrder ? '기존 기록의 기준은 현재 페인트존 경계와 달라 화면 점을 그대로 사용하지 않습니다.' : '이 기록의 가상 좌표는 현재 코트 경계 기준과 다릅니다.'} 아래 ‘페인트존 네 모서리’를 선택하고 네 점을 실제 페인트존 선의 교차점에 맞춘 뒤 림 중심도 지정해 주세요. 기존 분석 결과는 자동으로 바뀌지 않습니다.</p>}
+      <div className="setup-guide calibration-guide">
+        <strong>{supportedTemplate ? '확인 기준' : '재설정 필요'}</strong>
+        {supportedTemplate ? <>
+          {laneTemplate ? <>
+            <span><b>1번 · 베이스라인 왼쪽</b> — 골대 아래 끝선과 페인트존 왼쪽 선의 교차점</span>
+            <span><b>2번 · 베이스라인 오른쪽</b> — 골대 아래 끝선과 페인트존 오른쪽 선의 교차점</span>
+            <span><b>3번 · 자유투선 오른쪽</b> — 자유투선과 페인트존 오른쪽 선의 교차점</span>
+            <span><b>4번 · 자유투선 왼쪽</b> — 자유투선과 페인트존 왼쪽 선의 교차점</span>
+          </> : pointNames.map((name, index) => <span key={name}>{index + 1}번 · {name}</span>)}
+          <span><b>골대 점</b> — 림 중심</span>
+          <span>1 → 2 → 3 → 4 순서가 교차하지 않도록 맞춰 주세요.</span>
+        </> : <span>‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 맞춰 주세요.</span>}
+      </div>
+      {!supportedTemplate && <p className="inline-warning">{previousLaneOrder ? '기존 기록의 기준은 현재 페인트존 경계와 달라 화면 점을 그대로 사용하지 않습니다.' : '이 기록의 가상 좌표는 현재 코트 경계 기준과 다릅니다.'} ‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 다시 지정해 주세요. 기존 분석 결과는 자동으로 바뀌지 않습니다.</p>}
       {!allPointsPlaced && <p className="inline-warning">네 모서리와 림을 각각 실제 위치에 지정해야 저장할 수 있습니다.</p>}
       {guideMessage && <p className="inline-warning">{guideMessage}</p>}
       <label className="check-row"><input type="checkbox" checked={confirmed} disabled={!allPointsPlaced || !supportedTemplate} onChange={(event) => setConfirmed(event.target.checked)} />영상에 반코트와 골대가 보이고 기준점을 실제 위치에 맞춘 것을 확인했습니다.</label>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="actions"><button className="button secondary" onClick={chooseLaneTemplate}>페인트존 네 모서리</button><button className="button secondary" onClick={() => { setPoints(INITIAL_POINTS); setCourtPoints(FULL_COURT_POINTS); setPointNames(FULL_COURT_NAMES); setPlacedPoints([false, false, false, false, false]); setConfirmed(false); setGuideMessage('네 점을 반코트 전체 모서리에 직접 맞춰 주세요.') }}>반코트 네 모서리</button><button className="button primary" onClick={save} disabled={!analysis || !frameReady || !confirmed || saving || !supportedTemplate || !allPointsPlaced}>{saving ? '저장 중…' : analysis?.play_type === 'solo' ? '확인하고 분석 준비로' : '확인하고 선수 설정으로'}</button></div>
+      <div className="actions"><button type="button" className="button secondary" onClick={resetCalibration} disabled={saving}>재설정</button><button className="button primary" onClick={save} disabled={!analysis || !frameReady || !confirmed || saving || !supportedTemplate || !allPointsPlaced}>{saving ? '저장 중…' : analysis?.play_type === 'solo' ? '확인하고 분석 준비로' : '확인하고 선수 설정으로'}</button></div>
     </section>
   </div>
 }

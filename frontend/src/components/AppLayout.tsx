@@ -31,11 +31,6 @@ export function AppLayout() {
           ))}
         </nav>
 
-        <div className="sidebar-note">
-          <span>현재 단계</span>
-          <strong>Phase 12</strong>
-          <p>저장된 영상과 분석 결과를 다시 열고 관리할 수 있습니다.</p>
-        </div>
       </aside>
 
       <main className="content-area">

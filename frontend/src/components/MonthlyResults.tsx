@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { CourtShot } from './ShotCourt3D'
 import { ShotHeatmap } from './ShotHeatmap'
@@ -29,6 +29,7 @@ export function MonthlyResults() {
   const [month, setMonth] = useState('')
   const [data, setData] = useState<MonthlyData | null>(null)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
+  const courtRef = useRef<HTMLDivElement>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -66,21 +67,23 @@ export function MonthlyResults() {
         {overall?.attempts ? <ShotHeatmap
           statistics={data.statistics.by_zone}
           selectedZone={selectedZone}
-          onSelect={(zone) => { setSelectedZone((current) => current === zone ? null : zone); setSelectedId(null) }}
+          onSelect={(zone) => { setSelectedZone((current) => current === zone ? null : zone); setSelectedId(null); requestAnimationFrame(() => courtRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }}
           patternId="monthlyCourtWood"
         /> : <p className="inline-warning">이 달에 저장된 슛 기록이 없습니다.</p>}
         <p className="monthly-results-note">개인 연습용 목표는 골밑 80%, 페인트존 60%, 미드레인지 45%, 3점 35%입니다. 성공·실패가 정해진 슛이 1개라도 있으면 구역 성공률을 목표와 비교합니다. 목표 이상은 초록, 미만은 빨강입니다. 이 목표는 리그 평균이 아닙니다.</p>
       </>}
     </section>
     {data && <>
-      <Suspense fallback={<p className="inline-warning">3D 코트를 불러오는 중입니다…</p>}><ShotCourt3D
+      <div ref={courtRef} style={{ scrollMarginTop: 24 }}><Suspense fallback={<p className="inline-warning">3D 코트를 불러오는 중입니다…</p>}><ShotCourt3D
         shots={visibleShots}
         numbers={numbers}
         selectedShot={selected}
         jerseyNumber={selected?.jersey_number ?? null}
         onSelect={(id) => { const shot = visibleShots.find((item) => item.id === id); if (shot) navigate(`/results/${shot.analysis_id}?shot=${shot.id}`) }}
         typeLabels={TYPE_LABELS}
-      /></Suspense>
+        zone={selectedZone}
+        onZoneChange={(zone) => { setSelectedZone(zone); setSelectedId(null) }}
+      /></Suspense></div>
       <section className="setup-card monthly-shot-list"><h2>{selectedZone ? '선택한 구역의 슛' : '월별 슛 목록'}</h2>
         <p>겹친 번호는 목록에서도 선택할 수 있습니다. 원본 영상은 각 분석 결과에서 확인합니다.</p>
         {visibleShots.length ? <ul>{visibleShots.map((shot) => <li key={shot.id}>

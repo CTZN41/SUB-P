@@ -80,6 +80,7 @@ export function ShotReviewPage() {
   const { search } = useLocation()
   const requestedShotId = new URLSearchParams(search).get('shot')
   const videoRef = useRef<HTMLVideoElement>(null)
+  const courtRef = useRef<HTMLDivElement>(null)
   const addFormRef = useRef<HTMLFormElement>(null)
   const sequenceEnd = useRef<number | null>(null)
   const sequenceStart = useRef<number | null>(null)
@@ -168,9 +169,9 @@ export function ShotReviewPage() {
 
   async function save(event: FormEvent) {
     event.preventDefault(); if (!form) return
-    if (!form.court_x.trim() || !form.court_y.trim()) {
+    if (!form.court_x.trim() || !form.court_y.trim() || !hasShotPosition({ id: 'form', result: form.result, court_x: Number(form.court_x), court_y: Number(form.court_y) })) {
       setShowAdvanced(true)
-      setError('코트 위치가 비어 있습니다. 2D 코트에서 슛 위치를 누르거나 가로·세로 위치를 입력해 주세요.')
+      setError('2D 코트에서 슛 위치를 선택해 주세요.')
       return
     }
     setBusy(true); setError('')
@@ -215,6 +216,7 @@ export function ShotReviewPage() {
   function selectZone(zone: string) {
     const nextZone = selectedZone === zone ? null : zone
     setSelectedZone(nextZone)
+    requestAnimationFrame(() => courtRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
   if (!data) return <div className="page shot-review-page"><p role="status" className="inline-warning">{error || '분석 결과를 불러오는 중입니다…'}</p></div>
   return <div className="page shot-review-page">
@@ -236,7 +238,7 @@ export function ShotReviewPage() {
         </div>}
       </div>
     </section>
-    <Suspense fallback={<p className="inline-warning">3D 코트를 불러오는 중입니다…</p>}><ShotCourt3D
+    <div ref={courtRef} style={{ scrollMarginTop: 24 }}><Suspense fallback={<p className="inline-warning">3D 코트를 불러오는 중입니다…</p>}><ShotCourt3D
       shots={visibleShots}
       numbers={numbers}
       showPlayerName={showPlayerNames}
@@ -249,7 +251,9 @@ export function ShotReviewPage() {
       }}
       detailsOpen={showShotList}
       typeLabels={TYPE_LABEL}
-    /></Suspense>
+      zone={selectedZone}
+      onZoneChange={setSelectedZone}
+    /></Suspense></div>
     <div className="review-layout" hidden={!showShotList}>
       {showShotList && <section className="setup-card shot-list-panel"><div className="panel-title"><div><h2>{selectedZoneLabel ? `${selectedZoneLabel} 슛 기록` : resultFilter ? `${SHOT_CATEGORY_LABELS[resultFilter as ShotCategory]} 슛 기록` : '전체 슛 기록'}</h2>{visibleShots.some((shot) => shot.status === 'needs_review' || shotCategory(shot) === 'position_review' || shotCategory(shot) === 'outcome_review') && <p>확인이 필요한 기록이 있습니다.</p>}</div><div className="actions"><button className="button primary" onClick={startAdding} disabled={!players.length}>{analysis?.play_type !== 'solo' ? '슛 직접 추가' : '빠진 슛 추가'}</button><button className="button secondary" onClick={() => { videoRef.current?.pause(); sequenceEnd.current = null; sequenceStart.current = null; setShowShotList(false); setSelectedId(null) }}>닫기</button></div></div>
         {!visibleShots.length && <p className="inline-warning">현재 조건에 맞는 슛이 없습니다.{!selectedZone && ' 빠진 슛을 직접 추가할 수 있습니다.'}</p>}
@@ -260,10 +264,12 @@ export function ShotReviewPage() {
         {selected && (!hasShotPosition(selected) || shotCategory(selected) === 'outcome_review' || selected.status === 'needs_review') && !adding && <p className="inline-warning"><strong>확인할 이유:</strong> {readableReason(selected)}</p>}
         {selected && possibleNonShot(selected) && !adding && <p className="helper-text">원본을 보고 슛이 맞으면 아래에서 결과·종류·위치를 선택해 저장하세요. 슛이 아니면 이 후보 기록을 삭제할 수 있습니다.</p>}
         {!form && <p className="helper-text">왼쪽에서 슛을 선택하거나 빠진 슛을 추가해 주세요.</p>}
-        {form && <form ref={addFormRef} className={`shot-edit-form${showAdvanced ? '' : ' shot-form-basic'}`} onSubmit={save} onInvalidCapture={() => { setShowAdvanced(true); setError('시간은 분:초 형식으로 입력하고, 결과·종류와 코트 위치를 확인해 주세요.') }}><h2>{adding ? '빠진 슛 추가' : '선택한 슛 확인·수정'}</h2>
-          <ShotPositionPicker x={form.court_x} y={form.court_y} disabled={busy} saved={!adding && selected?.court_x != null && selected?.court_y != null && Number(form.court_x) === Number(selected.court_x.toFixed(2)) && Number(form.court_y) === Number(selected.court_y.toFixed(2))} onChange={(x, y) => { setForm((current) => current ? { ...current, court_x: x, court_y: y } : current); setNotice(''); setError('') }} />
-          <button className="button secondary shot-advanced-toggle" type="button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced((value) => !value)}>{showAdvanced ? '시간·코트 위치 닫기' : '시간·코트 위치 직접 수정'}</button>
-          <div className="shot-form-grid"><label>선수<select value={form.player_id} onChange={(e) => change('player_id', e.target.value)}>{players.map((player) => <option value={player.id} key={player.id}>{player.display_name}{player.jersey_number ? ` #${player.jersey_number}` : ''}</option>)}</select></label><label>슛 시간(분:초)<input type="text" placeholder="08:26" pattern="[0-9]+:[0-5][0-9]" value={form.candidate_time_ms} onChange={(e) => change('candidate_time_ms', e.target.value)} required /></label><label>장면 시작(분:초)<input type="text" placeholder="08:24" pattern="[0-9]+:[0-5][0-9]" value={form.sequence_start_ms} onChange={(e) => change('sequence_start_ms', e.target.value)} required /></label><label>장면 끝(분:초)<input type="text" placeholder="08:29" pattern="[0-9]+:[0-5][0-9]" value={form.sequence_end_ms} onChange={(e) => change('sequence_end_ms', e.target.value)} required /></label><label>코트 가로 x (0~50ft)<input type="number" min="0" max="50" step="0.01" value={form.court_x} onChange={(e) => change('court_x', e.target.value)} required /></label><label>코트 세로 y (0~47ft)<input type="number" min="0" max="47" step="0.01" value={form.court_y} onChange={(e) => change('court_y', e.target.value)} required /></label><label>결과<select value={form.result} onChange={(e) => change('result', e.target.value)} required><option value="" disabled>결과 선택</option><option value="made">성공</option><option value="missed">실패</option></select></label><label>슛 종류<select value={form.shot_type} onChange={(e) => change('shot_type', e.target.value)} required><option value="" disabled>종류 선택</option>{SHOT_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
+        {form && <form ref={addFormRef} className="shot-edit-form" onSubmit={save} onInvalidCapture={() => { setShowAdvanced(true); setError('시간은 분:초 형식으로 입력하고, 결과·종류와 코트 위치를 확인해 주세요.') }}><h2>{adding ? '빠진 슛 추가' : '선택한 슛 확인·수정'}</h2>
+          <button className="button secondary shot-advanced-toggle" type="button" aria-expanded={showAdvanced} aria-controls="shot-advanced-fields" onClick={() => setShowAdvanced((value) => !value)}>{showAdvanced ? '시간·코트 위치 닫기' : '시간·코트 위치 수정'}</button>
+          <div className="shot-form-grid"><label>선수<select value={form.player_id} onChange={(e) => change('player_id', e.target.value)}>{players.map((player) => <option value={player.id} key={player.id}>{player.display_name}{player.jersey_number ? ` #${player.jersey_number}` : ''}</option>)}</select></label><label>슛 시간(분:초)<input type="text" placeholder="08:26" pattern="[0-9]+:[0-5][0-9]" value={form.candidate_time_ms} onChange={(e) => change('candidate_time_ms', e.target.value)} required /></label><label>결과<select value={form.result} onChange={(e) => change('result', e.target.value)} required><option value="" disabled>결과 선택</option><option value="made">성공</option><option value="missed">실패</option></select></label><label>슛 종류<select value={form.shot_type} onChange={(e) => change('shot_type', e.target.value)} required><option value="" disabled>종류 선택</option>{SHOT_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>{showAdvanced && <><label>장면 시작(분:초)<input type="text" placeholder="08:24" pattern="[0-9]+:[0-5][0-9]" value={form.sequence_start_ms} onChange={(e) => change('sequence_start_ms', e.target.value)} required /></label><label>장면 끝(분:초)<input type="text" placeholder="08:29" pattern="[0-9]+:[0-5][0-9]" value={form.sequence_end_ms} onChange={(e) => change('sequence_end_ms', e.target.value)} required /></label></>}</div>
+          {showAdvanced && <div id="shot-advanced-fields" className="shot-advanced-fields">
+            <ShotPositionPicker x={form.court_x} y={form.court_y} disabled={busy} saved={!adding && selected?.court_x != null && selected?.court_y != null && Number(form.court_x) === Number(selected.court_x.toFixed(2)) && Number(form.court_y) === Number(selected.court_y.toFixed(2))} onChange={(x, y) => { setForm((current) => current ? { ...current, court_x: x, court_y: y } : current); setNotice(''); setError('') }} />
+          </div>}
           {notice && <p className="success-note" role="status">{notice}</p>}{error && <p className="form-error" role="alert">{error}</p>}<div className="actions"><button className="button primary" disabled={busy}>{busy ? '저장 중…' : adding ? '슛 추가' : '확인하고 저장'}</button>{adding && <button type="button" className="button secondary" onClick={() => { setAdding(false); setSelectedId(data?.shots[0]?.id ?? null) }}>취소</button>}{selected && !adding && <button type="button" className="button danger" onClick={remove} disabled={busy}>기록 삭제</button>}</div>
         </form>}
       </section>

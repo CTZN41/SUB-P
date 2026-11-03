@@ -143,7 +143,7 @@ function spreadOverlaps(shots: CourtShot[]) {
   })
 }
 
-export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPlayerName = true, onSelect, onOpenDetails, detailsOpen = false, typeLabels }: {
+export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPlayerName = true, onSelect, onOpenDetails, detailsOpen = false, typeLabels, zone, onZoneChange }: {
   shots: CourtShot[]
   numbers: Record<string, number>
   selectedShot: CourtShot | null
@@ -153,6 +153,8 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
   onOpenDetails?: () => void
   detailsOpen?: boolean
   typeLabels: Record<string, string>
+  zone?: string | null
+  onZoneChange?: (zone: string | null) => void
 }) {
   const mountRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<THREE.Scene | null>(null)
@@ -168,12 +170,20 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
   const onSelectRef = useRef(onSelect)
   const shotsRef = useRef(shots)
   const [renderError, setRenderError] = useState(false)
-  const [activeZone, setActiveZone] = useState<string | null>(null)
+  const [localZone, setLocalZone] = useState<string | null>(null)
+  const activeZone = zone === undefined ? localZone : zone
+  const zoneControlRef = useRef({ controlled: zone !== undefined, onChange: onZoneChange })
 
   useEffect(() => {
     onSelectRef.current = onSelect
     shotsRef.current = shots
-  }, [onSelect, shots])
+    zoneControlRef.current = { controlled: zone !== undefined, onChange: onZoneChange }
+  }, [onSelect, shots, zone, onZoneChange])
+
+  function setActiveZone(next: string | null) {
+    if (zoneControlRef.current.controlled) zoneControlRef.current.onChange?.(next)
+    else setLocalZone(next)
+  }
 
   function render() {
     if (sceneRef.current && cameraRef.current) {
@@ -272,7 +282,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
       const hit = raycaster.intersectObjects([...zonesRef.current.values()], true).find(item => item.object instanceof THREE.Mesh)
       if (hit) {
         const code = classifyCourtZone(hit.point.x + 25, hit.point.z + 23.5)
-        if (code) setActiveZone(current => current === code ? null : code)
+        if (code) setActiveZone(activeZoneRef.current === code ? null : code)
       }
     }
     const cancel = () => { pointerDown = null }
