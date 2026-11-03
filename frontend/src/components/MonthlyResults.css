@@ -1,5 +1,5 @@
 .monthly-results { margin: 0 0 18px; }
-.monthly-results-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; }
+.monthly-results-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .monthly-results-heading p { margin: 6px 0 0; color: #849188; }
 .monthly-results-heading label { min-width: 150px; color: #aab5ae; font-size: .8rem; }
 .monthly-results-heading select { display: block; width: 100%; margin-top: 6px; padding: 9px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: #0f1814; color: white; }
@@ -8,6 +8,8 @@
 .monthly-results-summary span { display: block; color: #829087; font-size: .75rem; }
 .monthly-results-summary strong { display: block; margin-top: 4px; font-size: 1.2rem; }
 .monthly-shot-list { margin-top: 18px; }
+.monthly-shot-preview { margin-top: 18px; }
+.monthly-shot-preview video { display: block; width: 100%; max-height: 65vh; background: #000; border-radius: 12px; }
 .monthly-shot-list h2 { margin: 0; font-size: 1rem; }
 .monthly-shot-list p { color: #93a198; font-size: .8rem; }
 .monthly-shot-list ul { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
@@ -21,3 +23,6 @@
 .history-view-tabs a.active { border-color: #d8ff4f; background: rgba(216,255,79,.1); color: #e9ff9e; }
 .history-day-heading { margin: 20px 0 4px; color: #d8ff4f; font-size: .95rem; }
 @media (max-width: 800px) { .monthly-results-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .monthly-results-heading { flex-direction: column; align-items: stretch; } }
+
+.monthly-results-heading h2 { margin: 0; font-size: clamp(2rem, 2.6vw, 2.75rem); line-height: 1.15; }
+.monthly-results > .setup-card:first-child { padding-top: 22px; }

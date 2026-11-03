@@ -4,6 +4,7 @@ import { useLocation, useParams } from 'react-router-dom'
 import { ShotHeatmap } from '../components/ShotHeatmap'
 import { ShotPositionPicker } from '../components/ShotPositionPicker'
 import { ShotResultSummary } from '../components/ShotResultSummary'
+import { AnalysisBackLink } from '../components/AnalysisBackLink'
 import { hasShotPosition, shotCategory, shotNumbers, formatShotTime, parseShotTime, shouldShowPlayerNames, SHOT_CATEGORY_LABELS } from '../utils/shotPresentation'
 import type { ShotCategory } from '../utils/shotPresentation'
 
@@ -220,7 +221,8 @@ export function ShotReviewPage() {
   }
   if (!data) return <div className="page shot-review-page"><p role="status" className="inline-warning">{error || '분석 결과를 불러오는 중입니다…'}</p></div>
   return <div className="page shot-review-page">
-    <header className="setup-header"><div><p className="eyebrow">RESULTS & HEATMAP</p><h1>{analysis?.title ?? '슛 분석 결과'}</h1>{analysis && analysis.play_type !== 'solo' && <p className="inline-warning">다인원 자동 추적은 아직 지원하지 않습니다. 원본 영상을 보면서 슛과 선수를 직접 기록해 주세요.</p>}</div></header>
+    <AnalysisBackLink to="/history" />
+    <header className="setup-header"><div><p className="eyebrow">분석 결과</p><h1>{analysis?.title ?? '분석 결과'}</h1>{analysis && analysis.play_type !== 'solo' && <p className="inline-warning">다인원 자동 추적은 아직 지원하지 않습니다. 원본 영상을 보면서 슛과 선수를 직접 기록해 주세요.</p>}</div></header>
     <ShotResultSummary shots={sourceData?.shots ?? []} selectedCategory={resultFilter ? resultFilter as ShotCategory : null} onSelect={(category) => { setResultFilter(category ?? ''); setPlayerFilter(''); setTypeFilter(''); setSelectedZone(null); setShowShotList(true) }} />
     <section className="setup-card results-dashboard">
       <div className="panel-title"><div><h2>14개 구역 히트맵</h2></div></div>

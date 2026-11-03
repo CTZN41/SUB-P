@@ -58,7 +58,7 @@ export function AnalysisHistory({ recent = false }: { recent?: boolean }) {
 
   const visible = recent ? records.slice(0, 3) : records
   return <section className="history-section" aria-label={recent ? '최근 분석 기록' : '분석 기록'}>
-    <div className="history-heading"><h2>{recent ? '최근 분석 기록' : '저장된 분석 기록'}</h2>{recent && <Link to="/history">전체 보기</Link>}</div>
+    <div className="history-heading"><h2>{recent ? '최근 분석 기록' : '영상별 기록'}</h2>{recent && <Link to="/history">전체 보기</Link>}</div>
     {loading && <p>기록을 불러오는 중입니다.</p>}
     {!loading && !error && records.length === 0 && <p>아직 저장된 분석 기록이 없습니다.</p>}
     {notice && <p className="success-note" role="status">{notice}</p>}

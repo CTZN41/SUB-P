@@ -104,9 +104,9 @@ export function ShotHeatmap({
         </g>
       })}
     </svg>
-    <div className="selected-zone-detail" aria-live="polite">
-      {selected ? <><strong>{selected.label}</strong><span>성공/시도 {selectedStat?.made ?? 0}/{selectedStat?.attempts ?? 0}</span><span>성공률 {percent(selectedStat?.success_rate)}</span><span>슛 비중 {percent(selectedStat?.attempt_share ?? 0)}</span><span>개인 목표 {zoneTarget(selected.code)}%</span></> : <span>구역을 선택하면 해당 구역의 슛 목록과 상세 수치를 볼 수 있습니다.</span>}
-    </div>
+    {selected && <div className="selected-zone-detail" aria-live="polite">
+      <strong>{selected.label}</strong><span>성공/시도 {selectedStat?.made ?? 0}/{selectedStat?.attempts ?? 0}</span><span>성공률 {percent(selectedStat?.success_rate)}</span><span>슛 비중 {percent(selectedStat?.attempt_share ?? 0)}</span><span>개인 목표 {zoneTarget(selected.code)}%</span>
+    </div>}
     <div className="heatmap-legend" aria-label="히트맵 색상 설명">
       <span><i className="hot" />목표 이상</span><span><i className="cold" />목표 미만</span><span><i className="empty" />시도 없음</span>
     </div>

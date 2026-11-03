@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { AnalysisBackLink } from '../components/AnalysisBackLink'
 import { ANALYSIS_STAGES as STAGES, analysisStageIndex, analysisStageLabel } from '../utils/analysisStages'
 
 const API_BASE = 'http://127.0.0.1:8000/api'
@@ -83,6 +84,7 @@ export function AnalysisProgressPage() {
   const simulation = job?.is_simulation ?? false
   const elapsed = job?.started_at ? ((job.finished_at ? Date.parse(job.finished_at) : now) - Date.parse(job.started_at)) / 1000 : null
   return <div className="page progress-page">
+    <AnalysisBackLink to={!terminal ? '/history' : analysis?.play_type === 'solo' ? `/court/${analysisId}` : `/players/${analysisId}`} />
     <header className="setup-header"><div><p className="eyebrow">ANALYSIS FLOW</p><h1>{analysis?.title ?? '분석 준비'}</h1>
       <p className="lead">영상을 분석해 슛 위치와 결과를 확인합니다.</p></div><span className="step-chip">{analysis?.play_type === 'solo' ? '2 / 2 설정' : '3 / 3 설정'}</span></header>
     {simulation && <div className="simulation-banner"><strong>개발용 흐름 점검</strong><span>실제 슛을 찾거나 결과를 저장하지 않습니다.</span></div>}

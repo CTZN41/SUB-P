@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { AnalysisBackLink } from '../components/AnalysisBackLink'
 
 const API_BASE = 'http://127.0.0.1:8000/api'
 const INITIAL_POINTS = [[12, 78], [88, 78], [72, 25], [28, 25]]
@@ -113,9 +114,10 @@ export function CourtCalibrationPage() {
   }
 
   return <div className="page setup-page">
+    <AnalysisBackLink to="/history" />
     <header className="setup-header"><div><p className="eyebrow">COURT SETUP</p><h1>코트 위치 확인</h1><p className="lead">네 모서리와 골대 점을 영상의 실제 코트 선과 림 중심에 맞춰 주세요.</p></div><span className="step-chip">{analysis?.play_type === 'solo' ? '1 / 2 설정' : '1 / 3 설정'}</span></header>
     <section className="setup-card">
-      <div className="frame-toolbar"><strong>{analysis?.title ?? '영상을 불러오는 중'}</strong><label>대표 장면<input type="range" min="0" max={Math.max(0, (analysis?.duration_ms ?? 0) - 500)} step="500" value={timeMs} onChange={(e) => { setTimeMs(Number(e.target.value)); setPlacedPoints([false, false, false, false, false]); setConfirmed(false); setError(''); setGuideMessage('장면이 바뀌었습니다. 네 모서리와 림을 다시 지정해 주세요.') }} /></label><span>{(timeMs / 1000).toFixed(1)}초</span></div>
+      <div className="frame-toolbar"><strong>{analysis?.title ?? '영상을 불러오는 중'}</strong><label>대표 장면<input type="range" min="0" max={Math.max(0, (analysis?.duration_ms ?? 0) - 500)} step="500" value={timeMs} onChange={(e) => { setTimeMs(Number(e.target.value)); setPlacedPoints([false, false, false, false, false]); setConfirmed(false); setError(''); setGuideMessage('') }} /></label><span>{(timeMs / 1000).toFixed(1)}초</span></div>
       <div className="calibration-frame" style={{ backgroundImage: frameReady ? `url(${frameUrl})` : 'none', aspectRatio: analysis ? `${analysis.width} / ${analysis.height}` : '16 / 9' }} onPointerDown={(event) => {
         const target = event.target as HTMLElement
         const index = Number(target.dataset.point)
@@ -150,7 +152,6 @@ export function CourtCalibrationPage() {
         </> : <span>‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 맞춰 주세요.</span>}
       </div>
       {!supportedTemplate && <p className="inline-warning">{previousLaneOrder ? '기존 기록의 기준은 현재 페인트존 경계와 달라 화면 점을 그대로 사용하지 않습니다.' : '이 기록의 가상 좌표는 현재 코트 경계 기준과 다릅니다.'} ‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 다시 지정해 주세요. 기존 분석 결과는 자동으로 바뀌지 않습니다.</p>}
-      {!allPointsPlaced && <p className="inline-warning">네 모서리와 림을 각각 실제 위치에 지정해야 저장할 수 있습니다.</p>}
       {guideMessage && <p className="inline-warning">{guideMessage}</p>}
       <label className="check-row"><input type="checkbox" checked={confirmed} disabled={!allPointsPlaced || !supportedTemplate} onChange={(event) => setConfirmed(event.target.checked)} />영상에 반코트와 골대가 보이고 기준점을 실제 위치에 맞춘 것을 확인했습니다.</label>
       {error && <p className="form-error" role="alert">{error}</p>}

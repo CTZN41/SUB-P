@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import './ShotCourt3D.css'
@@ -143,12 +144,14 @@ function spreadOverlaps(shots: CourtShot[]) {
   })
 }
 
-export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPlayerName = true, onSelect, onOpenDetails, detailsOpen = false, typeLabels, zone, onZoneChange }: {
+export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jerseyNumber, showPlayerName = true, showNumberGuide = true, onSelect, onOpenDetails, detailsOpen = false, typeLabels, zone, onZoneChange }: {
   shots: CourtShot[]
   numbers: Record<string, number>
   selectedShot: CourtShot | null
+  selectedAction?: ReactNode
   jerseyNumber: string | null
   showPlayerName?: boolean
+  showNumberGuide?: boolean
   onSelect: (shotId: string) => void
   onOpenDetails?: () => void
   detailsOpen?: boolean
@@ -428,7 +431,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
     <div className="court-3d-heading"><div><strong>3D 슈팅 맵</strong><span>코트를 끌어 회전하고, 슛 번호를 눌러 영상을 확인하세요.</span></div><div className="court-3d-controls"><button type="button" onClick={() => zoom(.8)} aria-label="3D 코트 확대">+</button><button type="button" onClick={() => zoom(1.25)} aria-label="3D 코트 축소">−</button><button type="button" onClick={reset}>초기 시점</button>{onOpenDetails && <button type="button" onClick={onOpenDetails} aria-expanded={detailsOpen}>{detailsOpen ? '기록 관리 닫기' : '기록 관리'}</button>}</div></div>
     <div className="court-3d-zone-controls"><label>3D 구역<select value={activeZone ?? ''} onChange={event => setActiveZone(event.target.value || null)}><option value="">전체 코트</option>{COURT_ZONES.map(zone => <option key={zone.code} value={zone.code}>{zone.label}</option>)}</select></label>{activeZone && <button type="button" onClick={reset}>전체 코트로</button>}<span role="status">{selectedZone ? `${selectedZone.label} · ${shots.filter(shot => shot.zone_code === activeZone).length}개 기록` : '바닥 구역을 누르면 강조해서 볼 수 있습니다.'}</span></div>
     {renderError ? <p className="court-3d-unavailable">이 브라우저에서는 3D 코트를 표시할 수 없습니다. 아래 슛 목록에서 기록을 확인할 수 있습니다.</p> : <div ref={mountRef} className="court-3d-canvas" data-selected-zone={activeZone ?? ''} data-zone-count={COURT_ZONES.length} role="img" aria-label={`슛 ${locatedCount}개가 표시된 3D 반코트`} />}
-    <div className="court-3d-footer"><span><i className="made" /> 성공</span><span><i className="missed" /> 실패</span><span><i className="uncertain" /> 결과 확인 필요</span><span>숫자는 슛 목록과 같은 번호입니다.</span>{shots.some((shot) => shot.court_x == null || shot.court_y == null) && <span>위치 없는 기록은 기록 관리에서 확인</span>}</div>
-    {selectedShot && <div className="court-3d-selected"><div><strong>{numbers[selectedShot.id]}번{showPlayerName ? ` · ${selectedShot.player_name}${jerseyNumber ? ` #${jerseyNumber}` : ''}` : ''} · {formatShotTime(selectedShot.candidate_time_ms)}</strong><span>{selectedShot.zone_label ?? '위치 확인 필요'} · {selectedShot.result === 'made' ? '성공' : selectedShot.result === 'missed' ? '실패' : '결과 확인 필요'} · {typeLabels[selectedShot.shot_type] ?? selectedShot.shot_type}</span></div></div>}
+    <div className="court-3d-footer"><span><i className="made" /> 성공</span><span><i className="missed" /> 실패</span><span><i className="uncertain" /> 결과 확인 필요</span>{showNumberGuide && <span>숫자는 슛 목록과 같은 번호입니다.</span>}{shots.some((shot) => shot.court_x == null || shot.court_y == null) && <span>위치 없는 기록은 기록 관리에서 확인</span>}</div>
+    {selectedShot && <div className="court-3d-selected"><div><strong>{numbers[selectedShot.id]}번{showPlayerName ? ` · ${selectedShot.player_name}${jerseyNumber ? ` #${jerseyNumber}` : ''}` : ''} · {formatShotTime(selectedShot.candidate_time_ms)}</strong><span>{selectedShot.zone_label ?? '위치 확인 필요'} · {selectedShot.result === 'made' ? '성공' : selectedShot.result === 'missed' ? '실패' : '결과 확인 필요'} · {typeLabels[selectedShot.shot_type] ?? selectedShot.shot_type}</span></div>{selectedAction}</div>}
   </div>
 }

@@ -1,5 +1,9 @@
 #root {
   min-height: 100vh;
+  --card-background: #16211c;
+  --card-border: 1px solid rgba(255, 255, 255, .08);
+  --card-radius: 22px;
+  --card-padding: 22px 26px;
 }
 
 .app-shell {
@@ -104,9 +108,9 @@
 }
 
 .page {
-  max-width: 1240px;
+  max-width: 1540px;
   margin: 0 auto;
-  padding: 54px 56px;
+  padding: 54px 48px;
 }
 
 .page-header {
@@ -284,7 +288,7 @@ h1 {
 }
 
 .registration-page {
-  max-width: 1080px;
+  max-width: 1540px;
 }
 
 .registration-header {
@@ -494,7 +498,7 @@ h1 {
   color: #eaff9e;
 }
 
-.setup-page { max-width: 1120px; }
+.setup-page { max-width: 1540px; }
 .setup-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 .setup-header h1 { margin-bottom: 12px; font-size: clamp(2.6rem, 6vw, 4.8rem); }
 .step-chip { flex: 0 0 auto; padding: 10px 14px; border-radius: 999px; background: rgba(216,255,79,.1); color: #d8ff4f; font-weight: 850; }
@@ -527,7 +531,7 @@ h1 {
 .box-controls input { width: 100%; accent-color: #d8ff4f; }
 .inline-warning { padding: 10px 12px; border-radius: 9px; background: rgba(255,205,112,.08); color: #ffda91; font-size: .8rem; line-height: 1.45; }
 .full-button { width: 100%; margin-top: 16px; }
-.progress-page { max-width: 1360px; }
+.progress-page { max-width: 1540px; }
 .progress-page > .progress-card { padding: 32px; }
 .progress-page > .progress-card:first-of-type { min-height: 480px; }
 .progress-page .progress-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -553,7 +557,7 @@ h1 {
 .stage-list li.done span { background: rgba(216,255,79,.15); color: #d8ff4f; }
 .success-note { padding: 14px 16px; border-radius: 12px; background: rgba(40,190,125,.1); color: #84e9b8; }
 .button.danger { border: 1px solid rgba(229,83,83,.45); background: rgba(229,83,83,.1); color: #ffaaaa; }
-.shot-review-page { max-width: 1380px; }
+.shot-review-page, .history-page { max-width: 1540px; }
 .review-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .review-summary > div, .review-summary > button { padding: 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; background: #16211c; }
 .review-summary span, .review-summary strong { display: block; }
@@ -710,3 +714,47 @@ h1 {
 .review-summary > button { color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .review-summary > button:hover, .review-summary > button:focus-visible { border-color: #d8ff4f; }
 .review-summary > button[aria-pressed="true"] { border-color: #d8ff4f; background: #202d1b; }
+
+/* Shared card appearance, based on the monthly results card. */
+.page :is(.setup-card, .requirements-card, .form-section, .registration-result,
+  .placeholder-card, .heatmap-wrap, .shot-court-3d, .history-item,
+  .history-dialog, .shot-position-picker, .court-3d-selected),
+.page .review-summary > :is(div, button),
+.page .progress-summary > div,
+.page .stat-breakdowns > section {
+  padding: var(--card-padding);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-background);
+}
+.page .review-summary > button:hover,
+.page .review-summary > button:focus-visible,
+.page .review-summary > button[aria-pressed="true"] {
+  border-color: #d8ff4f;
+}
+.page .review-summary > button[aria-pressed="true"] { background: #202d1b; }
+@media (max-width: 700px) {
+  .page { --card-padding: 20px; }
+}
+
+.registration-form-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+.registration-form-columns > .form-section { min-width: 0; }
+.registration-form-columns > :not(.form-section) { grid-column: 1 / -1; }
+.registration-form-columns .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.registration-form-columns .form-grid > label:nth-child(3) { grid-column: 1 / -1; }
+.registration-form-columns .file-picker { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 1100px) {
+  .registration-form-columns { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .registration-form-columns .form-grid { grid-template-columns: 1fr; }
+}
+.registration-form-columns .consent-submit-actions { display: grid; gap: 12px; margin-top: 26px; }
+.registration-form-columns > .form-section:nth-of-type(2) { display: flex; flex-direction: column; }
+.registration-form-columns .consent-submit-actions { margin-top: auto; padding-top: 26px; }
+.analysis-back-nav { margin-bottom: 22px; }
+.analysis-back-nav .button { min-height: 40px; }
+.history-menu-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 0; background: transparent; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.history-submenu { display: grid; gap: 4px; padding-left: 14px; }
+.history-submenu .nav-link { padding: 10px 14px; font-size: .9rem; }
+.history-menu-toggle:focus-visible, .history-submenu .nav-link:focus-visible { outline: 2px solid #d8ff4f; outline-offset: 2px; }

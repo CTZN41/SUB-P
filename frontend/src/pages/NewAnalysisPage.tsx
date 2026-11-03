@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { FormEvent, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AnalysisBackLink } from '../components/AnalysisBackLink'
 
 const API_BASE = 'http://127.0.0.1:8000/api'
 const MAX_FILE_BYTES = 5 * 1024 * 1024 * 1024
@@ -34,6 +35,8 @@ export function NewAnalysisPage() {
   const navigate = useNavigate()
   const recordedDateRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
+  const [title, setTitle] = useState('')
+  const [recordedDate, setRecordedDate] = useState('')
   const [playType, setPlayType] = useState('solo')
   const [containsOthers, setContainsOthers] = useState(false)
   const [consentConfirmed, setConsentConfirmed] = useState(false)
@@ -53,6 +56,14 @@ export function NewAnalysisPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    if (!title.trim() || !recordedDate || !recordedDateRef.current?.validity.valid) {
+      setError('분석 이름과 촬영 날짜를 입력해 주세요.')
+      return
+    }
+    if (!aiNoticeConfirmed || (containsOthers && !consentConfirmed)) {
+      setError('필요한 동의 항목을 확인해 주세요.')
+      return
+    }
     if (!file) {
       setError('분석할 MP4 영상 한 개를 선택해 주세요.')
       return
@@ -67,6 +78,7 @@ export function NewAnalysisPage() {
     }
 
     const form = new FormData(event.currentTarget)
+    form.set('title', title.trim())
     form.set('video', file)
     form.set('contains_others', String(containsOthers))
     form.set('consent_confirmed', String(consentConfirmed))
@@ -103,6 +115,7 @@ export function NewAnalysisPage() {
   if (result) {
     return (
       <div className="page registration-page">
+        <AnalysisBackLink to="/history" />
         <section className="registration-result">
           <p className="eyebrow">영상 등록 완료</p>
           <h1>{result.title}</h1>
@@ -126,7 +139,6 @@ export function NewAnalysisPage() {
               새 분석 추가
             </button>
           </div>
-          <p className="helper-text">현재 영상은 이미 저장되었습니다. 새 분석을 추가해도 이 기록은 유지됩니다.</p>
         </section>
       </div>
     )
@@ -134,11 +146,11 @@ export function NewAnalysisPage() {
 
   return (
     <div className="page registration-page">
+      <AnalysisBackLink to="/" />
       <header className="registration-header">
         <div>
           <p className="eyebrow">NEW ANALYSIS</p>
           <h1>새 영상 등록</h1>
-          <p className="lead">MP4 영상을 등록하면 길이와 화질을 확인하고 안전하게 로컬 PC에 보관합니다.</p>
         </div>
         <div className="requirements-card">
           <strong>촬영 권장 조건</strong>
@@ -151,24 +163,24 @@ export function NewAnalysisPage() {
         </div>
       </header>
 
-      <form className="registration-form" onSubmit={submit}>
+      <form className="registration-form registration-form-columns" onSubmit={submit}>
         <section className="form-section">
-          <div className="section-heading"><span>01</span><div><h2>영상과 기본 정보</h2><p>분석 기록에서 알아보기 쉬운 이름을 사용하세요.</p></div></div>
-          <label>분석 이름<input name="title" maxLength={100} required placeholder="예: 10월 28일 개인 슈팅 연습" /></label>
+          <div className="section-heading"><span>01</span><div><h2>영상과 기본 정보</h2></div></div>
+          <label>분석 이름 <small>필수</small><input name="title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={100} required placeholder="예: 10월 28일 개인 슈팅 연습" /></label>
           <div className="form-grid">
             <label>촬영 형태<select name="play_type" value={playType} onChange={(event) => setPlayType(event.target.value)}><option value="solo">개인 연습</option><option value="one_on_one">1대1</option><option value="two_on_two">2대2</option><option value="three_on_three">3대3</option></select></label>
-            <label className="recorded-date-field" onClick={openRecordedDatePicker}>촬영 날짜 <small>선택</small><input ref={recordedDateRef} name="recorded_date" type="date" /></label>
+            <label className="recorded-date-field" onClick={openRecordedDatePicker}>촬영 날짜 <small>필수</small><input ref={recordedDateRef} name="recorded_date" type="date" value={recordedDate} onChange={(event) => setRecordedDate(event.target.value)} required /></label>
             {playType !== 'solo' && <label>첫 선수 이름 <small>선택</small><input name="player_name" maxLength={100} placeholder="나머지 선수는 다음 단계에서 등록" /></label>}
           </div>
           <label className="file-picker">
-            <span>{file ? file.name : 'MP4 파일을 선택하세요'}</span>
+            <span>{file ? file.name : 'MP4 파일을 선택하세요 (필수)'}</span>
             <small>{file ? formatBytes(file.size) : '한 번에 한 파일 · 최대 10분 · 최대 5GB'}</small>
             <input type="file" accept="video/mp4,.mp4" onChange={(event) => setFile(event.target.files?.[0] ?? null)} required />
           </label>
         </section>
 
         <section className="form-section">
-          <div className="section-heading"><span>02</span><div><h2>촬영 동의와 AI 안내</h2><p>영상은 이 PC에 보관하며 후보 장면만 외부 AI 처리에 사용될 수 있습니다.</p></div></div>
+          <div className="section-heading"><span>02</span><div><h2>촬영 동의와 AI 안내</h2></div></div>
           <fieldset>
             <legend>영상에 다른 사람이 포함되어 있나요?</legend>
             <label className="choice"><input type="radio" name="others_choice" checked={!containsOthers} onChange={() => { setContainsOthers(false); setConsentConfirmed(false) }} />아니요</label>
@@ -176,12 +188,13 @@ export function NewAnalysisPage() {
           </fieldset>
           {containsOthers && <label className="check-row"><input type="checkbox" checked={consentConfirmed} onChange={(event) => setConsentConfirmed(event.target.checked)} /><span>영상에 포함된 사람에게 촬영과 분석 동의를 받았습니다.</span></label>}
           <label className="check-row"><input type="checkbox" checked={aiNoticeConfirmed} onChange={(event) => setAiNoticeConfirmed(event.target.checked)} required /><span>전체 영상이 아닌 슛 후보 장면이 OpenAI로 처리될 수 있다는 안내를 확인했습니다.</span></label>
+          <div className="consent-submit-actions">
+            {error && <p className="form-error" role="alert">{error}</p>}
+            <button className="button primary submit-button" type="submit" disabled={submitting || !title.trim() || !recordedDate || !file || (containsOthers && !consentConfirmed) || !aiNoticeConfirmed}>
+              {submitting ? '영상 정보를 확인하는 중…' : '영상 등록하고 검사하기'}
+            </button>
+          </div>
         </section>
-
-        {error && <p className="form-error" role="alert">{error}</p>}
-        <button className="button primary submit-button" type="submit" disabled={submitting || (containsOthers && !consentConfirmed) || !aiNoticeConfirmed}>
-          {submitting ? '영상 정보를 확인하는 중…' : '영상 등록하고 검사하기'}
-        </button>
       </form>
     </div>
   )

@@ -18,6 +18,6 @@ export function analysisStageLabel(stage?: string | null): string {
   if (!stage) return '시작 전'
   const index = analysisStageIndex(stage)
   if (index < 0) return stage
-  const separator = stage.indexOf(' ·')
-  return ANALYSIS_STAGES[index] + (separator >= 0 ? stage.slice(separator) : '')
+  const progress = (index === 4 || index === 5) ? stage.match(/\b(\d+)\s*\/\s*(\d+)\b/) : null
+  return ANALYSIS_STAGES[index] + (progress ? ` ${progress[1]}/${progress[2]}` : '')
 }
