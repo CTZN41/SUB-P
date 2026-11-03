@@ -626,6 +626,7 @@ def attach_candidate_foot_tracks(
         candidate_foot = candidate.get("foot_point_px")
         candidate['frame_size_px'] = [frame_width, frame_height]
         candidate['foot_point_source'] = 'person_box_lower_midpoint'
+        candidate['foot_point_time_ms'] = candidate_time
         candidate['foot_point_clipped'] = foot_proxy_is_clipped(candidate_foot, candidate['frame_size_px'])
         if not isinstance(candidate_foot, (list, tuple)) or len(candidate_foot) != 2:
             continue

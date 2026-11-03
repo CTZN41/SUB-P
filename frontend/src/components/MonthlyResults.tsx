@@ -87,7 +87,6 @@ export function MonthlyResults() {
         shots={visibleShots}
         numbers={numbers}
         selectedShot={selected}
-        showNumberGuide={false}
         selectedAction={selected && <Link className="button secondary" to={`/results/${selected.analysis_id}?shot=${selected.id}`}>원본 분석 보기</Link>}
         showPlayerName={!!selected && !/^선수\s+[A-F]$/.test(selected.player_name.trim())}
         jerseyNumber={selected?.jersey_number ?? null}

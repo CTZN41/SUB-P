@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from math import hypot
 from time import perf_counter
 from app.services.ordered_review_trial import bounded_ordered_map
 from pathlib import Path
@@ -14,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import Settings
 from app.services.court_calibration import transform_point
-from app.services.court_zones import classify_zone
+from app.services.court_zones import classify_zone, THREE_POINT_RADIUS_FT, HOOP_X_FT, HOOP_Y_FT
 from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
 from app.analysis.foot_evidence import foot_proxy_is_clipped
 
@@ -58,7 +59,17 @@ class CameraContextDecision(BaseModel):
     reason: str = Field(max_length=300)
 
 
-class ShotReviewDecision(BaseModel):
+class VisualArcEvidence(BaseModel):
+    visual_arc_relation: Literal['outside', 'inside', 'touching', 'unclear'] = 'unclear'
+    grounded_frame_offsets_ms: list[int] = Field(default_factory=list, max_length=8)
+    arc_evidence: str = Field(default='', max_length=300)
+
+
+class VisualArcDecision(VisualArcEvidence):
+    confidence: float = Field(ge=0, le=1)
+
+
+class ShotReviewDecision(VisualArcEvidence):
     is_shot: bool
     confidence: float = Field(ge=0, le=1)
     is_shot_confidence: float = Field(ge=0, le=1)
@@ -106,7 +117,7 @@ class ShotReviewDecision(BaseModel):
     reason: str = Field(max_length=300)
 
 
-class ShotDetailDecision(BaseModel):
+class ShotDetailDecision(VisualArcEvidence):
     outcome: Literal["made", "missed", "unclear"]
     outcome_confidence: float = Field(ge=0, le=1)
     shot_type: Literal[
@@ -168,7 +179,7 @@ class OutcomeReviewDecision(BaseModel):
     reason: str = Field(max_length=300)
 
 
-class PositionReviewDecision(BaseModel):
+class PositionReviewDecision(VisualArcEvidence):
     court_zone: CourtZone
     court_x: float | None = Field(ge=0, le=50)
     court_y: float | None = Field(ge=0, le=47)
@@ -426,6 +437,10 @@ def _projected_foot_position(
 ) -> tuple[float, float] | None:
     """Return a plausible court projection, never an authoritative shot location."""
     foot = candidate.get("foot_point_px")
+    source_time = candidate.get('foot_point_time_ms',
+        (candidate.get('shot_gate') or {}).get('detector_candidate_time_ms', candidate.get('time_ms')))
+    if source_time is not None and candidate.get('time_ms') is not None and abs(source_time-candidate['time_ms']) > 150:
+        return None  # A retimed release must not inherit an old frame's pixels.
     if transform is None or candidate.get("calibration_shifted") or not isinstance(foot, (list, tuple)) or len(foot) != 2:
         return None
     if candidate.get('foot_point_clipped') or foot_proxy_is_clipped(foot, candidate.get('frame_size_px')):
@@ -540,6 +555,26 @@ def _invalidate_conflicting_position(
     decision.confidence = 0
 
 
+def _court_geometry_prompt() -> str:
+    return (
+        f" Numeric map geometry: hoop=({HOOP_X_FT},{HOOP_Y_FT}) ft; outside the corner sections, "
+        f"the 3-point arc radius is {THREE_POINT_RADIUS_FT} ft. Compute distance as "
+        "sqrt((x-25)^2+(y-5.25)^2). Distances >=23.75 map to three-point zones. "
+        "Corner zones are x<=3 or x>=47 with y<=14. These are virtual map conventions, "
+        "not a measurement of this outdoor court's exact regulation dimensions. "
+        "FIRST report visual_arc_relation from actual grounded shoes relative to the visible "
+        "court arc, independently of numeric estimates. Use outside only when both grounded "
+        "shoes are visibly behind the line; touching means a shoe overlaps the line. "
+        "Then estimate consistent coordinates; never move a visually clear three-pointer "
+        "inside solely because an approximate box projection or rounded coordinate says so. "
+        "Dense pre-release shoe crops may be supplied at 150ms intervals. In "
+        "grounded_frame_offsets_ms list only supplied timestamps that visibly show ground "
+        "contact, not airborne feet; describe actual shoes/line evidence in arc_evidence. "
+        "An image edge, missing shoe, or box midpoint cannot prove ground contact or line "
+        "contact. If the images cannot resolve the visual/numeric conflict, return needs_review. "
+    )
+
+
 def _review_once(
     client,
     model: str,
@@ -585,6 +620,7 @@ def _review_once(
                     "the presence of a dribble alone. Explain the observed footwork in reason. "
                     + _camera_context_prompt(camera_context) + " "
                     + _foot_projection_prompt(projected_foot, projected_plant) + " "
+                    + _court_geometry_prompt() +
                     "Location must now follow two steps: (1) project the shooter's shooting/plant shoes using "
                     "the shared camera orientation into an overhead relation to the lane; (2) choose the "
                     "14-zone result from that projected relation and distance. Do not infer "
@@ -692,6 +728,7 @@ def _review_position_once(
                     "the shooter's location at release. "
                     + _camera_context_prompt(camera_context) + " "
                     + _foot_projection_prompt(projected_foot, projected_plant) + " "
+                    + _court_geometry_prompt() +
                     "Project the actual release shoes into an overhead left/aligned/right relation to the lane; "
                     "never equate image-left/image-right with court-left/court-right. Third, classify distance "
                     "and choose one of the 14 zones. Use the visible hoop, paint, lane and three-point arc. "
@@ -714,6 +751,30 @@ def _review_position_once(
     parsed = getattr(response, "output_parsed", None)
     if parsed is None:
         raise OpenAIShotReviewError("AI가 코트 위치 판정 형식에 맞는 결과를 반환하지 않았습니다.")
+    return parsed, _usage_dict(response)
+
+
+def _review_visual_arc_once(client, model, images):
+    """An independent image-only judgment: no old coordinates or zone labels."""
+    response = client.responses.parse(
+        model=model, reasoning={'effort': 'low'}, store=False,
+        input=[{'role': 'user', 'content': [{'type': 'input_text', 'text': (
+            'Decide ONLY where the final GROUNDED shooting shoes are relative to the visible '
+            'three-point line. No numeric map coordinates or previous classifications are supplied. '
+            'Track the shoes across the chronological pre-release sequence. Ignore approach steps '
+            'before the last plant. A lifted shoe crossing the painted line in the image does NOT '
+            'mean its sole touches the ground or line. Use visible sole-ground contact and shadows. '
+            'If the final grounded shoes are beyond the arc away from the hoop return outside; '
+            'inside means basket-side; touching requires actual planted sole contact with paint, '
+            'not perspective overlap of a lifted shoe or an obscured image edge. '
+            'List at least two supplied pre-release timestamps supporting your final plant '
+            'judgment in grounded_frame_offsets_ms. Describe the specific shoe and line evidence '
+            'in arc_evidence. If contact or the line is hidden return unclear. Do not estimate '
+            'coordinates, a virtual radius, scoring outcome, or shot type.'
+        )}, *images]}], text_format=VisualArcDecision)
+    parsed = getattr(response, 'output_parsed', None)
+    if parsed is None:
+        raise OpenAIShotReviewError('AI가 신발과 3점선 판정을 반환하지 않았습니다.')
     return parsed, _usage_dict(response)
 
 
@@ -771,6 +832,28 @@ def _position_zone_mismatch(decision: ShotReviewDecision | PositionReviewDecisio
     return classify_zone(decision.court_x, decision.court_y).value != decision.court_zone
 
 
+def _visual_arc_conflict(decision) -> bool:
+    if decision.court_zone == 'needs_review' or decision.court_x is None or decision.court_y is None:
+        return False
+    numeric_three = classify_zone(decision.court_x, decision.court_y).value.startswith('three_')
+    return (decision.visual_arc_relation == 'outside' and not numeric_three) or (
+        decision.visual_arc_relation in ('inside', 'touching') and numeric_three)
+
+
+def _needs_arc_review(decision) -> bool:
+    if decision.court_x is None or decision.court_y is None:
+        return False
+    distance = hypot(decision.court_x-HOOP_X_FT, decision.court_y-HOOP_Y_FT)
+    return _visual_arc_conflict(decision) or (
+        abs(distance-THREE_POINT_RADIUS_FT) <= 2 and decision.position_confidence < .8)
+
+
+def _grounded_arc_evidence(position) -> bool:
+    return (position.visual_arc_relation in ('outside', 'inside', 'touching')
+            and len(set(t for t in position.grounded_frame_offsets_ms if -1000 <= t < 0)) >= 2
+            and bool(position.arc_evidence.strip()))
+
+
 def _apply_position_review(
     decision: ShotReviewDecision,
     position: PositionReviewDecision,
@@ -778,6 +861,15 @@ def _apply_position_review(
     initial_zone_mismatch: bool = False,
 ) -> None:
     terra_zone = decision.court_zone
+    distance_reversal = (
+        terra_zone != 'needs_review' and position.court_zone != 'needs_review'
+        and terra_zone.startswith('three_') != position.court_zone.startswith('three_'))
+    if initial_zone_mismatch and distance_reversal and not _grounded_arc_evidence(position):
+        _invalidate_conflicting_position(decision, '3점 여부가 재검토에서 바뀌었지만 접지·선 근거가 부족해 위치 확인 필요')
+        return
+    if _visual_arc_conflict(position):
+        _invalidate_conflicting_position(decision, '영상의 3점선 안팎 근거와 숫자 좌표가 달라 위치 확인 필요')
+        return
     models_disagree = (
         not initial_zone_mismatch
         and terra_zone != "needs_review"
@@ -808,6 +900,9 @@ def _apply_position_review(
     decision.overhead_lateral_relation = position.overhead_lateral_relation
     decision.distance_band = position.distance_band
     decision.projection_evidence = position.projection_evidence
+    decision.visual_arc_relation = position.visual_arc_relation
+    decision.grounded_frame_offsets_ms = position.grounded_frame_offsets_ms
+    decision.arc_evidence = position.arc_evidence
     position_unclear = (
         position.court_zone == "needs_review"
         or position.court_x is None
@@ -1072,7 +1167,8 @@ def review_candidates_with_openai(
             camera_context_records.extend(records)
             escalated += count
     failed = 0
-    from app.services.review_frame_trial import fast_candidate_frame_inputs, fast_outcome_frame_inputs, dense_rim_inputs, evidence_rich_detail_inputs
+    from app.services.review_frame_trial import (fast_candidate_frame_inputs, fast_outcome_frame_inputs,
+        dense_rim_inputs, evidence_rich_detail_inputs, dense_shoe_inputs, position_only_inputs)
     from app.services.outcome_evidence_trial import needs_direct_outcome_check, strict_outcome_once, scoring_evidence_client
     prepare_detail = fast_candidate_frame_inputs if fast_image_sampling else candidate_frame_inputs
     prepare_outcome = (dense_rim_inputs if (require_outcome_evidence or scoring_rim_evidence) else
@@ -1115,6 +1211,10 @@ def review_candidates_with_openai(
                             candidate.get("tracked_hoop_px")) if scoring_rim_evidence else
                       timed("prepare_images", prepare_detail, video_path,
                             int(candidate["time_ms"]), candidate.get("foot_point_px")))
+            shoes, shoe_evidence = timed('prepare_shoes', dense_shoe_inputs, video_path, candidate)
+            position_images = position_only_inputs(images, shoes)
+            if shoes:
+                images = [*images, *shoes]
             primary, usage = timed("shot_review", _review_once,
                 detail_client,
                 settings.openai_vision_model,
@@ -1127,23 +1227,63 @@ def review_candidates_with_openai(
             attempts.append({"model": settings.openai_vision_model, "task": "shot_review", "effort": "low", "usage": usage})
             final_model = settings.openai_vision_model
             model_decisions = {"primary": primary.model_dump()}
-            if _position_zone_mismatch(primary):
+            zone_mismatch = _position_zone_mismatch(primary)
+            arc_retry = bool(shoes) and _needs_arc_review(primary)
+            visual_arc = None
+            visual_unresolved = False
+            if arc_retry:
                 try:
+                    visual_arc, usage = timed('visual_arc', _review_visual_arc_once,
+                        client, settings.openai_vision_model, position_images)
+                    allowed = set(shoe_evidence['offsets_ms'])
+                    visual_arc.grounded_frame_offsets_ms = [t for t in visual_arc.grounded_frame_offsets_ms if t in allowed]
+                    attempts.append({'model': settings.openai_vision_model, 'task': 'visual_arc', 'effort': 'low', 'usage': usage})
+                    model_decisions['visual_arc'] = visual_arc.model_dump()
+                    visual_unresolved = visual_arc.confidence < POSITION_AUTO_CONFIRM_CONFIDENCE or not _grounded_arc_evidence(visual_arc)
+                    if visual_unresolved:
+                        _invalidate_conflicting_position(primary, '접지 신발과 3점선 관계를 영상에서 확정하지 못해 위치 확인 필요')
+                    else:
+                        primary.visual_arc_relation = visual_arc.visual_arc_relation
+                        primary.grounded_frame_offsets_ms = visual_arc.grounded_frame_offsets_ms
+                        primary.arc_evidence = visual_arc.arc_evidence
+                except Exception:
+                    visual_unresolved = True
+                    _invalidate_conflicting_position(primary, '독립적인 신발·3점선 검토를 완료하지 못해 위치 확인 필요')
+            if (zone_mismatch or arc_retry or _visual_arc_conflict(primary)) and not visual_unresolved:
+                try:
+                    mismatch_text = (
+                        f"The first pass named {primary.court_zone} but returned "
+                        f"({primary.court_x}, {primary.court_y}), which maps to "
+                        f"{classify_zone(primary.court_x, primary.court_y).value}. "
+                        if primary.court_x is not None and primary.court_y is not None else '')
                     position, usage = timed("position_review", _review_position_once,
-                        client, settings.openai_vision_model, images,
+                        client, settings.openai_vision_model, position_images,
                         camera_context=camera_context,
                         projected_foot=projected_foot,
                         projected_plant=projected_plant,
                         inconsistency=(
-                            f"The first pass named {primary.court_zone} but returned "
-                            f"({primary.court_x}, {primary.court_y}), which maps to "
-                            f"{classify_zone(primary.court_x, primary.court_y).value}. "
-                            "Recheck the shoes and court lines; correct the zone or coordinates. "
+                            mismatch_text +
+                            "Inspect actual grounded shoes in the dense sequence BEFORE numeric estimates. "
+                            "The first estimate may have the wrong coordinates, not the wrong visual zone. "
+                            "If changing between 2 and 3 points, cite at least TWO supplied grounded "
+                            "pre-release timestamps and visible shoe/line evidence. Do not merely rename "
+                            "the zone to match old numbers. If contact is off-screen or ambiguous return needs_review. "
+                            + (f"An independent image-only pass found {visual_arc.visual_arc_relation}: "
+                               f"{visual_arc.arc_evidence}; grounded offsets={visual_arc.grounded_frame_offsets_ms}. "
+                               "Keep coordinates consistent with this visible distance; if you cannot reconcile it return needs_review. "
+                               if visual_arc else '')
                         ),
                     )
-                    attempts.append({"model": settings.openai_vision_model, "task": "position_consistency", "effort": "low", "usage": usage})
+                    if shoes:
+                        allowed = set(shoe_evidence['offsets_ms'])
+                        position.grounded_frame_offsets_ms = [t for t in position.grounded_frame_offsets_ms if t in allowed]
+                    attempts.append({"model": settings.openai_vision_model,
+                        "task": "position_consistency" if zone_mismatch else "arc_boundary",
+                        "effort": "low", "usage": usage})
                     model_decisions["position_consistency"] = position.model_dump()
-                    if not _position_zone_mismatch(position):
+                    if visual_arc and position.visual_arc_relation != visual_arc.visual_arc_relation:
+                        _invalidate_conflicting_position(primary, '영상 단독 검토와 좌표 검토의 3점 여부가 달라 위치 확인 필요')
+                    elif not _position_zone_mismatch(position):
                         _apply_position_review(
                             primary, position, initial_zone_mismatch=True,
                         )
@@ -1302,6 +1442,9 @@ def review_candidates_with_openai(
             if candidate.get('calibration_view_valid') is False:
                 final_review.update(court_x=None, court_y=None, court_zone='needs_review', position_confidence=0, review_required=True,
                                     position_reason='이 구도의 코트 기준점이 검증되지 않아 위치 확인 필요')
+            elif _visual_arc_conflict(primary):
+                final_review.update(court_x=None, court_y=None, court_zone='needs_review', position_confidence=0, review_required=True,
+                                    position_reason='영상의 3점선 안팎 근거와 숫자 좌표가 달라 위치 확인 필요')
             elif _projection_lateral_conflict(primary, projected_plant or projected_foot):
                 final_review.update(court_x=None, court_y=None, court_zone='needs_review', position_confidence=0, review_required=True,
                                     position_reason='검증된 바닥 위치와 AI의 코트 좌우가 달라 위치 확인 필요')
@@ -1335,8 +1478,10 @@ def review_candidates_with_openai(
                 "calibrated_plant_projection": list(projected_plant) if projected_plant else None,
                 "plant_sample_time_ms": plant_time_ms,
                 "foot_point_source": candidate.get('foot_point_source', 'person_box_lower_midpoint'),
+                "foot_point_time_ms": candidate.get('foot_point_time_ms', gate.get('detector_candidate_time_ms', candidate['time_ms'])),
                 "three_point_line_check": line_check,
                 "input_window_ms": [min(FRAME_OFFSETS_MS), extended_to_ms],
+                "shoe_evidence": shoe_evidence,
             }
             reviewed += 1
         except Exception as exc:

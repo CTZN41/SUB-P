@@ -1,0 +1,1209 @@
+{
+  "analysis_id": "73c65375-acb3-474f-8187-a0fa991cb98a",
+  "db_writes": 0,
+  "local_seconds": 11.994,
+  "source_count": 83,
+  "local": [
+    {
+      "number": 1,
+      "time_ms": 6034,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 0,
+          "status": "accepted",
+          "alignment": {
+            "matches": 2266,
+            "inliers": 1570,
+            "holdout_median_px": 1.0301,
+            "center_scale": 1.0031,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.989315927028656,
+              0.9528914093971252,
+              0.940762996673584,
+              0.9544656276702881
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 6,
+      "time_ms": 36991,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 0,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3447,
+            "inliers": 2720,
+            "holdout_median_px": 0.1298,
+            "center_scale": 1.0001,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.9909396767616272,
+              0.9891528487205505,
+              0.9829484224319458,
+              0.9856705665588379
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 13,
+      "time_ms": 92568,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 4001,
+            "inliers": 3176,
+            "holdout_median_px": 0.032,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.997372031211853,
+              0.9975365400314331,
+              0.997581422328949,
+              0.33912110328674316
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 14,
+      "time_ms": 98253,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3347,
+            "inliers": 2642,
+            "holdout_median_px": 0.1049,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "temporal_floor",
+            "reference_frames": 5,
+            "current_frames": 3,
+            "best_scores": [
+              0.9926,
+              0.99,
+              0.9906,
+              0.9888
+            ],
+            "support_counts": [
+              3,
+              1,
+              3,
+              2
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 28,
+      "time_ms": 198255,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3339,
+            "inliers": 2634,
+            "holdout_median_px": 0.092,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.9906097054481506,
+              0.771701991558075,
+              0.9877885580062866,
+              0.15261289477348328
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 41,
+      "time_ms": 292624,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 4001,
+            "inliers": 3176,
+            "holdout_median_px": 0.032,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.997372031211853,
+              0.9975365400314331,
+              0.997581422328949,
+              0.33912110328674316
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 42,
+      "time_ms": 298408,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3352,
+            "inliers": 2642,
+            "holdout_median_px": 0.1057,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "temporal_floor",
+            "reference_frames": 5,
+            "current_frames": 3,
+            "best_scores": [
+              0.9929,
+              0.9905,
+              0.9908,
+              0.9884
+            ],
+            "support_counts": [
+              3,
+              2,
+              3,
+              2
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 54,
+      "time_ms": 385542,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "rejected",
+          "reason": "scene holdout mismatch"
+        },
+        {
+          "profile": 0,
+          "status": "accepted",
+          "alignment": {
+            "matches": 2560,
+            "inliers": 1985,
+            "holdout_median_px": 0.8715,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.5298417210578918,
+              0.9775899648666382,
+              0.9763124585151672,
+              0.9715789556503296
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 55,
+      "time_ms": 392593,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3954,
+            "inliers": 3144,
+            "holdout_median_px": 0.0284,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.99756920337677,
+              0.997550368309021,
+              0.9964561462402344,
+              0.4556407332420349
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 56,
+      "time_ms": 398328,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3339,
+            "inliers": 2635,
+            "holdout_median_px": 0.0962,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "temporal_floor",
+            "reference_frames": 5,
+            "current_frames": 3,
+            "best_scores": [
+              0.9927,
+              0.99,
+              0.9906,
+              0.9888
+            ],
+            "support_counts": [
+              3,
+              1,
+              3,
+              2
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 61,
+      "time_ms": 428950,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "rejected",
+          "reason": "scene matches cover too little area"
+        },
+        {
+          "profile": 0,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3387,
+            "inliers": 2672,
+            "holdout_median_px": 0.1376,
+            "center_scale": 0.9999,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.9872352480888367,
+              0.9884787201881409,
+              0.9835408926010132,
+              0.988013505935669
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 69,
+      "time_ms": 492630,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3954,
+            "inliers": 3144,
+            "holdout_median_px": 0.0284,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.99756920337677,
+              0.997550368309021,
+              0.9964561462402344,
+              0.4556407332420349
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 70,
+      "time_ms": 498414,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3337,
+            "inliers": 2635,
+            "holdout_median_px": 0.102,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "temporal_floor",
+            "reference_frames": 5,
+            "current_frames": 3,
+            "best_scores": [
+              0.9926,
+              0.9898,
+              0.9906,
+              0.9898
+            ],
+            "support_counts": [
+              3,
+              2,
+              3,
+              2
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 76,
+      "time_ms": 537188,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "rejected",
+          "reason": "scene matches cover too little area"
+        },
+        {
+          "profile": 0,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3412,
+            "inliers": 2687,
+            "holdout_median_px": 0.1231,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.990933895111084,
+              0.9893547892570496,
+              0.9827229976654053,
+              0.9861698150634766
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 79,
+      "time_ms": 557542,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "rejected",
+          "reason": "scene matches cover too little area"
+        },
+        {
+          "profile": 0,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3106,
+            "inliers": 2426,
+            "holdout_median_px": 0.7179,
+            "center_scale": 0.9999,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.9821789860725403,
+              0.9861488342285156,
+              0.9883930087089539,
+              0.9840248823165894
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    },
+    {
+      "number": 83,
+      "time_ms": 592549,
+      "valid": true,
+      "checks": [
+        {
+          "profile": 1,
+          "status": "accepted",
+          "alignment": {
+            "matches": 3936,
+            "inliers": 3129,
+            "holdout_median_px": 0.029,
+            "center_scale": 1.0,
+            "changed": false
+          },
+          "floor": {
+            "method": "single_frame",
+            "scores": [
+              0.9970766305923462,
+              0.99701327085495,
+              0.9962537884712219,
+              0.3587587773799896
+            ]
+          }
+        }
+      ],
+      "shoe_evidence": {
+        "status": "available",
+        "offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "image_edge_offsets_ms": [
+          -1000,
+          -850,
+          -700,
+          -550,
+          -400,
+          -250,
+          -100
+        ],
+        "source": "original_shoe_pixels",
+        "numeric_proxy_replaced": false
+      }
+    }
+  ],
+  "paid_seconds": 41.214,
+  "usage": {
+    "input_tokens": 92247,
+    "output_tokens": 2448
+  },
+  "model": "gpt-6.1-terra",
+  "reviewed": [
+    {
+      "number": 28,
+      "time_ms": 198255,
+      "decision": {
+        "visual_arc_relation": "outside",
+        "grounded_frame_offsets_ms": [
+          -400,
+          -250
+        ],
+        "arc_evidence": "At -400 ms the nearer shoe is planted beyond the arc while the other is moving across it. At -250 ms both soles appear grounded on the away-from-hoop side, with the line passing behind them.",
+        "is_shot": true,
+        "confidence": 0.73,
+        "is_shot_confidence": 1.0,
+        "outcome": "made",
+        "outcome_confidence": 0.99,
+        "shot_type": "step_back",
+        "shot_type_confidence": 0.83,
+        "court_zone": "three_wing_left",
+        "court_x": 10.2,
+        "court_y": 24.5,
+        "position_confidence": 0.73,
+        "position_reason": "The last grounded stance is visually outside the arc. The estimated coordinates place it approximately 24.3 feet from the hoop, on the left wing.",
+        "camera_view": "right_sideline",
+        "overhead_lateral_relation": "left_of_lane",
+        "distance_band": "three_point",
+        "projection_evidence": [
+          "The grounded stance projects left of the lane under the confirmed court orientation.",
+          "The shoe positions and visible arc support a slightly greater distance than the approximate box projections."
+        ],
+        "visible_evidence": [
+          "ball_falling_below_rim",
+          "ball_rising",
+          "camera_cut",
+          "release",
+          "rim_passage"
+        ],
+        "sequence_start_offset_ms": -2000,
+        "sequence_end_offset_ms": 1800,
+        "review_required": false,
+        "reason": "After dribbling forward, the shooter retreats from the inside plant, replants near the arc, and jumps. The ball is seen above and then below the rim with net movement, but the sampled frames do not directly show it passing downward through the rim or net. A camera cut follows.; 득점 전용 검토: The ball de",
+        "local_ai_conflict": false,
+        "model": "gpt-6.1-terra",
+        "attempts": [
+          {
+            "model": "gpt-6.1-terra",
+            "task": "shot_review",
+            "effort": "low",
+            "usage": {
+              "input_tokens": 27721,
+              "output_tokens": 505,
+              "total_tokens": 28226
+            }
+          },
+          {
+            "model": "gpt-6.1-terra",
+            "task": "visual_arc",
+            "effort": "low",
+            "usage": {
+              "input_tokens": 5489,
+              "output_tokens": 131,
+              "total_tokens": 5620
+            }
+          },
+          {
+            "model": "gpt-6.1-terra",
+            "task": "arc_boundary",
+            "effort": "low",
+            "usage": {
+              "input_tokens": 6540,
+              "output_tokens": 259,
+              "total_tokens": 6799
+            }
+          },
+          {
+            "model": "gpt-6.1-terra",
+            "task": "outcome_only",
+            "effort": "low",
+            "usage": {
+              "input_tokens": 10853,
+              "output_tokens": 127,
+              "total_tokens": 10980
+            }
+          }
+        ],
+        "model_decisions": {
+          "primary": {
+            "visual_arc_relation": "touching",
+            "grounded_frame_offsets_ms": [
+              -1000,
+              -550,
+              -400,
+              -300,
+              -250
+            ],
+            "arc_evidence": "At the final plant around -300 to -250 ms, one shoe overlaps the visible arc while the other is behind it. Earlier, the lead shoe is inside the arc before the retreat.",
+            "is_shot": true,
+            "confidence": 0.65,
+            "is_shot_confidence": 1.0,
+            "outcome": "unclear",
+            "outcome_confidence": 0.65,
+            "shot_type": "step_back",
+            "shot_type_confidence": 0.83,
+            "court_zone": "mid_wing_left",
+            "court_x": 10.4,
+            "court_y": 22.2,
+            "position_confidence": 0.72,
+            "position_reason": "The final plant is on the left side of the lane under the supplied calibration, with a shoe on the arc. The approximate coordinates place it in the left midrange wing.",
+            "camera_view": "right_sideline",
+            "overhead_lateral_relation": "left_of_lane",
+            "distance_band": "midrange",
+            "projection_evidence": [
+              "The plant is left of the lane under the confirmed court-left orientation.",
+              "A plant shoe overlaps the arc; the approximate projection is inside the virtual three-point radius."
+            ],
+            "visible_evidence": [
+              "release",
+              "ball_rising",
+              "ball_falling_below_rim",
+              "camera_cut"
+            ],
+            "sequence_start_offset_ms": -2000,
+            "sequence_end_offset_ms": 1800,
+            "review_required": true,
+            "reason": "After dribbling forward, the shooter retreats from the inside plant, replants near the arc, and jumps. The ball is seen above and then below the rim with net movement, but the sampled frames do not directly show it passing downward through the rim or net. A camera cut follows."
+          },
+          "visual_arc": {
+            "visual_arc_relation": "outside",
+            "grounded_frame_offsets_ms": [
+              -400,
+              -250
+            ],
+            "arc_evidence": "At -400 ms the nearer shoe is planted beyond the arc while the other shoe is lifting across it. By -250 ms both soles are grounded on the away-from-hoop side; the paint passes behind the shoes rather than visibly under a planted sole.",
+            "confidence": 0.84
+          },
+          "position_consistency": {
+            "visual_arc_relation": "outside",
+            "grounded_frame_offsets_ms": [
+              -400,
+              -250
+            ],
+            "arc_evidence": "At -400 ms the nearer shoe is planted beyond the arc while the other is moving across it. At -250 ms both soles appear grounded on the away-from-hoop side, with the line passing behind them.",
+            "court_zone": "three_wing_left",
+            "court_x": 10.2,
+            "court_y": 24.5,
+            "confidence": 0.73,
+            "reason": "The last grounded stance is visually outside the arc. The estimated coordinates place it approximately 24.3 feet from the hoop, on the left wing.",
+            "camera_view": "right_sideline",
+            "overhead_lateral_relation": "left_of_lane",
+            "distance_band": "three_point",
+            "projection_evidence": [
+              "The grounded stance projects left of the lane under the confirmed court orientation.",
+              "The shoe positions and visible arc support a slightly greater distance than the approximate box projections."
+            ]
+          },
+          "outcome_primary": {
+            "outcome": "made",
+            "confidence": 0.99,
+            "visible_evidence": [
+              "rim_passage",
+              "ball_falling_below_rim",
+              "camera_cut"
+            ],
+            "review_required": false,
+            "reason": "The ball descends over the rim at +1200–1250ms, passes down inside the opening and through the net at +1300ms, and falls below it by +1400ms. The view cuts at +1800ms."
+          }
+        },
+        "calibrated_foot_projection": [
+          10.3863,
+          22.1721
+        ],
+        "calibrated_plant_projection": [
+          10.2411,
+          22.9516
+        ],
+        "plant_sample_time_ms": 197905,
+        "foot_point_source": "person_box_lower_midpoint",
+        "three_point_line_check": {
+          "status": "not_available"
+        },
+        "input_window_ms": [
+          -4000,
+          4500
+        ],
+        "shoe_evidence": {
+          "status": "available",
+          "offsets_ms": [
+            -1000,
+            -850,
+            -700,
+            -550,
+            -400,
+            -250,
+            -100
+          ],
+          "image_edge_offsets_ms": [
+            -1000,
+            -850,
+            -700,
+            -550,
+            -400,
+            -250,
+            -100
+          ],
+          "source": "original_shoe_pixels",
+          "numeric_proxy_replaced": false
+        }
+      },
+      "valid": true
+    },
+    {
+      "number": 41,
+      "time_ms": 292624,
+      "decision": {
+        "visual_arc_relation": "outside",
+        "grounded_frame_offsets_ms": [
+          -400,
+          -250
+        ],
+        "arc_evidence": "At -400 ms the foreground sole is planted beyond the arc, with the other shoe beside it on the outside. At -250 ms the shoes remain on the outside pavement; the line is visible alongside them.",
+        "is_shot": true,
+        "confidence": 0.74,
+        "is_shot_confidence": 1.0,
+        "outcome": "made",
+        "outcome_confidence": 0.96,
+        "shot_type": "side_step",
+        "shot_type_confidence": 0.76,
+        "court_zone": "three_wing_left",
+        "court_x": 12.0,
+        "court_y": 26.0,
+        "position_confidence": 0.74,
+        "position_reason": "The final plant is visually outside the arc and projects to the left wing. The approximate coordinates are 24.5 ft from the hoop, consistent with a three-pointer.",
+        "camera_view": "right_sideline",
+        "overhead_lateral_relation": "left_of_lane",
+        "distance_band": "three_point",
+        "projection_evidence": [
+          "The shoes are beyond the arc on the left side of the projected lane.",
+          "Left/right follows the confirmed court calibration, not image position alone."
+        ],
+        "visible_evidence": [
+          "release",
+          "ball_rising",
+          "rim_passage",
+          "ball_falling_below_rim"
+        ],
+        "sequence_start_offset_ms": -3500,
+        "sequence_end_offset_ms": 2000,
+        "review_required": false,
+        "reason": "After dribbling, the shooter shifts laterally, brings the feet together into a new plant, and rises for the jumper; there is no clear retreating step. The rim crops show the ball descending through the hoop and net.",
+        "local_ai_conflict": false,
+        "model": "gpt-6.1-terra",
+        "attempts": [
+          {
+            "model": "gpt-6.1-terra",
+            "task": "shot_review",
+            "effort": "low",
+            "usage": {
+              "input_tokens": 27263,
+              "output_tokens": 443,
+              "total_tokens": 27706
+            }
+          },
+          {
+            "model": "gpt-6.1-terra",
+            "task": "visual_arc",
+            "effort": "low",
+            "usage": {
+              "input_tokens": 5427,
+              "output_tokens": 131,
+              "total_tokens": 5558
+            }
+          },
+          {
+            "model": "gpt-6.1-terra",
+            "task": "arc_boundary",
+            "effort": "low",
+            "usage": {
+              "input_tokens": 6311,
+              "output_tokens": 294,
+              "total_tokens": 6605
+            }
+          }
+        ],
+        "model_decisions": {
+          "primary": {
+            "visual_arc_relation": "touching",
+            "grounded_frame_offsets_ms": [
+              -700,
+              -550,
+              -400,
+              -300
+            ],
+            "arc_evidence": "In the final plant, one shoe overlaps the visible arc while the other is behind it; the -400 ms crop shows the overlap most clearly.",
+            "is_shot": true,
+            "confidence": 0.68,
+            "is_shot_confidence": 1.0,
+            "outcome": "made",
+            "outcome_confidence": 0.96,
+            "shot_type": "side_step",
+            "shot_type_confidence": 0.76,
+            "court_zone": "mid_wing_left",
+            "court_x": 12.0,
+            "court_y": 24.5,
+            "position_confidence": 0.68,
+            "position_reason": "The plant projects left of the lane on the calibrated court, at approximately the arc. The line contact places it in the midrange rather than beyond the three-point line.",
+            "camera_view": "right_sideline",
+            "overhead_lateral_relation": "left_of_lane",
+            "distance_band": "midrange",
+            "projection_evidence": [
+              "The shooting feet are left of the lane's projected centerline toward half court.",
+              "A planted shoe overlaps the three-point arc."
+            ],
+            "visible_evidence": [
+              "release",
+              "ball_rising",
+              "rim_passage",
+              "ball_falling_below_rim"
+            ],
+            "sequence_start_offset_ms": -3500,
+            "sequence_end_offset_ms": 2000,
+            "review_required": false,
+            "reason": "After dribbling, the shooter shifts laterally, brings the feet together into a new plant, and rises for the jumper; there is no clear retreating step. The rim crops show the ball descending through the hoop and net."
+          },
+          "visual_arc": {
+            "visual_arc_relation": "outside",
+            "grounded_frame_offsets_ms": [
+              -400,
+              -250
+            ],
+            "arc_evidence": "In the final plant, the foreground shoe's sole is on the pavement beyond the arc. The other shoe comes down beside it on the same side; its apparent overlap with the paint occurs while it is moving, not as planted sole contact. The line remains visible alongside the shoes.",
+            "confidence": 0.8
+          },
+          "position_consistency": {
+            "visual_arc_relation": "outside",
+            "grounded_frame_offsets_ms": [
+              -400,
+              -250
+            ],
+            "arc_evidence": "At -400 ms the foreground sole is planted beyond the arc, with the other shoe beside it on the outside. At -250 ms the shoes remain on the outside pavement; the line is visible alongside them.",
+            "court_zone": "three_wing_left",
+            "court_x": 12.0,
+            "court_y": 26.0,
+            "confidence": 0.74,
+            "reason": "The final plant is visually outside the arc and projects to the left wing. The approximate coordinates are 24.5 ft from the hoop, consistent with a three-pointer.",
+            "camera_view": "right_sideline",
+            "overhead_lateral_relation": "left_of_lane",
+            "distance_band": "three_point",
+            "projection_evidence": [
+              "The shoes are beyond the arc on the left side of the projected lane.",
+              "Left/right follows the confirmed court calibration, not image position alone."
+            ]
+          }
+        },
+        "calibrated_foot_projection": null,
+        "calibrated_plant_projection": null,
+        "plant_sample_time_ms": null,
+        "foot_point_source": "person_box_lower_midpoint",
+        "three_point_line_check": {
+          "status": "not_available"
+        },
+        "input_window_ms": [
+          -4000,
+          3500
+        ],
+        "shoe_evidence": {
+          "status": "available",
+          "offsets_ms": [
+            -1000,
+            -850,
+            -700,
+            -550,
+            -400,
+            -250,
+            -100
+          ],
+          "image_edge_offsets_ms": [
+            -1000,
+            -850,
+            -700,
+            -550,
+            -400,
+            -250,
+            -100
+          ],
+          "source": "original_shoe_pixels",
+          "numeric_proxy_replaced": false
+        }
+      },
+      "valid": true
+    }
+  ]
+}

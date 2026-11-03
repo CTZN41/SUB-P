@@ -1,0 +1,22 @@
+{
+  "source_analysis": "80e15ffd-ebab-440e-915a-18378b3a5a95",
+  "different_court": [
+    {
+      "time_ms": 1000,
+      "status": "rejected",
+      "reason": "scene matches cover too little area"
+    },
+    {
+      "time_ms": 3000,
+      "status": "rejected",
+      "reason": "scene matches cover too little area"
+    },
+    {
+      "time_ms": 6000,
+      "status": "rejected",
+      "reason": "scene matches cover too little area"
+    }
+  ],
+  "mirrored_reference": "rejected",
+  "older_downloads_available": false
+}

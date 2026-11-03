@@ -187,7 +187,7 @@ export function NewAnalysisPage() {
             <label className="choice"><input type="radio" name="others_choice" checked={containsOthers} onChange={() => setContainsOthers(true)} />예</label>
           </fieldset>
           {containsOthers && <label className="check-row"><input type="checkbox" checked={consentConfirmed} onChange={(event) => setConsentConfirmed(event.target.checked)} /><span>영상에 포함된 사람에게 촬영과 분석 동의를 받았습니다.</span></label>}
-          <label className="check-row"><input type="checkbox" checked={aiNoticeConfirmed} onChange={(event) => setAiNoticeConfirmed(event.target.checked)} required /><span>전체 영상이 아닌 슛 후보 장면이 OpenAI로 처리될 수 있다는 안내를 확인했습니다.</span></label>
+          <label className="check-row"><input type="checkbox" checked={aiNoticeConfirmed} onChange={(event) => setAiNoticeConfirmed(event.target.checked)} required /><span>전체 영상이 아닌 슛 후보 장면이 OpenAI로 처리될 수 있습니다.<br />이 안내를 확인했습니다.</span></label>
           <div className="consent-submit-actions">
             {error && <p className="form-error" role="alert">{error}</p>}
             <button className="button primary submit-button" type="submit" disabled={submitting || !title.trim() || !recordedDate || !file || (containsOthers && !consentConfirmed) || !aiNoticeConfirmed}>

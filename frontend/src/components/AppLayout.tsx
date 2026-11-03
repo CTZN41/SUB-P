@@ -15,11 +15,7 @@ export function AppLayout() {
     <div className="app-shell">
       <aside className="sidebar">
         <NavLink className="brand" to="/">
-          <span className="brand-mark">B</span>
-          <span>
-            <strong>Baseline AI</strong>
-            <small>Basketball Shot Lab</small>
-          </span>
+          <strong>ShotLog</strong>
         </NavLink>
 
         <nav className="main-nav" aria-label="주요 메뉴">

@@ -2,7 +2,7 @@
 
 ## 1. 문서 정보
 
-- 서비스 이름: **ShotMap AI**
+- 서비스 이름: **ShotLog** (2026-11-03 변경, 이전 이름 ShotMap AI·Baseline AI)
 - 문서 기준: `New/docs/mvp.md`
 - 목표 발표일: 2026년 11월 6일 금요일
 - 첫 실행 환경: 현재 사용자의 PC

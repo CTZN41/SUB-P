@@ -1,28 +1,28 @@
 .monthly-results { margin: 0 0 18px; }
 .monthly-results-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-.monthly-results-heading p { margin: 6px 0 0; color: #849188; }
-.monthly-results-heading label { min-width: 150px; color: #aab5ae; font-size: .8rem; }
-.monthly-results-heading select { display: block; width: 100%; margin-top: 6px; padding: 9px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: #0f1814; color: white; }
+.monthly-results-heading p { margin: 6px 0 0; color: var(--text-secondary); }
+.monthly-results-heading label { min-width: 150px; color: var(--text-secondary); font-size: .8rem; }
+.monthly-results-heading select { display: block; width: 100%; margin-top: 6px; padding: 9px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: var(--surface-inset); color: white; }
 .monthly-results-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
-.monthly-results-summary > div { padding: 14px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: #16211c; }
-.monthly-results-summary span { display: block; color: #829087; font-size: .75rem; }
+.monthly-results-summary > div { padding: 14px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: var(--surface); }
+.monthly-results-summary span { display: block; color: var(--text-secondary); font-size: .75rem; }
 .monthly-results-summary strong { display: block; margin-top: 4px; font-size: 1.2rem; }
 .monthly-shot-list { margin-top: 18px; }
 .monthly-shot-preview { margin-top: 18px; }
 .monthly-shot-preview video { display: block; width: 100%; max-height: 65vh; background: #000; border-radius: 12px; }
 .monthly-shot-list h2 { margin: 0; font-size: 1rem; }
-.monthly-shot-list p { color: #93a198; font-size: .8rem; }
+.monthly-shot-list p { color: var(--text-secondary); font-size: .8rem; }
 .monthly-shot-list ul { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
 .monthly-shot-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.monthly-shot-list li button { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; padding: 9px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: #101a15; color: white; cursor: pointer; text-align: left; }
-.monthly-shot-list li button.selected { border-color: #d8ff4f; }
-.monthly-shot-list li a { color: #d8ff4f; font-size: .78rem; white-space: nowrap; }
-.monthly-results-note { margin: 16px 0 0; color: #8b9a8f; font-size: .75rem; line-height: 1.6; }
+.monthly-shot-list li button { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; padding: 9px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: var(--surface-inset); color: white; cursor: pointer; text-align: left; }
+.monthly-shot-list li button.selected { border-color: var(--accent); }
+.monthly-shot-list li a { color: var(--accent); font-size: .78rem; white-space: nowrap; }
+.monthly-results-note { margin: 16px 0 0; color: var(--text-secondary); font-size: .75rem; line-height: 1.6; }
 .history-view-tabs { display: flex; gap: 8px; margin: 0 0 18px; }
-.history-view-tabs a { padding: 10px 18px; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; color: #afbbb2; text-decoration: none; }
-.history-view-tabs a.active { border-color: #d8ff4f; background: rgba(216,255,79,.1); color: #e9ff9e; }
-.history-day-heading { margin: 20px 0 4px; color: #d8ff4f; font-size: .95rem; }
+.history-view-tabs a { padding: 10px 18px; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; color: var(--text-secondary); text-decoration: none; }
+.history-view-tabs a.active { border-color: var(--accent); background: var(--accent); color: #111418; }
+.history-day-heading { margin: 28px 0 12px; color: var(--text-secondary); font-size: .867rem; font-weight: 600; }
 @media (max-width: 800px) { .monthly-results-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .monthly-results-heading { flex-direction: column; align-items: stretch; } }
 
-.monthly-results-heading h2 { margin: 0; font-size: clamp(2rem, 2.6vw, 2.75rem); line-height: 1.15; }
+.monthly-results-heading h2 { margin: 0; font-size: 1.6rem; line-height: 1.15; }
 .monthly-results > .setup-card:first-child { padding-top: 22px; }

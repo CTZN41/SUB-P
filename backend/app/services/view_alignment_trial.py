@@ -55,8 +55,8 @@ def guarded_calibration(reference, current, court_transform):
         return None, {"status":"different_or_unverified_view","reason":str(error)}
 
 
-def validate_floor_alignment(reference, current, matrix, points):
-    """Check manual floor landmark patches independently of background matches."""
+def floor_patch_scores(reference, current, matrix, points):
+    """Keep landmark indices, including unusable patches, for temporal checks."""
     warped = cv2.warpPerspective(current, np.linalg.inv(matrix), (reference.shape[1], reference.shape[0]))
     a = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY)
     b = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
@@ -64,15 +64,90 @@ def validate_floor_alignment(reference, current, matrix, points):
     for x, y in points[:4]:
         x, y = int(x), int(y)
         if x < 28 or y < 28 or x+28 >= a.shape[1] or y+28 >= a.shape[0]:
+            scores.append(None)
             continue
         patch = a[y-22:y+23, x-22:x+23]
         if float(patch.std()) < 12:
+            scores.append(None)
             continue
         score = cv2.matchTemplate(b[y-25:y+26,x-25:x+26], patch, cv2.TM_CCOEFF_NORMED).max()
         scores.append(float(score))
+    return scores
+
+
+def validate_floor_alignment(reference, current, matrix, points):
+    """Check manual floor landmark patches independently of background matches."""
+    scores = [s for s in floor_patch_scores(reference, current, matrix, points) if s is not None]
     if len(scores) < 3 or sum(s >= .75 for s in scores) < 3:
         raise ValueError('manual floor landmarks do not agree')
     return scores
+
+
+def _read_frame(capture, time_ms):
+    if time_ms < 0:
+        return None
+    capture.set(cv2.CAP_PROP_POS_MSEC, time_ms)
+    ok, frame = capture.read()
+    return frame if ok else None
+
+
+def temporal_floor_alignment(capture, reference, current, matrix, points,
+                             reference_ms, current_ms, reference_cache=None):
+    """Recover occluded patches without reducing the 3-landmark/.75 threshold.
+
+    Every extra frame must align to its anchor. Each accepted landmark must
+    match in two distinct current frames. Background matching alone never
+    grants permission to reuse a court transform.
+    """
+    reference_cache = reference_cache if reference_cache is not None else {}
+    key = int(reference_ms)
+    if key not in reference_cache:
+        references = [(reference_ms, reference, np.eye(3))]
+        for offset in (-1200, -600, 600, 1200):
+            image = _read_frame(capture, reference_ms + offset)
+            if image is None:
+                continue
+            try:
+                ref_matrix, _ = align_view(reference, image)
+                references.append((reference_ms + offset, image, ref_matrix))
+            except ValueError:
+                continue
+        reference_cache[key] = references
+    references = reference_cache[key]
+    currents = [(current_ms, current, np.eye(3))]
+    for offset in (-600, 600):
+        image = _read_frame(capture, current_ms + offset)
+        if image is None:
+            continue
+        try:
+            current_matrix, _ = align_view(current, image)
+            currents.append((current_ms + offset, image, current_matrix))
+        except ValueError:
+            continue
+    supports = [set() for _ in points[:4]]
+    best = [0.0 for _ in points[:4]]
+    for current_time, current_image, current_matrix in currents:
+        for _, ref_image, ref_matrix in references:
+            # Original reference points -> this reference neighbor -> current
+            # neighbor. The actual candidate still uses the original matrix.
+            neighbor_points = cv2.perspectiveTransform(
+                np.float32([points[:4]]), ref_matrix)[0].tolist()
+            neighbor_matrix = current_matrix @ matrix @ np.linalg.inv(ref_matrix)
+            for i, score in enumerate(floor_patch_scores(
+                    ref_image, current_image, neighbor_matrix, neighbor_points)):
+                if score is not None:
+                    best[i] = max(best[i], score)
+                    if score >= .75:
+                        supports[i].add(current_time)
+    evidence = {
+        'method': 'temporal_floor',
+        'reference_frames': len(references), 'current_frames': len(currents),
+        'best_scores': [round(s, 4) for s in best],
+        'support_counts': [len(s) for s in supports],
+    }
+    if sum(len(s) >= 2 for s in supports) < 3:
+        raise ValueError('temporal floor landmarks do not agree')
+    return evidence
 
 
 def group_camera_views(video, candidates, calibration):
@@ -95,10 +170,14 @@ def group_camera_views(video, candidates, calibration):
             references.append(image)
         transforms={i:p['transform'] for i,p in enumerate(profiles)}
         reports=[]
+        reference_cache={}
         for candidate in candidates:
             capture.set(cv2.CAP_PROP_POS_MSEC,max(0,int(candidate["time_ms"])-300))
             ok,frame=capture.read()
             selected=None
+            checks=[]
+            candidate.pop('validated_court_transform', None)
+            candidate.pop('validated_three_point_line', None)
             if ok:
                 # Prefer a nearby manually saved view; no camera grouping alone
                 # grants permission to reuse that view's numeric coordinates.
@@ -106,16 +185,26 @@ def group_camera_views(video, candidates, calibration):
                 for index in order:
                     ref = references[index]
                     try:
-                        matrix, _ = align_view(ref,frame)
+                        matrix, metrics = align_view(ref,frame)
                         points = profiles[index].get('image_points')
                         if not points:
                             raise ValueError('manual floor landmarks missing')
-                        validate_floor_alignment(ref,frame,matrix,points)
+                        try:
+                            scores = validate_floor_alignment(ref,frame,matrix,points)
+                            evidence = {'method': 'single_frame', 'scores': scores}
+                        except ValueError:
+                            evidence = temporal_floor_alignment(
+                                capture, ref, frame, matrix, points,
+                                profiles[index]['frame_time_ms'], max(0,int(candidate['time_ms'])-300),
+                                reference_cache)
+                        checks.append({'profile': index, 'status': 'accepted',
+                                       'alignment': metrics, 'floor': evidence})
                         selected=index
                         candidate['validated_court_transform'] = transform_calibration(profiles[index]['transform'],matrix)
                         candidate['validated_three_point_line'] = (cv2.perspectiveTransform(np.float32([profiles[index]['three_point_line']]),matrix)[0].tolist() if profiles[index].get('three_point_line') else None)
                         break
-                    except ValueError:
+                    except ValueError as error:
+                        checks.append({'profile': index, 'status': 'rejected', 'reason': str(error)})
                         continue
             if selected is None:
                 selected=len(references)
@@ -129,7 +218,8 @@ def group_camera_views(video, candidates, calibration):
             candidate["scene_id"]=selected
             candidate["calibration_view_valid"]=candidate.get('validated_court_transform') is not None
             reports.append({"time_ms":candidate["time_ms"],"view_id":selected,
-                            "old_calibration_usable":transforms[selected] is not None})
+                            "old_calibration_usable":candidate['calibration_view_valid'],
+                            'checks': checks})
         return transforms,reports
     finally:
         capture.release()

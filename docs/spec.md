@@ -1,4 +1,4 @@
-# ShotMap AI 기능 동작 설명서(SPEC)
+# ShotLog 기능 동작 설명서(SPEC)
 
 ## 1. 문서 목적
 
@@ -18,7 +18,7 @@
 
 | 구분 | 확정 내용 |
 |---|---|
-| 서비스 이름 | ShotMap AI |
+| 서비스 이름 | ShotLog (이전 이름 ShotMap AI·Baseline AI, 저장소명 SUB-P 유지) |
 | 지원 화면 | PC 화면 |
 | 지원 영상 | MP4 한 개, 최대 10분, 최대 5GB |
 | 필수 분석 | 개인 연습 영상 |

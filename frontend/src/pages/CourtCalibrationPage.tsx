@@ -165,10 +165,10 @@ export function CourtCalibrationPage() {
           <span>1 → 2 → 3 → 4 순서가 교차하지 않도록 맞춰 주세요.</span>
         </> : <span>‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 맞춰 주세요.</span>}
       </div>
-      {!supportedTemplate && <p className="inline-warning">{previousLaneOrder ? '기존 기록의 기준은 현재 페인트존 경계와 달라 화면 점을 그대로 사용하지 않습니다.' : '이 기록의 가상 좌표는 현재 코트 경계 기준과 다릅니다.'} ‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 다시 지정해 주세요. 기존 분석 결과는 자동으로 바뀌지 않습니다.</p>}
+      {!supportedTemplate && <p className="inline-warning"><span className="message-line">{previousLaneOrder ? '기존 기록의 기준은 현재 페인트존 경계와 달라 화면 점을 그대로 사용하지 않습니다.' : '이 기록의 가상 좌표는 현재 코트 경계 기준과 다릅니다.'}</span><span className="message-line">‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 다시 지정해 주세요.</span><span className="message-line">기존 분석 결과는 자동으로 바뀌지 않습니다.</span></p>}
       {guideMessage && <p className="inline-warning">{guideMessage}</p>}
-      {!allPointsPlaced && <p className="inline-warning" role="status">아직 확인하지 않은 기준점: {missingPointNames.join(', ')}. 해당 점을 실제 위치로 옮기거나, 이미 맞다면 한 번 눌러 주세요.</p>}
-      <label className="check-row"><input type="checkbox" checked={confirmed} disabled={!allPointsPlaced || !supportedTemplate} onChange={(event) => setConfirmed(event.target.checked)} />영상에 반코트와 골대가 보이고 기준점을 실제 위치에 맞춘 것을 확인했습니다.</label>
+      {!allPointsPlaced && <div className="inline-warning" role="status"><strong>아직 확인하지 않은 기준점</strong><ul className="message-list">{missingPointNames.map(name => <li key={name}>{name}</li>)}</ul><span className="message-line">해당 점을 실제 위치로 옮기거나, 이미 맞다면 한 번 눌러 주세요.</span></div>}
+      <label className="check-row"><input type="checkbox" checked={confirmed} disabled={!allPointsPlaced || !supportedTemplate} onChange={(event) => setConfirmed(event.target.checked)} /><span>영상에 반코트와 골대가 보이고 기준점을 실제 위치에 맞춘 것을 확인했습니다.</span></label>
       {allPointsPlaced && supportedTemplate && !confirmed && <p role="status">위 확인란을 체크하면 저장할 수 있습니다.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="actions"><button type="button" className="button secondary" onClick={resetCalibration} disabled={saving}>재설정</button><button type="button" className="button secondary" onClick={() => save(false)} disabled={!analysis || !frameReady || !confirmed || saving || !supportedTemplate || !allPointsPlaced}>이 구도 저장</button><button className="button primary" onClick={() => save()} disabled={!analysis || !frameReady || !confirmed || saving || !supportedTemplate || !allPointsPlaced}>{saving ? '저장 중…' : analysis?.play_type === 'solo' ? '확인하고 분석 준비로' : '확인하고 선수 설정으로'}</button></div>

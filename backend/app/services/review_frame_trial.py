@@ -1,6 +1,77 @@
 """Trial: decode each requested frame once, in chronological frame order."""
 from pathlib import Path
+from math import isfinite
 import cv2
+
+
+PLANT_OFFSETS_MS = (-1000, -850, -700, -550, -400, -250, -100)
+
+
+def dense_shoe_inputs(video, candidate):
+    """Show real pre-release shoes/arc, without relabeling a box as a foot.
+
+    Crop centers follow the existing track only to locate image content. A
+    clipped shoe remains clipped; no off-screen pixels or ankle coordinates
+    are manufactured.
+    """
+    from app.services import openai_shot_review as r
+    release = int(candidate['time_ms'])
+    focus = candidate.get('foot_point_px')
+    if not focus or not Path(video).is_file():
+        return [], {'status': 'unavailable', 'offsets_ms': []}
+    offsets = [o for o in PLANT_OFFSETS_MS if release + o >= 0]
+    frames = frame_map(video, [release + o for o in offsets])
+    images, available, clipped = [], [], []
+    for offset in offsets:
+        target = release + offset
+        frame = frames.get(target)
+        if frame is None:
+            continue
+        track = candidate.get('foot_track') or []
+        sample = min(track, key=lambda s: abs(s['time_ms']-target)) if track else None
+        point = sample.get('foot_point_px') if sample and abs(sample['time_ms']-target) <= 250 else focus
+        if not point or len(point) != 2:
+            continue
+        if not all(isfinite(float(value)) for value in point):
+            continue
+        height, width = frame.shape[:2]
+        x, y = int(point[0]), int(point[1])
+        # Include both shoes and nearby court line at original pixel density.
+        x1, x2 = max(0, x-int(width*.14)), min(width, x+int(width*.14))
+        y1, y2 = max(0, y-int(height*.24)), min(height, y+int(height*.10))
+        crop = frame[y1:y2, x1:x2]
+        if crop.shape[0] < 64 or crop.shape[1] < 64:
+            continue
+        edge = y+height*.10 >= height or x1 == 0 or x2 == width
+        available.append(offset)
+        if edge:
+            clipped.append(offset)
+        images.extend([
+            {'type': 'input_text', 'text': (
+                f'pre-release shoe/line crop t={offset:+d}ms; '
+                f'original pixels ROI=({x1},{y1},{x2},{y2}); '
+                'box midpoint is a crop locator, NOT an ankle or contact measurement. '
+                + ('Image border is included; feet may be off-screen. ' if edge else '')
+                + 'Determine actual ground contact from the shoes in these images; '
+                'do not treat airborne feet or an image edge as ground contact.'
+            )},
+            {'type': 'input_image', 'image_url': r._encode_frame(crop), 'detail': 'high'},
+        ])
+    return images, {'status': 'available' if available else 'unavailable',
+                    'offsets_ms': available, 'image_edge_offsets_ms': clipped,
+                    'source': 'original_shoe_pixels', 'numeric_proxy_replaced': False}
+
+
+def position_only_inputs(images, shoes):
+    """Keep a small pre-release overview plus the dense shoe sequence for retry."""
+    overview = []
+    if isinstance(images, list):
+        for index in range(0, len(images)-1):
+            item = images[index]
+            if item.get('type') == 'input_text' and item.get('text') in (
+                    'full frame t=-1000ms', 'full frame t=-600ms', 'full frame t=+0ms'):
+                overview.extend(images[index:index+2])
+    return [*overview, *shoes] if shoes and overview else images
 
 
 def frame_map(video: Path, times: list[float]):

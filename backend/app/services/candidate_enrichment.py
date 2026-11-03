@@ -64,6 +64,8 @@ def enrich_candidates(
             for other in result["candidates"]
         ):
             return
+        # Changing the release timestamp does not retime the detected pixels.
+        candidate.setdefault('foot_point_time_ms', candidate.get('time_ms', reference_time))
         candidate["time_ms"] = release_time
         candidate["frame_index"] = round(
             release_time / 1000 * float(result.get("source_fps", 0) or 0)

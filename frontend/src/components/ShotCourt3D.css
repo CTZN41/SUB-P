@@ -3,7 +3,7 @@
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, .08);
   border-radius: 16px;
-  background: #0c1410;
+  background: var(--surface-inset);
 }
 
 .court-3d-heading,
@@ -20,22 +20,22 @@
 .court-3d-selected span { display: block; }
 .court-3d-heading strong { font-size: 1rem; }
 .court-3d-heading span,
-.court-3d-selected span { margin-top: 5px; color: #a2b0a8; font-size: .78rem; }
+.court-3d-selected span { margin-top: 5px; color: var(--text-secondary); font-size: .78rem; }
 
 .court-3d-controls { display: flex; gap: 7px; flex: 0 0 auto; }
 .court-3d-controls button {
-  min-width: 34px;
-  min-height: 34px;
+  min-width: 40px;
+  min-height: 40px;
   padding: 0 10px;
   border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 8px;
-  background: #1a2921;
-  color: #e6f2e9;
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--text);
   font: inherit;
   cursor: pointer;
 }
 .court-3d-controls button:hover,
-.court-3d-controls button:focus-visible { border-color: #d8ff4f; }
+.court-3d-controls button:focus-visible { border-color: var(--accent); }
 
 .court-3d-canvas {
   width: 100%;
@@ -47,9 +47,9 @@
 }
 .court-3d-canvas canvas { display: block; touch-action: none; cursor: grab; }
 .court-3d-canvas canvas:active { cursor: grabbing; }
-.court-3d-zone-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; color: #a2b0a8; font-size: .8rem; }
+.court-3d-zone-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; color: var(--text-secondary); font-size: .8rem; }
 .court-3d-zone-controls label { display: flex; align-items: center; gap: 8px; }
-.court-3d-zone-controls select, .court-3d-zone-controls button { padding: 8px 10px; border: 1px solid #526347; border-radius: 8px; background: #17251d; color: #eef5ea; font: inherit; }
+.court-3d-zone-controls select, .court-3d-zone-controls button { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-inset); color: var(--text); font: inherit; }
 .court-3d-unavailable { padding: 30px; color: #ffda91; }
 .court-3d-footer {
   display: flex;
@@ -57,7 +57,7 @@
   align-items: center;
   gap: 8px 17px;
   margin: 12px 0 0;
-  color: #a2b0a8;
+  color: var(--text-secondary);
   font-size: .76rem;
 }
 .court-3d-footer span { display: inline-flex; align-items: center; gap: 6px; }
@@ -74,6 +74,14 @@
   background: rgba(216, 255, 79, .045);
 }
 .court-3d-selected strong { color: #fff; }
+
+.court-3d-heading, .court-3d-selected { flex-wrap: wrap; }
+.court-3d-heading > div:first-child, .court-3d-selected > div:first-child { flex: 1 1 240px; min-width: 0; }
+.court-3d-controls { flex-wrap: wrap; max-width: 100%; }
+.court-3d-controls button { word-break: keep-all; overflow-wrap: normal; }
+.court-3d-zone-controls label { flex-wrap: wrap; max-width: 100%; }
+.court-3d-zone-controls select { min-width: 0; max-width: 100%; }
+.court-3d-selected span { line-height: 1.7; }
 
 @media (max-width: 640px) {
   .court-3d-heading,

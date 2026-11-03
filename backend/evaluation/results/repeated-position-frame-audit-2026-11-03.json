@@ -1,0 +1,42 @@
+{
+  "base_frame": 5553,
+  "fps": 59.98827470686767,
+  "measurements": [
+    {
+      "repeat": 2,
+      "source_frame_shift": 6000,
+      "resized_mean_pixel_difference": 0.0,
+      "best_time_s": 192.588,
+      "decoded_full_frame_equal": true
+    },
+    {
+      "repeat": 3,
+      "source_frame_shift": 12001,
+      "resized_mean_pixel_difference": 0.0,
+      "best_time_s": 292.624,
+      "decoded_full_frame_equal": true
+    },
+    {
+      "repeat": 4,
+      "source_frame_shift": 18000,
+      "resized_mean_pixel_difference": 0.0,
+      "best_time_s": 392.627,
+      "decoded_full_frame_equal": true
+    },
+    {
+      "repeat": 5,
+      "source_frame_shift": 24001,
+      "resized_mean_pixel_difference": 0.0,
+      "best_time_s": 492.663,
+      "decoded_full_frame_equal": true
+    },
+    {
+      "repeat": 6,
+      "source_frame_shift": 30001,
+      "resized_mean_pixel_difference": 0.0,
+      "best_time_s": 592.682,
+      "decoded_full_frame_equal": true
+    }
+  ],
+  "scope": "Local decoded 320x180 grayscale comparison; no AI calls"
+}
