@@ -544,8 +544,8 @@ h1 {
 .success-note { padding: 14px 16px; border-radius: 12px; background: rgba(40,190,125,.1); color: #84e9b8; }
 .button.danger { border: 1px solid rgba(229,83,83,.45); background: rgba(229,83,83,.1); color: #ffaaaa; }
 .shot-review-page { max-width: 1380px; }
-.review-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
-.review-summary > div { padding: 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; background: #16211c; }
+.review-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.review-summary > div, .review-summary > button { padding: 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; background: #16211c; }
 .review-summary span, .review-summary strong { display: block; }
 .review-summary span { color: #829087; font-size: .78rem; }
 .review-summary strong { margin-top: 5px; font-size: 1.4rem; }
@@ -598,7 +598,7 @@ h1 {
 .shot-advanced-toggle { margin: 8px 0 12px; }
 .shot-list-panel .panel-title p { margin: 5px 0 0; color: #849188; font-size: .78rem; }
 .review-shot-list { display: grid; gap: 8px; max-height: 720px; margin: 20px 0 0; padding: 0; overflow-y: auto; list-style: none; }
-.review-shot-list button { width: 100%; display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: #0f1814; color: #e8eeea; text-align: left; cursor: pointer; }
+.review-shot-list button { width: 100%; display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: center; padding: 12px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: #0f1814; color: #e8eeea; text-align: left; cursor: pointer; }
 .review-shot-list button.selected { border-color: rgba(216,255,79,.65); background: rgba(216,255,79,.06); }
 .review-shot-list strong, .review-shot-list small { display: block; }
 .review-shot-list small { margin-top: 4px; color: #849188; }
@@ -692,3 +692,7 @@ h1 {
 .summary-count-note { margin: -8px 0 20px; color: #a2b0a8; font-size: .8rem; line-height: 1.6; }
 .result-mark.position_review { background: #506a86; }
 .result-mark.outcome_review { background: #9a7b34; }
+
+.review-summary > button { color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.review-summary > button:hover, .review-summary > button:focus-visible { border-color: #d8ff4f; }
+.review-summary > button[aria-pressed="true"] { border-color: #d8ff4f; background: #202d1b; }

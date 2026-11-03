@@ -28,3 +28,22 @@ export function shotSummary(shots: PresentableShot[]) {
 export function shotNumbers(shots: { id: string }[]): Record<string, number> {
   return Object.fromEntries(shots.map((shot, index) => [shot.id, index + 1]))
 }
+
+export function formatShotTime(milliseconds: number): string {
+  if (!Number.isFinite(milliseconds)) return '--:--'
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000))
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+export function shouldShowPlayerNames(playType: string, names: string[]): boolean {
+  return playType !== 'solo' || names.length > 1 || names.some(name => !/^선수\s+[A-F]$/.test(name.trim()))
+}
+
+export function parseShotTime(value: string, originalMilliseconds?: number): number | null {
+  if (!/^\d+:[0-5]\d$/.test(value)) return null
+  // A location-only edit must not round the original release/segment timing.
+  if (originalMilliseconds !== undefined && value === formatShotTime(originalMilliseconds)) return originalMilliseconds
+  const [minutes, seconds] = value.split(':').map(Number)
+  const milliseconds = (minutes * 60 + seconds) * 1000
+  return Number.isSafeInteger(milliseconds) ? milliseconds : null
+}

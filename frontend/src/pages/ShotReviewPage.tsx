@@ -4,7 +4,8 @@ import { useLocation, useParams } from 'react-router-dom'
 import { ShotHeatmap } from '../components/ShotHeatmap'
 import { ShotPositionPicker } from '../components/ShotPositionPicker'
 import { ShotResultSummary } from '../components/ShotResultSummary'
-import { hasShotPosition, shotCategory, shotNumbers, SHOT_CATEGORY_LABELS } from '../utils/shotPresentation'
+import { hasShotPosition, shotCategory, shotNumbers, formatShotTime, parseShotTime, shouldShowPlayerNames, SHOT_CATEGORY_LABELS } from '../utils/shotPresentation'
+import type { ShotCategory } from '../utils/shotPresentation'
 
 const ShotCourt3D = lazy(() => import('../components/ShotCourt3D').then((module) => ({ default: module.ShotCourt3D })))
 
@@ -16,7 +17,6 @@ const SHOT_TYPES = [
   ['turnaround', '턴어라운드'], ['hook_shot', '훅슛'], ['other', '기타'],
 ]
 const TYPE_LABEL = Object.fromEntries(SHOT_TYPES)
-const RESULT_LABEL: Record<string, string> = { made: '성공', missed: '실패', needs_review: '결과 확인 필요' }
 
 type Analysis = { id: string; title: string; duration_ms: number; fps: number | null; play_type: string }
 type Player = { id: string; display_name: string; jersey_number: string | null }
@@ -26,16 +26,21 @@ type Stats = { overall: StatLine; by_player: Record<string, StatLine>; by_shot_t
 type ShotList = { analysis_status: string; duration_ms: number; fps: number | null; shots: Shot[]; statistics: Stats }
 type FormState = { player_id: string; candidate_time_ms: string; sequence_start_ms: string; sequence_end_ms: string; court_x: string; court_y: string; result: string; shot_type: string }
 
-function milliseconds(value: string) { return Math.round(Number(value) * 1000) }
-function seconds(value: number) { return (value / 1000).toFixed(2) }
-function readableReason(reason: string | null) {
-  if (!reason) return '자동 판정을 확인해 주세요.'
-  if (reason.includes('OpenAI')) return '외부 AI 판정을 완료하지 못해 사람이 확인해야 합니다.'
-  if (reason.includes('court') || reason.includes('좌표')) return '코트 위치를 확정하지 못했습니다.'
-  return reason
+function milliseconds(value: string, original?: number) {
+  const parsed = parseShotTime(value, original)
+  if (parsed === null) throw new Error('시간은 08:26처럼 분:초로 입력해 주세요.')
+  return parsed
+}
+function readableReason(shot: Shot) {
+  const reasons: string[] = []
+  if (shot.result !== 'made' && shot.result !== 'missed') reasons.push('성공·실패를 영상에서 확정하지 못했습니다.')
+  if (!hasShotPosition(shot)) reasons.push('슛 위치를 확정하지 못했습니다.')
+  if (reasons.length) return reasons.join(' ')
+  if (shot.shot_type === 'needs_review') return '슛 종류를 확정하지 못했습니다.'
+  return '자동 판정을 확인해 주세요.'
 }
 function shotToForm(shot: Shot): FormState {
-  return { player_id: shot.player_id, candidate_time_ms: seconds(shot.candidate_time_ms), sequence_start_ms: seconds(shot.sequence_start_ms), sequence_end_ms: seconds(shot.sequence_end_ms), court_x: shot.court_x?.toFixed(2) ?? '', court_y: shot.court_y?.toFixed(2) ?? '', result: shot.result === 'needs_review' ? '' : shot.result, shot_type: shot.shot_type === 'needs_review' ? '' : shot.shot_type }
+  return { player_id: shot.player_id, candidate_time_ms: formatShotTime(shot.candidate_time_ms), sequence_start_ms: formatShotTime(shot.sequence_start_ms), sequence_end_ms: formatShotTime(shot.sequence_end_ms), court_x: shot.court_x?.toFixed(2) ?? '', court_y: shot.court_y?.toFixed(2) ?? '', result: shot.result === 'needs_review' ? '' : shot.result, shot_type: shot.shot_type === 'needs_review' ? '' : shot.shot_type }
 }
 
 function possibleNonShot(shot: Shot) {
@@ -77,6 +82,7 @@ export function ShotReviewPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const addFormRef = useRef<HTMLFormElement>(null)
   const sequenceEnd = useRef<number | null>(null)
+  const sequenceStart = useRef<number | null>(null)
   const openedDeepLink = useRef<string | null>(null)
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
@@ -95,6 +101,7 @@ export function ShotReviewPage() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const data = useMemo(() => sourceData ? filteredShotList(sourceData, playerFilter, resultFilter, typeFilter) : null, [sourceData, playerFilter, resultFilter, typeFilter])
   const selected = data?.shots.find((shot) => shot.id === selectedId) ?? null
+  const showPlayerNames = shouldShowPlayerNames(analysis?.play_type ?? 'solo', players.map(player => player.display_name))
   const numbers = useMemo(() => shotNumbers(sourceData?.shots ?? []), [sourceData?.shots])
 
   const load = useCallback(async () => {
@@ -106,7 +113,7 @@ export function ShotReviewPage() {
 
   useEffect(() => { load().catch((caught) => setError(caught.message)) }, [load])
   useEffect(() => { setSelectedZone(null) }, [playerFilter, resultFilter, typeFilter])
-  useEffect(() => { if (data && selectedId && !data.shots.some((shot) => shot.id === selectedId)) { setSelectedId(null); setForm(null) } }, [data, selectedId])
+  useEffect(() => { if (data && selectedId && !data.shots.some((shot) => shot.id === selectedId)) { videoRef.current?.pause(); sequenceEnd.current = null; sequenceStart.current = null; setSelectedId(null); setForm(null) } }, [data, selectedId])
   useEffect(() => { if (selected && !adding) setForm(shotToForm(selected)) }, [selected, adding])
   useEffect(() => {
     if (!adding || !showShotList) return
@@ -123,15 +130,17 @@ export function ShotReviewPage() {
     setShowAdvanced(shot.court_x == null || shot.court_y == null)
     setAdding(false); setSelectedId(shot.id); setForm(shotToForm(shot)); setError(''); setNotice('')
     sequenceEnd.current = shot.sequence_end_ms / 1000
+    sequenceStart.current = shot.sequence_start_ms / 1000
     if (videoRef.current) videoRef.current.currentTime = shot.sequence_start_ms / 1000
   }
   function startAdding() {
+    videoRef.current?.pause(); sequenceEnd.current = null; sequenceStart.current = null
     setShowAdvanced(false)
     const duration = analysis?.duration_ms ?? data?.duration_ms ?? 10_000
     const candidate = selected?.candidate_time_ms ?? Math.max(0, Math.round(duration / 2))
     const start = Math.max(0, candidate - 2000); const end = Math.min(duration, Math.max(candidate + 2000, start + 1))
     setAdding(true); setSelectedId(null); setError(''); setNotice('')
-    setForm({ player_id: players[0]?.id ?? '', candidate_time_ms: seconds(candidate), sequence_start_ms: seconds(start), sequence_end_ms: seconds(end), court_x: '25', court_y: '15', result: 'made', shot_type: 'set_shot' })
+    setForm({ player_id: players[0]?.id ?? '', candidate_time_ms: formatShotTime(candidate), sequence_start_ms: formatShotTime(start), sequence_end_ms: formatShotTime(end), court_x: '25', court_y: '15', result: 'made', shot_type: 'set_shot' })
   }
   function playShot(shot: Shot) {
     choose(shot)
@@ -144,7 +153,16 @@ export function ShotReviewPage() {
     requestAnimationFrame(() => video.scrollIntoView({ behavior: 'smooth', block: 'center' }))
   }
   function onVideoTime() {
-    if (videoRef.current && sequenceEnd.current !== null && videoRef.current.currentTime >= sequenceEnd.current) { videoRef.current.pause(); sequenceEnd.current = null }
+    const video = videoRef.current
+    if (video && !video.paused && sequenceEnd.current !== null && sequenceStart.current !== null && video.currentTime >= sequenceEnd.current) {
+      video.currentTime = sequenceStart.current
+    }
+  }
+  function onVideoEnded() {
+    const video = videoRef.current
+    if (!video || sequenceStart.current === null || sequenceEnd.current === null) return
+    video.currentTime = sequenceStart.current
+    video.play().catch(() => setError('반복 재생이 차단됐습니다. 영상의 재생 버튼을 눌러 주세요.'))
   }
   function change(field: keyof FormState, value: string) { setForm((current) => current ? { ...current, [field]: value } : current) }
 
@@ -157,11 +175,15 @@ export function ShotReviewPage() {
     }
     setBusy(true); setError('')
     try {
-      const payload = { player_id: form.player_id, candidate_time_ms: milliseconds(form.candidate_time_ms), sequence_start_ms: milliseconds(form.sequence_start_ms), sequence_end_ms: milliseconds(form.sequence_end_ms), court_x: Number(form.court_x), court_y: Number(form.court_y), result: form.result, shot_type: form.shot_type }
+      const payload = { player_id: form.player_id, candidate_time_ms: milliseconds(form.candidate_time_ms, adding ? undefined : selected?.candidate_time_ms), sequence_start_ms: milliseconds(form.sequence_start_ms, adding ? undefined : selected?.sequence_start_ms), sequence_end_ms: milliseconds(form.sequence_end_ms, adding ? undefined : selected?.sequence_end_ms), court_x: Number(form.court_x), court_y: Number(form.court_y), result: form.result, shot_type: form.shot_type }
       const url = adding ? `${API_BASE}/analyses/${analysisId}/shots` : `${API_BASE}/analyses/${analysisId}/shots/${selectedId}`
       const response = await fetch(url, { method: adding ? 'POST' : 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const result = await response.json(); if (!response.ok) throw new Error(result.detail?.message ?? '슛 기록을 저장하지 못했습니다.')
       const savedShot = result as Shot
+      if ((resultFilter === 'position_review' || resultFilter === 'outcome_review') && sourceData) {
+        const updated = [...sourceData.shots.filter(shot => shot.id !== savedShot.id), savedShot]
+        if (!updated.some(shot => shotCategory(shot) === resultFilter)) setResultFilter('')
+      }
       setSourceData((current) => {
         if (!current) return current
         const shots = [...current.shots.filter((shot) => shot.id !== savedShot.id), savedShot].sort((a, b) => a.candidate_time_ms - b.candidate_time_ms)
@@ -171,12 +193,14 @@ export function ShotReviewPage() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : '슛 기록을 저장하지 못했습니다.') } finally { setBusy(false) }
   }
   async function remove() {
-    if (!selected || !window.confirm(`${seconds(selected.candidate_time_ms)}초 슛 기록을 삭제할까요?`)) return
+    if (!selected || !window.confirm(`${formatShotTime(selected.candidate_time_ms)} 슛 기록을 삭제할까요?`)) return
     setBusy(true); setError('')
     try {
       const response = await fetch(`${API_BASE}/analyses/${analysisId}/shots/${selected.id}`, { method: 'DELETE' })
       if (!response.ok) { const result = await response.json(); throw new Error(result.detail?.message ?? '삭제하지 못했습니다.') }
-      videoRef.current?.pause(); sequenceEnd.current = null
+      videoRef.current?.pause(); sequenceEnd.current = null; sequenceStart.current = null
+      if ((resultFilter === 'position_review' || resultFilter === 'outcome_review') && sourceData &&
+          !sourceData.shots.some(shot => shot.id !== selected.id && shotCategory(shot) === resultFilter)) setResultFilter('')
       setSourceData((current) => {
         if (!current) return current
         const shots = current.shots.filter((shot) => shot.id !== selected.id)
@@ -187,7 +211,7 @@ export function ShotReviewPage() {
   }
 
   const visibleShots = selectedZone ? data?.shots.filter((shot) => shot.zone_code === selectedZone) ?? [] : data?.shots ?? []
-  const selectedZoneLabel = visibleShots[0]?.zone_label ?? (selectedZone ? '선택한 구역' : null)
+  const selectedZoneLabel = selectedZone ? visibleShots[0]?.zone_label ?? '선택한 구역' : null
   function selectZone(zone: string) {
     const nextZone = selectedZone === zone ? null : zone
     setSelectedZone(nextZone)
@@ -195,12 +219,12 @@ export function ShotReviewPage() {
   if (!data) return <div className="page shot-review-page"><p role="status" className="inline-warning">{error || '분석 결과를 불러오는 중입니다…'}</p></div>
   return <div className="page shot-review-page">
     <header className="setup-header"><div><p className="eyebrow">RESULTS & HEATMAP</p><h1>{analysis?.title ?? '슛 분석 결과'}</h1>{analysis && analysis.play_type !== 'solo' && <p className="inline-warning">다인원 자동 추적은 아직 지원하지 않습니다. 원본 영상을 보면서 슛과 선수를 직접 기록해 주세요.</p>}</div></header>
-    <ShotResultSummary shots={data.shots} />
+    <ShotResultSummary shots={sourceData?.shots ?? []} selectedCategory={resultFilter ? resultFilter as ShotCategory : null} onSelect={(category) => { setResultFilter(category ?? ''); setPlayerFilter(''); setTypeFilter(''); setSelectedZone(null); setShowShotList(true) }} />
     <section className="setup-card results-dashboard">
       <div className="panel-title"><div><h2>14개 구역 히트맵</h2></div></div>
       {showShotList && <div className="result-filters" aria-label="결과 필터">
         <label>선수<select value={playerFilter} onChange={(event) => setPlayerFilter(event.target.value)}><option value="">전체 선수</option>{players.map((player) => <option key={player.id} value={player.id}>{player.display_name}{player.jersey_number ? ` #${player.jersey_number}` : ''}</option>)}</select></label>
-        <label>기록 구분<select value={resultFilter} onChange={(event) => setResultFilter(event.target.value)}><option value="">전체 결과</option>{Object.entries(SHOT_CATEGORY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>기록 구분<select value={resultFilter} onChange={(event) => setResultFilter(event.target.value)}><option value="">전체</option>{Object.entries(SHOT_CATEGORY_LABELS).filter(([value]) => value === 'made' || value === 'missed' || sourceData?.shots.some(shot => shotCategory(shot) === value)).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>슛 종류<select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="">전체 종류</option>{SHOT_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <button className="button secondary" type="button" onClick={() => { setPlayerFilter(''); setResultFilter(''); setTypeFilter(''); setSelectedZone(null) }}>필터 초기화</button>
       </div>}
@@ -215,31 +239,31 @@ export function ShotReviewPage() {
     <Suspense fallback={<p className="inline-warning">3D 코트를 불러오는 중입니다…</p>}><ShotCourt3D
       shots={visibleShots}
       numbers={numbers}
+      showPlayerName={showPlayerNames}
       selectedShot={selected}
       jerseyNumber={selected ? players.find((player) => player.id === selected.player_id)?.jersey_number ?? null : null}
       onSelect={(id) => { const shot = data?.shots.find((item) => item.id === id); if (shot) playShot(shot) }}
       onOpenDetails={() => {
-        if (showShotList) { videoRef.current?.pause(); setSelectedId(null) }
+        if (showShotList) { videoRef.current?.pause(); sequenceEnd.current = null; sequenceStart.current = null; setSelectedId(null) }
         setShowShotList((open) => !open)
       }}
       detailsOpen={showShotList}
       typeLabels={TYPE_LABEL}
     /></Suspense>
     <div className="review-layout" hidden={!showShotList}>
-      {showShotList && <section className="setup-card shot-list-panel"><div className="panel-title"><div><h2>{selectedZoneLabel ? `${selectedZoneLabel} 슛 기록` : '슛 기록'}</h2><p>{selectedZone ? `${visibleShots.length}개의 구역 기록을 표시합니다.` : analysis?.play_type !== 'solo' ? '원본을 확인하며 슛과 선수를 직접 기록합니다.' : data?.analysis_status === 'completed' ? '모든 기록 확인 완료' : '확인이 필요한 기록이 있습니다.'}</p></div><div className="actions"><button className="button primary" onClick={startAdding} disabled={!players.length}>{analysis?.play_type !== 'solo' ? '슛 직접 추가' : '빠진 슛 추가'}</button><button className="button secondary" onClick={() => { videoRef.current?.pause(); setShowShotList(false); setSelectedId(null) }}>닫기</button></div></div>
+      {showShotList && <section className="setup-card shot-list-panel"><div className="panel-title"><div><h2>{selectedZoneLabel ? `${selectedZoneLabel} 슛 기록` : resultFilter ? `${SHOT_CATEGORY_LABELS[resultFilter as ShotCategory]} 슛 기록` : '전체 슛 기록'}</h2>{visibleShots.some((shot) => shot.status === 'needs_review' || shotCategory(shot) === 'position_review' || shotCategory(shot) === 'outcome_review') && <p>확인이 필요한 기록이 있습니다.</p>}</div><div className="actions"><button className="button primary" onClick={startAdding} disabled={!players.length}>{analysis?.play_type !== 'solo' ? '슛 직접 추가' : '빠진 슛 추가'}</button><button className="button secondary" onClick={() => { videoRef.current?.pause(); sequenceEnd.current = null; sequenceStart.current = null; setShowShotList(false); setSelectedId(null) }}>닫기</button></div></div>
         {!visibleShots.length && <p className="inline-warning">현재 조건에 맞는 슛이 없습니다.{!selectedZone && ' 빠진 슛을 직접 추가할 수 있습니다.'}</p>}
-        <ol className="review-shot-list">{visibleShots.map((shot) => <li key={shot.id}><button className={selected?.id === shot.id ? 'selected' : ''} onClick={() => playShot(shot)}><span className={`result-mark ${shotCategory(shot)}`}>{numbers[shot.id]}</span><span><strong>{numbers[shot.id]}번 · {seconds(shot.candidate_time_ms)}초 · {shot.player_name}</strong><small>{possibleNonShot(shot) ? '슛이 아닐 수 있음 · 원본 확인 필요' : `${RESULT_LABEL[shot.result]} · ${TYPE_LABEL[shot.shot_type] ?? shot.shot_type} · ${shot.zone_label ?? '위치 확인 필요'}`}</small></span><em>{SHOT_CATEGORY_LABELS[shotCategory(shot)]}<small>{shot.status === 'user_confirmed' ? '사용자 확인' : '자동 판정'}</small></em></button></li>)}</ol>
+        <ol className="review-shot-list">{visibleShots.map((shot) => <li key={shot.id}><button className={selected?.id === shot.id ? 'selected' : ''} onClick={() => playShot(shot)}><span className={`result-mark ${shotCategory(shot)}`}>{numbers[shot.id]}</span><span><strong>{numbers[shot.id]}번 · {formatShotTime(shot.candidate_time_ms)}{showPlayerNames ? ` · ${shot.player_name}` : ''}</strong><small>{TYPE_LABEL[shot.shot_type] ?? '슛 종류 확인 필요'} / {shot.zone_label ?? '위치 확인 필요'}</small></span></button></li>)}</ol>
       </section>}
       <section className="setup-card shot-detail-panel">
-        <video ref={videoRef} src={`${API_BASE}/analyses/${analysisId}/video`} controls preload="metadata" onTimeUpdate={onVideoTime} />
-        <div className="video-review-toolbar"><span>원본 {data?.fps ? `${data.fps.toFixed(2)}fps` : 'fps 확인 불가'} · 인위적인 60fps 변환 없음</span></div>
-        {selected && (!hasShotPosition(selected) || shotCategory(selected) === 'outcome_review' || selected.status === 'needs_review') && !adding && <p className="inline-warning"><strong>확인할 이유:</strong> {readableReason(selected.review_reason)}</p>}
+        <video ref={videoRef} src={`${API_BASE}/analyses/${analysisId}/video`} controls preload="metadata" onTimeUpdate={onVideoTime} onEnded={onVideoEnded} />
+        {selected && (!hasShotPosition(selected) || shotCategory(selected) === 'outcome_review' || selected.status === 'needs_review') && !adding && <p className="inline-warning"><strong>확인할 이유:</strong> {readableReason(selected)}</p>}
         {selected && possibleNonShot(selected) && !adding && <p className="helper-text">원본을 보고 슛이 맞으면 아래에서 결과·종류·위치를 선택해 저장하세요. 슛이 아니면 이 후보 기록을 삭제할 수 있습니다.</p>}
         {!form && <p className="helper-text">왼쪽에서 슛을 선택하거나 빠진 슛을 추가해 주세요.</p>}
-        {form && <form ref={addFormRef} className={`shot-edit-form${showAdvanced ? '' : ' shot-form-basic'}`} onSubmit={save} onInvalidCapture={() => { setShowAdvanced(true); setError('필수 항목을 확인해 주세요. 코트 위치가 비어 있다면 가로·세로 값을 입력해야 합니다.') }}><h2>{adding ? '빠진 슛 추가' : '선택한 슛 확인·수정'}</h2>
-          <ShotPositionPicker x={form.court_x} y={form.court_y} disabled={busy} onChange={(x, y) => { setForm((current) => current ? { ...current, court_x: x, court_y: y } : current); setNotice(''); setError('') }} />
+        {form && <form ref={addFormRef} className={`shot-edit-form${showAdvanced ? '' : ' shot-form-basic'}`} onSubmit={save} onInvalidCapture={() => { setShowAdvanced(true); setError('시간은 분:초 형식으로 입력하고, 결과·종류와 코트 위치를 확인해 주세요.') }}><h2>{adding ? '빠진 슛 추가' : '선택한 슛 확인·수정'}</h2>
+          <ShotPositionPicker x={form.court_x} y={form.court_y} disabled={busy} saved={!adding && selected?.court_x != null && selected?.court_y != null && Number(form.court_x) === Number(selected.court_x.toFixed(2)) && Number(form.court_y) === Number(selected.court_y.toFixed(2))} onChange={(x, y) => { setForm((current) => current ? { ...current, court_x: x, court_y: y } : current); setNotice(''); setError('') }} />
           <button className="button secondary shot-advanced-toggle" type="button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced((value) => !value)}>{showAdvanced ? '시간·코트 위치 닫기' : '시간·코트 위치 직접 수정'}</button>
-          <div className="shot-form-grid"><label>선수<select value={form.player_id} onChange={(e) => change('player_id', e.target.value)}>{players.map((player) => <option value={player.id} key={player.id}>{player.display_name}{player.jersey_number ? ` #${player.jersey_number}` : ''}</option>)}</select></label><label>슛 시간(초)<input type="number" min="0" max={(data?.duration_ms ?? 0) / 1000} step="0.01" value={form.candidate_time_ms} onChange={(e) => change('candidate_time_ms', e.target.value)} required /></label><label>장면 시작(초)<input type="number" min="0" step="0.01" value={form.sequence_start_ms} onChange={(e) => change('sequence_start_ms', e.target.value)} required /></label><label>장면 끝(초)<input type="number" min="0" max={(data?.duration_ms ?? 0) / 1000} step="0.01" value={form.sequence_end_ms} onChange={(e) => change('sequence_end_ms', e.target.value)} required /></label><label>코트 가로 x (0~50ft)<input type="number" min="0" max="50" step="0.01" value={form.court_x} onChange={(e) => change('court_x', e.target.value)} required /></label><label>코트 세로 y (0~47ft)<input type="number" min="0" max="47" step="0.01" value={form.court_y} onChange={(e) => change('court_y', e.target.value)} required /></label><label>결과<select value={form.result} onChange={(e) => change('result', e.target.value)} required><option value="" disabled>결과 선택</option><option value="made">성공</option><option value="missed">실패</option></select></label><label>슛 종류<select value={form.shot_type} onChange={(e) => change('shot_type', e.target.value)} required><option value="" disabled>종류 선택</option>{SHOT_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
+          <div className="shot-form-grid"><label>선수<select value={form.player_id} onChange={(e) => change('player_id', e.target.value)}>{players.map((player) => <option value={player.id} key={player.id}>{player.display_name}{player.jersey_number ? ` #${player.jersey_number}` : ''}</option>)}</select></label><label>슛 시간(분:초)<input type="text" placeholder="08:26" pattern="[0-9]+:[0-5][0-9]" value={form.candidate_time_ms} onChange={(e) => change('candidate_time_ms', e.target.value)} required /></label><label>장면 시작(분:초)<input type="text" placeholder="08:24" pattern="[0-9]+:[0-5][0-9]" value={form.sequence_start_ms} onChange={(e) => change('sequence_start_ms', e.target.value)} required /></label><label>장면 끝(분:초)<input type="text" placeholder="08:29" pattern="[0-9]+:[0-5][0-9]" value={form.sequence_end_ms} onChange={(e) => change('sequence_end_ms', e.target.value)} required /></label><label>코트 가로 x (0~50ft)<input type="number" min="0" max="50" step="0.01" value={form.court_x} onChange={(e) => change('court_x', e.target.value)} required /></label><label>코트 세로 y (0~47ft)<input type="number" min="0" max="47" step="0.01" value={form.court_y} onChange={(e) => change('court_y', e.target.value)} required /></label><label>결과<select value={form.result} onChange={(e) => change('result', e.target.value)} required><option value="" disabled>결과 선택</option><option value="made">성공</option><option value="missed">실패</option></select></label><label>슛 종류<select value={form.shot_type} onChange={(e) => change('shot_type', e.target.value)} required><option value="" disabled>종류 선택</option>{SHOT_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
           {notice && <p className="success-note" role="status">{notice}</p>}{error && <p className="form-error" role="alert">{error}</p>}<div className="actions"><button className="button primary" disabled={busy}>{busy ? '저장 중…' : adding ? '슛 추가' : '확인하고 저장'}</button>{adding && <button type="button" className="button secondary" onClick={() => { setAdding(false); setSelectedId(data?.shots[0]?.id ?? null) }}>취소</button>}{selected && !adding && <button type="button" className="button danger" onClick={remove} disabled={busy}>기록 삭제</button>}</div>
         </form>}
       </section>

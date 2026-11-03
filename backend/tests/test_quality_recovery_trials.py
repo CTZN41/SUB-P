@@ -182,3 +182,28 @@ def test_end_of_video_keeps_primary_type_position_without_paid_retry(monkeypatch
     assert review['court_x'] == 25 and review['court_y'] == 22
     assert review['outcome'] == 'unclear' and review['review_required']
     assert result['ai_review']['usage'] == {'input_tokens': 10, 'output_tokens': 2}
+
+
+def test_scoring_recheck_adds_only_five_midpoints_in_time_order(monkeypatch):
+    from app.services import review_frame_trial as frames
+    requested = []
+    def extract(video, times):
+        requested.extend(times)
+        return {t: t for t in times}
+    monkeypatch.setattr(frames, 'frame_map', extract)
+    monkeypatch.setattr(r, '_hoop_crop', lambda frame, point: frame)
+    monkeypatch.setattr(r, '_encode_frame', lambda frame: str(frame))
+    images = frames.dense_rim_inputs(Path('unused'), 506098, [739, 332])
+    assert requested == sorted(set(requested))
+    assert {506098 + t for t in [850, 950, 1050, 1150, 1250]} <= set(requested)
+    assert sum(v['type'] == 'input_image' for v in images) == 30
+    assert sum(v.get('text', '').startswith('overview') for v in images) == 2
+
+
+def test_scoring_recheck_still_rejects_a_truncated_video(monkeypatch):
+    from app.services import review_frame_trial as frames
+    monkeypatch.setattr(frames, 'frame_map', lambda video, times: {times[0]: times[0]})
+    monkeypatch.setattr(r, '_hoop_crop', lambda frame, point: frame)
+    monkeypatch.setattr(r, '_encode_frame', lambda frame: str(frame))
+    with pytest.raises(r.InsufficientOutcomeEvidenceError):
+        frames.dense_rim_inputs(Path('unused'), 598349, [739, 332])

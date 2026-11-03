@@ -4,7 +4,7 @@ import type { CourtShot } from './ShotCourt3D'
 import { ShotHeatmap } from './ShotHeatmap'
 import './MonthlyResults.css'
 import { ShotResultSummary } from './ShotResultSummary'
-import { shotCategory, shotNumbers, SHOT_CATEGORY_LABELS } from '../utils/shotPresentation'
+import { shotCategory, shotNumbers, formatShotTime, SHOT_CATEGORY_LABELS } from '../utils/shotPresentation'
 
 const ShotCourt3D = lazy(() => import('./ShotCourt3D').then((module) => ({ default: module.ShotCourt3D })))
 const TYPE_LABELS: Record<string, string> = {
@@ -86,7 +86,7 @@ export function MonthlyResults() {
         {visibleShots.length ? <ul>{visibleShots.map((shot) => <li key={shot.id}>
           <button type="button" className={selectedId === shot.id ? 'selected' : ''} onClick={() => setSelectedId(shot.id)}>
             <span className={`result-mark ${shotCategory(shot)}`}>{numbers[shot.id]}</span>
-            <span>{numbers[shot.id]}번 · {SHOT_CATEGORY_LABELS[shotCategory(shot)]} · {shot.player_name} · {(shot.candidate_time_ms / 1000).toFixed(2)}초 · {shot.zone_label ?? '위치 확인 필요'}</span>
+            <span>{numbers[shot.id]}번 · {SHOT_CATEGORY_LABELS[shotCategory(shot)]} · {shot.player_name} · {formatShotTime(shot.candidate_time_ms)} · {shot.zone_label ?? '위치 확인 필요'}</span>
           </button>
           <Link to={`/results/${shot.analysis_id}`}>원본 결과</Link>
         </li>)}</ul> : <p>표시할 슛이 없습니다.</p>}

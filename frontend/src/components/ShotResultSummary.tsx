@@ -1,16 +1,23 @@
 import { shotSummary } from '../utils/shotPresentation'
 import type { PresentableShot } from '../utils/shotPresentation'
+import type { ShotCategory } from '../utils/shotPresentation'
 
-export function ShotResultSummary({ shots }: { shots: PresentableShot[] }) {
+export function ShotResultSummary({ shots, selectedCategory = null, onSelect }: {
+  shots: PresentableShot[]
+  selectedCategory?: ShotCategory | null
+  onSelect?: (category: ShotCategory | null) => void
+}) {
   const counts = shotSummary(shots)
-  return <>
-    <section className="review-summary" aria-label="결과 요약">
-      <div><span>전체 후보</span><strong>{counts.total}</strong></div>
-      <div><span>성공</span><strong>{counts.made}</strong></div>
-      <div><span>실패</span><strong>{counts.missed}</strong></div>
-      <div><span>위치 확인 필요</span><strong>{counts.position_review}</strong></div>
-      <div><span>결과 확인 필요</span><strong>{counts.outcome_review}</strong></div>
-    </section>
-    <p className="summary-count-note">성공·실패는 위치와 결과가 모두 정해진 기록입니다. 둘 다 미정이면 결과 확인 필요에만 집계하며, 저장 후 해당 항목으로 이동합니다.</p>
-  </>
+  const cards: { label: string; count: number; category: ShotCategory | null }[] = [
+    { label: '전체 후보', count: counts.total, category: null },
+    { label: '성공', count: counts.made, category: 'made' },
+    { label: '실패', count: counts.missed, category: 'missed' },
+    { label: '위치 확인 필요', count: counts.position_review, category: 'position_review' },
+    { label: '결과 확인 필요', count: counts.outcome_review, category: 'outcome_review' },
+  ]
+  return <section className="review-summary" aria-label="결과 요약">
+    {cards.filter(card => card.count > 0 || (card.category !== 'position_review' && card.category !== 'outcome_review')).map(card => onSelect
+      ? <button key={card.label} type="button" aria-label={`${card.label} 보기`} aria-pressed={selectedCategory === card.category} onClick={() => onSelect(card.category)}><span>{card.label}</span><strong>{card.count}</strong></button>
+      : <div key={card.label}><span>{card.label}</span><strong>{card.count}</strong></div>)}
+  </section>
 }

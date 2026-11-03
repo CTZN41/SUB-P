@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import './ShotCourt3D.css'
+import { formatShotTime } from '../utils/shotPresentation'
+import { COURT_ZONES } from '../utils/courtZones'
+import { addCourtZones, styleCourtZones } from './courtZoneMeshes'
 
 export type CourtShot = {
   id: string
@@ -13,6 +16,7 @@ export type CourtShot = {
   result: string
   shot_type: string
   status: string
+  zone_code?: string | null
 }
 
 const DEFAULT_CAMERA = new THREE.Vector3(62, 64, 76)
@@ -76,10 +80,7 @@ function addCourt(scene: THREE.Scene) {
 
   courtLine(scene, [[0, 0], [50, 0], [50, 47], [0, 47]], true)
   courtLine(scene, [[17, 0], [33, 0], [33, 19], [17, 19]], true)
-  courtLine(scene, [[3, 0], [3, 14]])
-  courtLine(scene, [[47, 0], [47, 14]])
-  const theta = Math.atan2(14 - 5.25, Math.sqrt(23.75 ** 2 - (14 - 5.25) ** 2))
-  courtLine(scene, arc(25, 5.25, 23.75, theta, Math.PI - theta))
+  // Three-point boundaries are drawn by the shared 2D/3D zone outlines.
   courtLine(scene, arc(25, 5.25, 4, 0, Math.PI))
   courtLine(scene, arc(25, 19, 6, 0, Math.PI))
   courtLine(scene, arc(25, 47, 6, Math.PI, 2 * Math.PI))
@@ -137,11 +138,12 @@ function spreadOverlaps(shots: CourtShot[]) {
   })
 }
 
-export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSelect, onOpenDetails, detailsOpen = false, typeLabels }: {
+export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPlayerName = true, onSelect, onOpenDetails, detailsOpen = false, typeLabels }: {
   shots: CourtShot[]
   numbers: Record<string, number>
   selectedShot: CourtShot | null
   jerseyNumber: string | null
+  showPlayerName?: boolean
   onSelect: (shotId: string) => void
   onOpenDetails?: () => void
   detailsOpen?: boolean
@@ -153,10 +155,15 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
   const controlsRef = useRef<OrbitControls | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const markersRef = useRef<THREE.Group | null>(null)
+  const zonesRef = useRef(new Map<string, THREE.Group>())
+  const activeZoneRef = useRef<string | null>(null)
+  const transitionRef = useRef<number | null>(null)
+  const cameraAnimatingRef = useRef(false)
   const texturesRef = useRef<Map<string, THREE.Texture>>(new Map())
   const onSelectRef = useRef(onSelect)
   const shotsRef = useRef(shots)
   const [renderError, setRenderError] = useState(false)
+  const [activeZone, setActiveZone] = useState<string | null>(null)
 
   useEffect(() => {
     onSelectRef.current = onSelect
@@ -188,6 +195,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
     light.position.set(-15, 55, 30)
     scene.add(light)
     addCourt(scene)
+    zonesRef.current = addCourtZones(scene)
     const markers = new THREE.Group()
     scene.add(markers)
     const camera = new THREE.PerspectiveCamera(48, 1, .1, 400)
@@ -201,12 +209,14 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
     controls.maxPolarAngle = Math.PI / 2.15
     controls.update()
     const draw = () => {
-      controls.minDistance = minimumCourtDistance(camera, controls.target) * .55
+      controls.minDistance = activeZoneRef.current ? 14 : minimumCourtDistance(camera, controls.target) * .55
       const offset = camera.position.clone().sub(controls.target)
       if (offset.length() < controls.minDistance) camera.position.copy(controls.target).add(offset.setLength(controls.minDistance))
       renderer.render(scene, camera)
     }
     controls.addEventListener('change', draw)
+    const stopCameraMotion = () => { cameraAnimatingRef.current = false }
+    controls.addEventListener('start', stopCameraMotion)
     const resize = () => {
       const width = mount.clientWidth
       const height = mount.clientHeight
@@ -242,7 +252,14 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
         if (distance <= radius && (!nearest || distance < nearest.distance)) nearest = { id, distance }
       }
       const shot = shotsRef.current.find((item) => item.id === nearest?.id)
-      if (shot) onSelectRef.current(shot.id)
+      if (shot) { onSelectRef.current(shot.id); return }
+      const raycaster = new THREE.Raycaster()
+      raycaster.setFromCamera(new THREE.Vector2((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1), camera)
+      const hit = raycaster.intersectObjects([...zonesRef.current.values()], true).find(item => item.object instanceof THREE.Mesh)
+      if (hit) {
+        const code = hit.object.userData.zoneCode as string
+        setActiveZone(current => current === code ? null : code)
+      }
     }
     const cancel = () => { pointerDown = null }
     renderer.domElement.addEventListener('pointerdown', down)
@@ -260,6 +277,8 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
       renderer.domElement.ownerDocument.removeEventListener('pointerup', up, true)
       renderer.domElement.removeEventListener('pointercancel', cancel)
       controls.removeEventListener('change', draw)
+      controls.removeEventListener('start', stopCameraMotion)
+      if (transitionRef.current !== null) cancelAnimationFrame(transitionRef.current)
       controls.dispose()
       scene.traverse((item) => {
         if (item instanceof THREE.Mesh || item instanceof THREE.Line || item instanceof THREE.LineLoop) {
@@ -277,6 +296,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
       controlsRef.current = null
       rendererRef.current = null
       markersRef.current = null
+      zonesRef.current.clear()
     }
   }, [])
 
@@ -299,20 +319,56 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
       const size = selected ? 3.8 : 3.3
       const marker = new THREE.Mesh(
         new THREE.PlaneGeometry(size, size),
-        new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false }),
+        new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: activeZone && shot.zone_code !== activeZone ? .3 : 1, side: THREE.DoubleSide, depthWrite: false }),
       )
       marker.rotation.x = -Math.PI / 2
       marker.position.set(
         THREE.MathUtils.clamp(point.x + offsetX, -25 + size / 2, 25 - size / 2),
-        .17,
+        .17 + (zonesRef.current.get(shot.zone_code ?? '')?.position.y ?? 0),
         THREE.MathUtils.clamp(point.z + offsetY, -23.5 + size / 2, 23.5 - size / 2),
       )
       marker.userData.shotId = shot.id
+      marker.userData.zoneCode = shot.zone_code
       marker.renderOrder = 2
       markers.add(marker)
     }
     render()
-  }, [shots, numbers, selectedShot?.id])
+  }, [shots, numbers, selectedShot?.id, activeZone])
+
+  useEffect(() => {
+    const camera = cameraRef.current
+    const controls = controlsRef.current
+    if (!camera || !controls) return
+    activeZoneRef.current = activeZone
+    styleCourtZones(zonesRef.current, activeZone)
+    const group = activeZone ? zonesRef.current.get(activeZone) : null
+    const bounds = group ? new THREE.Box3().setFromObject(group) : null
+    const target = bounds ? bounds.getCenter(new THREE.Vector3()).setY(1) : COURT_TARGET.clone()
+    const fromPosition = camera.position.clone()
+    const fromTarget = controls.target.clone()
+    const direction = camera.position.clone().sub(controls.target).normalize()
+    const distance = bounds ? Math.max(25, bounds.getSize(new THREE.Vector3()).length() * 1.5) : DEFAULT_CAMERA.length()
+    const destination = activeZone ? target.clone().addScaledVector(direction, distance) : DEFAULT_CAMERA.clone()
+    const heights = new Map([...zonesRef.current].map(([code, zone]) => [code, zone.position.y]))
+    const started = performance.now()
+    cameraAnimatingRef.current = true
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - started) / 450)
+      const eased = 1 - (1 - progress) ** 3
+      for (const [code, zone] of zonesRef.current) zone.position.y = THREE.MathUtils.lerp(heights.get(code) ?? 0, code === activeZone ? 1.6 : 0, eased)
+      for (const marker of markersRef.current?.children ?? []) marker.position.y = .17 + (zonesRef.current.get(marker.userData.zoneCode)?.position.y ?? 0)
+      if (cameraAnimatingRef.current) {
+        camera.position.lerpVectors(fromPosition, destination, eased)
+        controls.target.lerpVectors(fromTarget, target, eased)
+      }
+      controls.update()
+      render()
+      if (progress < 1) transitionRef.current = requestAnimationFrame(animate)
+      else transitionRef.current = null
+    }
+    transitionRef.current = requestAnimationFrame(animate)
+    return () => { if (transitionRef.current !== null) cancelAnimationFrame(transitionRef.current) }
+  }, [activeZone])
 
   function zoom(factor: number) {
     const camera = cameraRef.current
@@ -329,6 +385,8 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
     const camera = cameraRef.current
     const controls = controlsRef.current
     if (!camera || !controls) return
+    cameraAnimatingRef.current = false
+    setActiveZone(null)
     camera.position.copy(DEFAULT_CAMERA)
     controls.target.copy(COURT_TARGET)
     controls.update()
@@ -336,10 +394,12 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, onSele
   }
 
   const locatedCount = shots.filter((shot) => shot.court_x != null && shot.court_y != null).length
+  const selectedZone = COURT_ZONES.find(zone => zone.code === activeZone)
   return <div className="shot-court-3d">
     <div className="court-3d-heading"><div><strong>3D 슈팅 맵</strong><span>코트를 끌어 회전하고, 슛 번호를 눌러 영상을 확인하세요.</span></div><div className="court-3d-controls"><button type="button" onClick={() => zoom(.8)} aria-label="3D 코트 확대">+</button><button type="button" onClick={() => zoom(1.25)} aria-label="3D 코트 축소">−</button><button type="button" onClick={reset}>초기 시점</button>{onOpenDetails && <button type="button" onClick={onOpenDetails} aria-expanded={detailsOpen}>{detailsOpen ? '기록 관리 닫기' : '기록 관리'}</button>}</div></div>
-    {renderError ? <p className="court-3d-unavailable">이 브라우저에서는 3D 코트를 표시할 수 없습니다. 아래 슛 목록에서 기록을 확인할 수 있습니다.</p> : <div ref={mountRef} className="court-3d-canvas" role="img" aria-label={`슛 ${locatedCount}개가 표시된 3D 반코트`} />}
+    <div className="court-3d-zone-controls"><label>3D 구역<select value={activeZone ?? ''} onChange={event => setActiveZone(event.target.value || null)}><option value="">전체 코트</option>{COURT_ZONES.map(zone => <option key={zone.code} value={zone.code}>{zone.label}</option>)}</select></label>{activeZone && <button type="button" onClick={reset}>전체 코트로</button>}<span role="status">{selectedZone ? `${selectedZone.label} · ${shots.filter(shot => shot.zone_code === activeZone).length}개 기록` : '바닥 구역을 누르면 강조해서 볼 수 있습니다.'}</span></div>
+    {renderError ? <p className="court-3d-unavailable">이 브라우저에서는 3D 코트를 표시할 수 없습니다. 아래 슛 목록에서 기록을 확인할 수 있습니다.</p> : <div ref={mountRef} className="court-3d-canvas" data-selected-zone={activeZone ?? ''} data-zone-count={COURT_ZONES.length} role="img" aria-label={`슛 ${locatedCount}개가 표시된 3D 반코트`} />}
     <div className="court-3d-footer"><span><i className="made" /> 성공</span><span><i className="missed" /> 실패</span><span><i className="uncertain" /> 결과 확인 필요</span><span>숫자는 슛 목록과 같은 번호입니다.</span>{shots.some((shot) => shot.court_x == null || shot.court_y == null) && <span>위치 없는 기록은 기록 관리에서 확인</span>}</div>
-    {selectedShot && <div className="court-3d-selected"><div><strong>{numbers[selectedShot.id]}번 · {selectedShot.player_name}{jerseyNumber ? ` #${jerseyNumber}` : ''} · {(selectedShot.candidate_time_ms / 1000).toFixed(2)}초</strong><span>{selectedShot.zone_label ?? '위치 확인 필요'} · {selectedShot.result === 'made' ? '성공' : selectedShot.result === 'missed' ? '실패' : '결과 확인 필요'} · {typeLabels[selectedShot.shot_type] ?? selectedShot.shot_type} · {selectedShot.status === 'user_confirmed' ? '사용자 확인' : selectedShot.status === 'needs_review' ? '확인 필요' : '자동 판정'}</span></div></div>}
+    {selectedShot && <div className="court-3d-selected"><div><strong>{numbers[selectedShot.id]}번{showPlayerName ? ` · ${selectedShot.player_name}${jerseyNumber ? ` #${jerseyNumber}` : ''}` : ''} · {formatShotTime(selectedShot.candidate_time_ms)}</strong><span>{selectedShot.zone_label ?? '위치 확인 필요'} · {selectedShot.result === 'made' ? '성공' : selectedShot.result === 'missed' ? '실패' : '결과 확인 필요'} · {typeLabels[selectedShot.shot_type] ?? selectedShot.shot_type}</span></div></div>}
   </div>
 }

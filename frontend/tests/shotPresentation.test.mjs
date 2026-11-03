@@ -1,8 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { shotCategory, shotSummary, shotNumbers } from '../src/utils/shotPresentation.ts'
+import { shotCategory, shotSummary, shotNumbers, formatShotTime, parseShotTime, shouldShowPlayerNames } from '../src/utils/shotPresentation.ts'
 
 const shot = (id, result, x = 25, y = 22) => ({ id, result, court_x: x, court_y: y })
+
+test('display uses minutes and whole seconds without changing stored milliseconds', () => {
+  assert.equal(formatShotTime(57444), '00:57')
+  assert.equal(formatShotTime(506100), '08:26')
+  assert.equal(formatShotTime(598349), '09:58')
+  assert.equal(formatShotTime(599999), '09:59')
+  assert.equal(formatShotTime(600000), '10:00')
+  assert.equal(formatShotTime(NaN), '--:--')
+})
 
 test('84 records partition into exclusive outcome/position buckets', () => {
   const shots = [
@@ -38,4 +47,21 @@ test('numbers come from the unfiltered source and remain after selection filters
   assert.deepEqual(shots.filter(s => s.result === 'made').map(s => numbers[s.id]), [1, 3])
   assert.deepEqual(shotNumbers([]), {})
   assert.equal(shotSummary([]).total, 0)
+})
+
+
+test('default solo name is hidden but actual or multiple player names are shown', () => {
+  assert.equal(shouldShowPlayerNames('solo', ['선수 A']), false)
+  assert.equal(shouldShowPlayerNames('solo', ['민수']), true)
+  assert.equal(shouldShowPlayerNames('solo', ['선수 A', '선수 B']), true)
+  assert.equal(shouldShowPlayerNames('one_on_one', ['선수 A']), true)
+})
+
+
+test('minute inputs parse safely and preserve untouched subsecond timing', () => {
+  assert.equal(parseShotTime('08:26'), 506000)
+  assert.equal(parseShotTime('08:26', 506098), 506098)
+  assert.equal(parseShotTime('08:27', 506098), 507000)
+  assert.equal(parseShotTime('00:00'), 0)
+  for (const invalid of ['08:60', '506.10', '08:26.10', '', '-1:00', '08:2']) assert.equal(parseShotTime(invalid), null)
 })

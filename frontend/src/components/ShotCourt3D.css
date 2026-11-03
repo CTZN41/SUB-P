@@ -47,6 +47,9 @@
 }
 .court-3d-canvas canvas { display: block; touch-action: none; cursor: grab; }
 .court-3d-canvas canvas:active { cursor: grabbing; }
+.court-3d-zone-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; color: #a2b0a8; font-size: .8rem; }
+.court-3d-zone-controls label { display: flex; align-items: center; gap: 8px; }
+.court-3d-zone-controls select, .court-3d-zone-controls button { padding: 8px 10px; border: 1px solid #526347; border-radius: 8px; background: #17251d; color: #eef5ea; font: inherit; }
 .court-3d-unavailable { padding: 30px; color: #ffda91; }
 .court-3d-footer {
   display: flex;

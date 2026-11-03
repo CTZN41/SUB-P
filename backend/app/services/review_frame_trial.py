@@ -87,7 +87,9 @@ def dense_rim_inputs(video, time_ms, hoop_point, evidence_end_ms=None):
     must be validated against outcome labels before use.
     """
     from app.services import openai_shot_review as r
-    offsets = list(range(600, 2801, 100))
+    # Fast, clean makes can pass through the net between the 100ms samples.
+    # Add five midpoint crops to the existing second-pass request, not a new call.
+    offsets = sorted(set(range(600, 2801, 100)) | {850, 950, 1050, 1150, 1250})
     frames = frame_map(video, [time_ms + offset for offset in offsets])
     images = []
     for offset in offsets:

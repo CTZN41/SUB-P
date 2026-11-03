@@ -1,10 +1,11 @@
 import type { KeyboardEvent, MouseEvent } from 'react'
 import './ShotPositionPicker.css'
 
-export function ShotPositionPicker({ x, y, disabled = false, onChange }: {
+export function ShotPositionPicker({ x, y, disabled = false, saved = false, onChange }: {
   x: string
   y: string
   disabled?: boolean
+  saved?: boolean
   onChange: (x: string, y: string) => void
 }) {
   const hasPosition = x.trim() !== '' && y.trim() !== '' &&
@@ -36,8 +37,7 @@ export function ShotPositionPicker({ x, y, disabled = false, onChange }: {
   }
   return <section className="shot-position-picker" aria-label="슛 위치 직접 지정">
     <h3>2D 코트에서 슛 위치 찍기</h3>
-    <p id="shot-position-help">골대가 위에 있는 코트입니다. 슛을 쏜 바닥 위치를 누르세요. 화면의 좌우가 아닌 코트의 왼쪽·오른쪽을 확인하세요.</p>
-    <svg viewBox="0 0 500 470" role="application" aria-label="슛 위치 선택용 2D 반코트" aria-describedby="shot-position-help" aria-disabled={disabled} tabIndex={disabled ? -1 : 0} onClick={click} onKeyDown={keyDown}>
+    <svg viewBox="0 0 500 470" role="application" aria-label="슛 위치 선택용 2D 반코트" aria-disabled={disabled} tabIndex={disabled ? -1 : 0} onClick={click} onKeyDown={keyDown}>
       <rect width="500" height="470" fill="#ba8c52" />
       <g className="position-court-lines">
         <rect x="1" y="1" width="498" height="468" />
@@ -52,7 +52,6 @@ export function ShotPositionPicker({ x, y, disabled = false, onChange }: {
         <path d="M-16 0H16M0-16V16" stroke="#102019" strokeWidth="2" />
       </g>}
     </svg>
-    <p className="position-selection" role="status">{hasPosition ? `선택 위치: x ${Number(x).toFixed(2)} · y ${Number(y).toFixed(2)}ft (저장 전)` : '아직 위치를 선택하지 않았습니다.'}</p>
-    <p>다시 누르면 위치를 바꿀 수 있습니다. 방향키로 1ft, Shift+방향키로 0.1ft씩 조정할 수 있습니다. 아래 저장 버튼을 눌러야 구역·3D·히트맵에 반영됩니다.</p>
+    <p className="position-selection" role="status">{hasPosition ? `${saved ? '저장된 위치' : '선택 위치'}: x ${Number(x).toFixed(2)} · y ${Number(y).toFixed(2)}ft${saved ? '' : ' (저장 전)'}` : '아직 위치를 선택하지 않았습니다.'}</p>
   </section>
 }
