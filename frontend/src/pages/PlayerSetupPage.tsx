@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnalysisBackLink } from '../components/AnalysisBackLink'
 
-const API_BASE = 'http://127.0.0.1:8000/api'
+const API_BASE = '/api'
 type Analysis = { id: string; title: string; play_type: string; duration_ms: number; width: number; height: number }
 type Player = { id: string; display_name: string; jersey_number: string | null; initial_time_ms: number | null; initial_box: number[] | null }
 type PlayerData = { players: Player[]; warnings: string[]; max_players: number }

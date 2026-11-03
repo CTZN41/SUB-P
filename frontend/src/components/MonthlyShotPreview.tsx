@@ -15,7 +15,7 @@ export function MonthlyShotPreview({ shot, number, typeLabel, onClose }: {
   useEffect(() => {
     const controller = new AbortController()
     panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    fetch(`http://127.0.0.1:8000/api/analyses/${shot.analysis_id}/shots`, { signal: controller.signal })
+    fetch(`/api/analyses/${shot.analysis_id}/shots`, { signal: controller.signal })
       .then(async response => {
         if (!response.ok) throw new Error('슛 장면을 불러오지 못했습니다.')
         return response.json() as Promise<{ shots: Segment[] }>
@@ -41,7 +41,7 @@ export function MonthlyShotPreview({ shot, number, typeLabel, onClose }: {
     {error && <p role="alert">{error}</p>}
     {!segment && !error && <p role="status">슛 장면을 불러오는 중입니다…</p>}
     {segment && <video ref={videoRef} controls preload="metadata"
-      src={`http://127.0.0.1:8000/api/analyses/${shot.analysis_id}/video`}
+      src={`/api/analyses/${shot.analysis_id}/video`}
       onLoadedMetadata={replay} onEnded={replay}
       onTimeUpdate={() => {
         const video = videoRef.current

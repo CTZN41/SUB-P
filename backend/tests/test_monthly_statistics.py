@@ -2,6 +2,7 @@ from datetime import date, datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from app.core.config import Settings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -27,7 +28,7 @@ def test_monthly_results_use_recording_date_and_exclude_non_shot(tmp_path):
             Shot(analysis_id=registered.id, player_id=second.id, candidate_time_ms=600, sequence_start_ms=500, sequence_end_ms=900, result=ShotResult.NEEDS_REVIEW, shot_type=ShotType.NEEDS_REVIEW, status=ShotStatus.NEEDS_REVIEW, source=ShotSource.AUTO, confidence_data={"shot_gate": {"verdict": "not_shot"}}),
         ])
         session.commit()
-    app = FastAPI(); app.state.session_factory = factory; app.include_router(router)
+    app = FastAPI(); app.state.settings = Settings(_env_file=None, app_env='test'); app.state.session_factory = factory; app.include_router(router)
     with TestClient(app) as client:
         october = client.get("/api/analyses/monthly").json()
         september = client.get("/api/analyses/monthly?month=2026-09").json()

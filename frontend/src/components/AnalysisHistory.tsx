@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { deleteAnalysisRecords } from '../utils/deleteAnalysisRecords'
 import './AnalysisHistory.css'
 
-const API_BASE = 'http://127.0.0.1:8000/api'
+const API_BASE = '/api'
 
 type RecordItem = {
   id: string

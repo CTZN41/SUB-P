@@ -10,7 +10,7 @@ import type { ShotCategory } from '../utils/shotPresentation'
 
 const ShotCourt3D = lazy(() => import('../components/ShotCourt3D').then((module) => ({ default: module.ShotCourt3D })))
 
-const API_BASE = 'http://127.0.0.1:8000/api'
+const API_BASE = '/api'
 const SHOT_TYPES = [
   ['catch_and_shoot', '캐치 앤 슛'], ['set_shot', '제자리 슛'],
   ['dribble_pull_up', '드리블 풀업'], ['side_step', '사이드 스텝'], ['layup', '레이업'], ['dunk', '덩크'],

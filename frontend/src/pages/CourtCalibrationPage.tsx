@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnalysisBackLink } from '../components/AnalysisBackLink'
 
-const API_BASE = 'http://127.0.0.1:8000/api'
+const API_BASE = '/api'
 const INITIAL_POINTS = [[12, 78], [88, 78], [72, 25], [28, 25]]
 const INITIAL_COURT_POINTS = [[17, 0], [33, 0], [33, 19], [17, 19]]
 const INITIAL_POINT_NAMES = ['베이스라인 왼쪽', '베이스라인 오른쪽', '자유투선 오른쪽', '자유투선 왼쪽']

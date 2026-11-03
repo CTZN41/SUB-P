@@ -217,6 +217,7 @@ async def register_video(
             )
         analysis = Analysis(
             id=analysis_id,
+            owner_id=session.info.get('auth_user_id'),
             title=clean_title,
             play_type=play_type,
             recorded_date=recorded_date,

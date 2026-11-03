@@ -114,6 +114,7 @@ class Analysis(Base):
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    owner_id: Mapped[str | None] = mapped_column(String(36), index=True)
     title: Mapped[str] = mapped_column(String(100), nullable=False)
     play_type: Mapped[PlayType] = enum_column(PlayType)
     recorded_date: Mapped[date | None] = mapped_column(Date)

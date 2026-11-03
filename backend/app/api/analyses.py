@@ -56,9 +56,10 @@ from app.analysis.phase7_pipeline import Phase7Error
 from app.services.court_zones import ZONE_LABELS, ZoneCode, classify_zone
 from app.services.shot_statistics import calculate_statistics
 from app.services.monthly_statistics import monthly_statistics
+from app.services.authentication import require_analysis_user
 
 
-router = APIRouter(prefix="/api/analyses", tags=["analyses"])
+router = APIRouter(prefix="/api/analyses", tags=["analyses"], dependencies=[Depends(require_analysis_user)])
 
 PLAYER_LIMITS = {
     PlayType.SOLO: 1,
@@ -85,7 +86,7 @@ def get_monthly_statistics(
 
 def find_analysis(session: Session, analysis_id: str) -> Analysis:
     analysis = session.get(Analysis, analysis_id)
-    if analysis is None:
+    if analysis is None or (session.info.get('auth_required') and analysis.owner_id != session.info.get('auth_user_id')):
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "분석 기록을 찾을 수 없습니다."})
     return analysis
 
@@ -143,8 +144,10 @@ def list_analyses(request: Request, session: Annotated[Session, Depends(get_db_s
     ).exists()
     job_status = (select(AnalysisJob.status).where(AnalysisJob.analysis_id == Analysis.id)
                   .order_by(AnalysisJob.started_at.desc(), AnalysisJob.id.desc()).limit(1).scalar_subquery())
-    rows = session.execute(select(Analysis, has_calibration, has_assigned_player, job_status)
-                           .order_by(Analysis.created_at.desc(), Analysis.id.desc())).all()
+    query = select(Analysis, has_calibration, has_assigned_player, job_status)
+    if session.info.get('auth_required'):
+        query = query.where(Analysis.owner_id == session.info['auth_user_id'])
+    rows = session.execute(query.order_by(Analysis.created_at.desc(), Analysis.id.desc())).all()
     return AnalysisListResponse(analyses=[
         _list_item(
             analysis, request.app.state.settings.upload_path, latest_job_status,

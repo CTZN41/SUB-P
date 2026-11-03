@@ -6,6 +6,8 @@
 
 ## 기술 구성
 
+로그인·회원가입 화면과 Google·카카오·네이버 연결 코드를 추가했습니다. Google 제공사와 로컬 로그인 보호를 켜고 백엔드를 재시작했으며, Chrome에서 로그인된 홈과 새로고침 후 유지 상태를 확인했습니다. 네이버·카카오는 아직 설정 전입니다. 제공사 설정 순서와 검증 범위는 [로그인 설정 안내](docs/auth-setup.md)를 참고하세요.
+
 개발 기준은 **FastAPI + React·TypeScript + Supabase PostgreSQL**입니다. 백엔드는 `backend/.env`의 Supabase Session pooler 연결 문자열을 사용합니다. 설정이 없거나 잘못되면 SQLite로 자동 전환하지 않습니다. 기존 SQLite 파일과 데이터는 보존합니다.
 
 ## 한 번에 실행

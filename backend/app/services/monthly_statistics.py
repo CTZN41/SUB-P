@@ -31,9 +31,10 @@ def _is_shot(shot: Shot) -> bool:
 
 
 def monthly_statistics(session: Session, requested_month: str | None = None) -> dict:
-    rows = session.execute(
-        select(Analysis, Shot).join(Shot, Shot.analysis_id == Analysis.id)
-    ).all()
+    query = select(Analysis, Shot).join(Shot, Shot.analysis_id == Analysis.id)
+    if session.info.get('auth_required'):
+        query = query.where(Analysis.owner_id == session.info['auth_user_id'])
+    rows = session.execute(query).all()
     months = sorted({_month(analysis) for analysis, shot in rows if _is_shot(shot)}, reverse=True)
     month = requested_month or (months[0] if months else None)
     selected = [(analysis, shot) for analysis, shot in rows if month == _month(analysis) and _is_shot(shot)]

@@ -38,7 +38,7 @@ export function MonthlyResults() {
   useEffect(() => {
     const controller = new AbortController()
     const query = month ? `?month=${encodeURIComponent(month)}` : ''
-    fetch(`http://127.0.0.1:8000/api/analyses/monthly${query}`, { signal: controller.signal })
+    fetch(`/api/analyses/monthly${query}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error('월별 기록을 불러오지 못했습니다.')
         return response.json() as Promise<MonthlyData>

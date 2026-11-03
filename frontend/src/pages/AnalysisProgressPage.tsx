@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { AnalysisBackLink } from '../components/AnalysisBackLink'
 import { ANALYSIS_STAGES as STAGES, analysisStageIndex, analysisStageLabel } from '../utils/analysisStages'
 
-const API_BASE = 'http://127.0.0.1:8000/api'
+const API_BASE = '/api'
 type Analysis = { id: string; title: string; duration_ms: number; play_type: string }
 type Job = { id: string; status: string; stage: string | null; processed_ms: number; is_simulation: boolean; error_message: string | null; started_at: string | null; finished_at: string | null }
 

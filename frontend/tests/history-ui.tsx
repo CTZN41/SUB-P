@@ -15,8 +15,8 @@ const records = [
 
 window.fetch = async (input, options) => {
   const url = String(input)
-  if (url === 'http://127.0.0.1:8000/api/analyses' && !options?.method) return Response.json({ analyses: records })
-  if (url.startsWith('http://127.0.0.1:8000/api/analyses/fixture-') && options?.method === 'DELETE') {
+  if (url === '/api/analyses' && !options?.method) return Response.json({ analyses: records })
+  if (url.startsWith('/api/analyses/fixture-') && options?.method === 'DELETE') {
     const id = url.split('/').pop()
     if (id === 'fixture-active') return Response.json({ detail: { message: '분석 중에는 삭제할 수 없습니다. 먼저 취소해 주세요.' } }, { status: 409 })
     return new Response(null, { status: 204 })

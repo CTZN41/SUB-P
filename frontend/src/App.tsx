@@ -9,11 +9,16 @@ import { AnalysisProgressPage } from './pages/AnalysisProgressPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ShotReviewPage } from './pages/ShotReviewPage'
 import { MonthlyResultsPage } from './pages/MonthlyResultsPage'
+import { AuthGate, AuthProvider } from './auth/AuthProvider'
+import { AuthCallbackPage, AuthPage } from './pages/AuthPage'
 
 function App() {
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
+    <AuthProvider><Routes>
+      <Route path="login" element={<AuthPage key="login" />} />
+      <Route path="signup" element={<AuthPage key="signup" signup />} />
+      <Route path="auth/callback" element={<AuthCallbackPage />} />
+      <Route element={<AuthGate><AppLayout /></AuthGate>}>
         <Route index element={<HomePage />} />
         <Route path="new" element={<NewAnalysisPage />} />
         <Route path="court/:analysisId" element={<CourtCalibrationPage />} />
@@ -24,7 +29,7 @@ function App() {
         <Route path="history/monthly" element={<MonthlyResultsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    </Routes></AuthProvider>
   )
 }
 
