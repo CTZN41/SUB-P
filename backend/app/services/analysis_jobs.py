@@ -138,7 +138,9 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         analysis.current_stage = job.stage
         hoop_point = list(calibration.hoop_point)
         calibration_transform = [list(row) for row in calibration.transform]
-        views = [{"frame_time_ms":c.frame_time_ms,"transform":c.transform,"image_points":c.image_points,"three_point_line":c.three_point_line} for c in calibrations]
+        # Legacy arc metadata is retained in storage; live analysis uses only
+        # user-confirmed paint corners and hoop, plus the validated view guard.
+        views = [{"frame_time_ms":c.frame_time_ms,"transform":c.transform,"image_points":c.image_points} for c in calibrations]
         calibration_payload = {**views[0], "views":views}
         duration_ms = int(analysis.duration_ms)
         session.commit()

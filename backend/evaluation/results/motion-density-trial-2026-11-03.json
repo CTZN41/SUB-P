@@ -1,0 +1,287 @@
+{
+  "scope": "Six paid Terra detail calls, same prompt and context; only 8 player crops added. No DB mutation or production input change.",
+  "source_analysis": "2a9396e5-9f05-4541-8cde-6cfa73cb1c55",
+  "extra_offsets_ms": [
+    -900,
+    -800,
+    -700,
+    -600,
+    -500,
+    -400,
+    -200,
+    -100
+  ],
+  "provisional_labels": {
+    "5700": "dribble_pull_up",
+    "11433": "step_back"
+  },
+  "limitations": [
+    "Only two distinct shots; provisional observer labels, not an overall accuracy estimate.",
+    "Per-request wall time includes network/model variability."
+  ],
+  "runs": [
+    {
+      "time_ms": 11433,
+      "mode": "base",
+      "repeat": 1,
+      "image_count": 17,
+      "seconds": 10.196,
+      "usage": {
+        "input_tokens": 17765,
+        "output_tokens": 339,
+        "total_tokens": 18104
+      },
+      "decision": {
+        "is_shot": true,
+        "confidence": 0.76,
+        "is_shot_confidence": 1.0,
+        "outcome": "unclear",
+        "outcome_confidence": 0.99,
+        "shot_type": "step_back",
+        "shot_type_confidence": 0.84,
+        "court_zone": "three_wing_left",
+        "court_x": 9.0,
+        "court_y": 23.2,
+        "position_confidence": 0.76,
+        "position_reason": "The planted shoes are on or just outside the arc, left of the lane under the confirmed court orientation. The supplied projection supports a left-wing location, though the shoes are close to the line.",
+        "camera_view": "right_sideline",
+        "overhead_lateral_relation": "left_of_lane",
+        "distance_band": "three_point",
+        "projection_evidence": [
+          "The shooter retreats from inside the arc and plants near the arc before release.",
+          "The paint and free-throw lane locate the shooting position to court-left under the confirmed orientation.",
+          "The planted shoes are close to the three-point line."
+        ],
+        "visible_evidence": [
+          "release",
+          "ball_rising",
+          "ball_path_not_visible"
+        ],
+        "sequence_start_offset_ms": -3500,
+        "sequence_end_offset_ms": 300,
+        "review_required": true,
+        "reason": "After dribbling toward the hoop, the shooter steps back from inside the arc, replants both feet, and jumps for the shot. The ball rises out of view; no rim passage or rebound is shown."
+      }
+    },
+    {
+      "time_ms": 11433,
+      "mode": "dense",
+      "repeat": 1,
+      "image_count": 25,
+      "seconds": 9.115,
+      "usage": {
+        "input_tokens": 23005,
+        "output_tokens": 372,
+        "total_tokens": 23377
+      },
+      "decision": {
+        "is_shot": true,
+        "confidence": 0.69,
+        "is_shot_confidence": 1.0,
+        "outcome": "unclear",
+        "outcome_confidence": 0.99,
+        "shot_type": "step_back",
+        "shot_type_confidence": 0.77,
+        "court_zone": "three_wing_left",
+        "court_x": 9.0,
+        "court_y": 23.0,
+        "position_confidence": 0.69,
+        "position_reason": "The planted shoes are near the three-point arc, left of the lane under the shared court orientation. The feet are close to the line, so the distance classification is not certain.",
+        "camera_view": "right_sideline",
+        "overhead_lateral_relation": "left_of_lane",
+        "distance_band": "three_point",
+        "projection_evidence": [
+          "The lane edges and three-point arc are visible.",
+          "The shooting feet plant near the arc on the court-left side of the lane.",
+          "The supplied approximate projection is near (9, 23) feet."
+        ],
+        "visible_evidence": [
+          "release",
+          "ball_rising",
+          "ball_path_not_visible"
+        ],
+        "sequence_start_offset_ms": -3500,
+        "sequence_end_offset_ms": 300,
+        "review_required": true,
+        "reason": "After dribbling toward the basket, the shooter plants inside the arc and retreats to a new plant near the line before jumping. The ball rises out of view; no rim contact or result is shown."
+      }
+    },
+    {
+      "time_ms": 11433,
+      "mode": "dense",
+      "repeat": 2,
+      "image_count": 25,
+      "seconds": 8.622,
+      "usage": {
+        "input_tokens": 23005,
+        "output_tokens": 414,
+        "total_tokens": 23419
+      },
+      "decision": {
+        "is_shot": true,
+        "confidence": 0.72,
+        "is_shot_confidence": 1.0,
+        "outcome": "unclear",
+        "outcome_confidence": 0.99,
+        "shot_type": "step_back",
+        "shot_type_confidence": 0.78,
+        "court_zone": "three_wing_left",
+        "court_x": 9.0,
+        "court_y": 23.0,
+        "position_confidence": 0.72,
+        "position_reason": "The planted shoes are left of the lane in the calibrated overhead orientation and at the three-point arc. The shoe contacts are close to the line, so the distance classification is somewhat uncertain.",
+        "camera_view": "right_sideline",
+        "overhead_lateral_relation": "left_of_lane",
+        "distance_band": "three_point",
+        "projection_evidence": [
+          "Court-left is toward screen lower-left under the shared calibration.",
+          "The gather ends with shoes near the three-point arc, outside the left lane edge.",
+          "The supplied approximate projections place the shoes near (9, 23) feet."
+        ],
+        "visible_evidence": [
+          "release",
+          "ball_rising",
+          "ball_path_not_visible"
+        ],
+        "sequence_start_offset_ms": -3000,
+        "sequence_end_offset_ms": 300,
+        "review_required": true,
+        "reason": "After dribbling, the shooter retreats from the low gather and replants near the arc before jumping, consistent with a step-back. The ball rises out of frame; no rim contact or result is shown."
+      }
+    },
+    {
+      "time_ms": 11433,
+      "mode": "base",
+      "repeat": 2,
+      "image_count": 17,
+      "seconds": 7.707,
+      "usage": {
+        "input_tokens": 17765,
+        "output_tokens": 409,
+        "total_tokens": 18174
+      },
+      "decision": {
+        "is_shot": true,
+        "confidence": 0.72,
+        "is_shot_confidence": 1.0,
+        "outcome": "unclear",
+        "outcome_confidence": 0.99,
+        "shot_type": "step_back",
+        "shot_type_confidence": 0.77,
+        "court_zone": "three_wing_left",
+        "court_x": 9.0,
+        "court_y": 23.0,
+        "position_confidence": 0.72,
+        "position_reason": "The planted shoes are near the three-point arc, left of the lane in the confirmed overhead orientation. The calibrated projection supports a left-wing location, though the shoes are close to the line.",
+        "camera_view": "right_sideline",
+        "overhead_lateral_relation": "left_of_lane",
+        "distance_band": "three_point",
+        "projection_evidence": [
+          "The planted shoes are near the arc, beyond the left lane edge in the calibrated court orientation.",
+          "The approximate shoe projection is near x=9, y=23 feet."
+        ],
+        "visible_evidence": [
+          "release",
+          "ball_rising",
+          "ball_path_not_visible"
+        ],
+        "sequence_start_offset_ms": -3500,
+        "sequence_end_offset_ms": 300,
+        "review_required": true,
+        "reason": "After dribbling toward the lane, the shooter retreats from the inside position and replants near the arc before jumping. The ball rises after release, but the supplied frames do not show its arrival at the rim or the result."
+      }
+    },
+    {
+      "time_ms": 5700,
+      "mode": "base",
+      "repeat": 1,
+      "image_count": 30,
+      "seconds": 8.835,
+      "usage": {
+        "input_tokens": 25189,
+        "output_tokens": 339,
+        "total_tokens": 25528
+      },
+      "decision": {
+        "is_shot": true,
+        "confidence": 0.76,
+        "is_shot_confidence": 1.0,
+        "outcome": "made",
+        "outcome_confidence": 0.98,
+        "shot_type": "dribble_pull_up",
+        "shot_type_confidence": 0.76,
+        "court_zone": "three_wing_left",
+        "court_x": 9.3,
+        "court_y": 23.6,
+        "position_confidence": 0.76,
+        "position_reason": "The plant shoes are at or just outside the three-point arc. Projecting them using court-left toward screen lower-left places the shooter left of the lane, on the wing; the coordinates are approximate.",
+        "camera_view": "right_sideline",
+        "overhead_lateral_relation": "left_of_lane",
+        "distance_band": "three_point",
+        "projection_evidence": [
+          "Plant shoes are near the three-point arc.",
+          "The lane edges and confirmed court-left direction place the shooting position left of the lane.",
+          "The detector projection supports a left-wing location."
+        ],
+        "visible_evidence": [
+          "release",
+          "ball_rising",
+          "rim_passage",
+          "ball_falling_below_rim"
+        ],
+        "sequence_start_offset_ms": -3500,
+        "sequence_end_offset_ms": 2000,
+        "review_required": false,
+        "reason": "The shooter dribbles, gathers and plants for a jumper. The visible final footwork does not show a clear retreating step or a distinct lateral space-creating step. The ball passes through the net and falls below the rim."
+      }
+    },
+    {
+      "time_ms": 5700,
+      "mode": "dense",
+      "repeat": 1,
+      "image_count": 38,
+      "seconds": 9.35,
+      "usage": {
+        "input_tokens": 30429,
+        "output_tokens": 352,
+        "total_tokens": 30781
+      },
+      "decision": {
+        "is_shot": true,
+        "confidence": 0.78,
+        "is_shot_confidence": 1.0,
+        "outcome": "made",
+        "outcome_confidence": 0.98,
+        "shot_type": "side_step",
+        "shot_type_confidence": 0.78,
+        "court_zone": "three_wing_left",
+        "court_x": 9.5,
+        "court_y": 23.5,
+        "position_confidence": 0.79,
+        "position_reason": "The plant shoes are just outside the arc, projecting left of the lane using the confirmed court-left direction. The approximate detector projection is consistent with that wing location.",
+        "camera_view": "right_sideline",
+        "overhead_lateral_relation": "left_of_lane",
+        "distance_band": "three_point",
+        "projection_evidence": [
+          "Plant shoes are outside the three-point arc.",
+          "The calibrated court-left direction points toward screen lower-left.",
+          "The release location projects left of the lane."
+        ],
+        "visible_evidence": [
+          "release",
+          "ball_rising",
+          "rim_passage",
+          "ball_falling_below_rim"
+        ],
+        "sequence_start_offset_ms": -4000,
+        "sequence_end_offset_ms": 2000,
+        "review_required": false,
+        "reason": "After dribbling, the shooter shifts laterally, brings the trailing foot across to a new plant, and rises for a jumper; there is no clear retreating step. The ball passes through the rim and falls below the net."
+      }
+    }
+  ],
+  "api_usage": {
+    "input_tokens": 137158,
+    "output_tokens": 2225
+  }
+}

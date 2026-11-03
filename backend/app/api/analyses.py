@@ -283,8 +283,13 @@ def save_calibration(
     except CalibrationError as error:
         raise HTTPException(status_code=400, detail={"code": "CALIBRATION_INVALID", "message": str(error)}) from error
 
-    arc = payload.three_point_line
-    if arc is not None:
+    previous = session.scalar(select(CourtCalibration).where(
+        CourtCalibration.analysis_id == analysis_id,
+        CourtCalibration.frame_time_ms == payload.frame_time_ms,
+    ))
+    arc = (payload.three_point_line if 'three_point_line' in payload.model_fields_set else
+           previous.three_point_line if previous is not None else None)
+    if arc is not None and 'three_point_line' in payload.model_fields_set:
         from app.services.court_calibration import arc_has_crossing
         import numpy as np
         if (not 5 <= len(arc) <= 40 or any(len(p) != 2 or not all(np.isfinite(p)) or not (0 <= p[0] < width and 0 <= p[1] < height) for p in arc)

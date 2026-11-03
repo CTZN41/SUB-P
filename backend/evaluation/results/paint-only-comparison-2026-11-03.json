@@ -1,0 +1,175 @@
+{
+  "scope": "Two fresh full analyses with user-confirmed paint/hoop coordinates only. Original records preserved. User confirmed both work. Small same-source clips, not general accuracy.",
+  "cases": [
+    {
+      "case": "short12",
+      "source_id": "2a9396e5-9f05-4541-8cde-6cfa73cb1c55",
+      "analysis_id": "5f53cf59-8b9f-4c96-83bc-a7cd5dfa3923",
+      "elapsed_seconds": 53.088791,
+      "arc_saved": false,
+      "candidate_count": 2,
+      "saved_count": 2,
+      "made": 1,
+      "missed": 0,
+      "outcome_unclear": 1,
+      "missing_positions": 0,
+      "usage": {
+        "input_tokens": 57263,
+        "output_tokens": 1346
+      },
+      "timing_seconds": {
+        "local_candidates": 6.14,
+        "focused_rescan_and_shot_gate": 15.82,
+        "camera_view_validation": 0.89,
+        "detailed_ai_review": 21.1
+      },
+      "rows": [
+        {
+          "time_ms": 5700,
+          "baseline_zone": "three_wing_left",
+          "zone": "three_wing_left",
+          "same_zone": true,
+          "same_outcome": true,
+          "same_type": true,
+          "position_delta_ft": 0.2236,
+          "position_confidence": 0.75,
+          "line_check": {
+            "status": "not_available"
+          },
+          "plant_projection": null
+        },
+        {
+          "time_ms": 11433,
+          "baseline_zone": "three_wing_left",
+          "zone": "three_wing_left",
+          "same_zone": true,
+          "same_outcome": true,
+          "same_type": true,
+          "position_delta_ft": 0.0,
+          "position_confidence": 0.7,
+          "line_check": {
+            "status": "not_available"
+          },
+          "plant_projection": [
+            8.8938,
+            23.0416
+          ]
+        }
+      ]
+    },
+    {
+      "case": "sample32",
+      "source_id": "4ae7224e-2826-4b56-b975-e6212c5b625c",
+      "analysis_id": "7c2fcad2-b823-4cdd-924a-c2b861cb2eaa",
+      "elapsed_seconds": 102.598751,
+      "arc_saved": false,
+      "candidate_count": 5,
+      "saved_count": 5,
+      "made": 4,
+      "missed": 1,
+      "outcome_unclear": 0,
+      "missing_positions": 0,
+      "usage": {
+        "input_tokens": 166122,
+        "output_tokens": 2311
+      },
+      "timing_seconds": {
+        "local_candidates": 14.35,
+        "focused_rescan_and_shot_gate": 37.49,
+        "camera_view_validation": 3.11,
+        "detailed_ai_review": 37.66
+      },
+      "rows": [
+        {
+          "time_ms": 6033,
+          "baseline_zone": "mid_wing_left",
+          "zone": "mid_wing_left",
+          "same_zone": true,
+          "same_outcome": true,
+          "same_type": true,
+          "position_delta_ft": 0.0,
+          "position_confidence": 0.8,
+          "line_check": {
+            "status": "not_available"
+          },
+          "plant_projection": [
+            11.411,
+            18.0844
+          ]
+        },
+        {
+          "time_ms": 11267,
+          "baseline_zone": "mid_wing_left",
+          "zone": "mid_wing_left",
+          "same_zone": true,
+          "same_outcome": true,
+          "same_type": true,
+          "position_delta_ft": 0.0,
+          "position_confidence": 0.8,
+          "line_check": {
+            "status": "not_available"
+          },
+          "plant_projection": [
+            11.0864,
+            18.2961
+          ]
+        },
+        {
+          "time_ms": 16367,
+          "baseline_zone": "mid_wing_right",
+          "zone": "mid_wing_right",
+          "same_zone": true,
+          "same_outcome": true,
+          "same_type": true,
+          "position_delta_ft": 0.1,
+          "position_confidence": 0.78,
+          "line_check": {
+            "status": "not_available"
+          },
+          "plant_projection": [
+            35.8213,
+            15.8795
+          ]
+        },
+        {
+          "time_ms": 20900,
+          "baseline_zone": "mid_wing_right",
+          "zone": "mid_wing_right",
+          "same_zone": true,
+          "same_outcome": true,
+          "same_type": true,
+          "position_delta_ft": 0.0,
+          "position_confidence": 0.78,
+          "line_check": {
+            "status": "not_available"
+          },
+          "plant_projection": [
+            35.7205,
+            16.2069
+          ]
+        },
+        {
+          "time_ms": 28800,
+          "baseline_zone": "mid_center",
+          "zone": "mid_center",
+          "same_zone": true,
+          "same_outcome": true,
+          "same_type": true,
+          "position_delta_ft": 0.0,
+          "position_confidence": 0.73,
+          "line_check": {
+            "status": "not_available"
+          },
+          "plant_projection": [
+            20.4136,
+            21.3284
+          ]
+        }
+      ]
+    }
+  ],
+  "combined_usage": {
+    "input_tokens": 223385,
+    "output_tokens": 3657
+  }
+}

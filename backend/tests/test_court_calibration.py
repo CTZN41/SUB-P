@@ -50,6 +50,10 @@ def test_multiple_views_preserve_other_view_and_optional_arc(tmp_path):
         assert client.put(f'/api/analyses/{aid}/calibration', json=second).status_code == 200
         views = client.get(f'/api/analyses/{aid}/calibrations').json()
         assert len(views) == 2 and views[0]['three_point_line'] == first['three_point_line']
+        # The paint-only editor omits the legacy field; no historical data loss.
+        paint_update = valid_payload()
+        assert client.put(f'/api/analyses/{aid}/calibration',json=paint_update).status_code == 200
+        assert client.get(f'/api/analyses/{aid}/calibration').json()['three_point_line'] == first['three_point_line']
         assert client.put(f'/api/analyses/{aid}/calibration', json=second).status_code == 200
         assert len(client.get(f'/api/analyses/{aid}/calibrations').json()) == 2
         invalid = dict(second, three_point_line=[[10,10]] * 5)
