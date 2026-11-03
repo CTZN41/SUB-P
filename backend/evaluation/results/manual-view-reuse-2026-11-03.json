@@ -1,0 +1,79 @@
+{
+  "scope": "Read-only in-memory extra view: manual 12s clip calibration aligned to 590s of full video; no DB write or AI call",
+  "clip_to_source_alignment": {
+    "matches": 4274,
+    "inliers": 3373,
+    "holdout_median_px": 0.0116,
+    "center_scale": 1.0,
+    "changed": false
+  },
+  "floor_scores": [
+    0.9986456632614136,
+    0.9983871579170227,
+    0.9654623866081238,
+    0.9982521533966064
+  ],
+  "samples": [
+    {
+      "time_ms": 92568,
+      "camera_valid": true,
+      "view_id": 1,
+      "plant_projection": null,
+      "plant_ms": null,
+      "release_projection": [
+        9.0966,
+        23.6416
+      ]
+    },
+    {
+      "time_ms": 192454,
+      "camera_valid": true,
+      "view_id": 1,
+      "plant_projection": null,
+      "plant_ms": null,
+      "release_projection": [
+        9.2733,
+        23.5774
+      ]
+    },
+    {
+      "time_ms": 498330,
+      "camera_valid": true,
+      "view_id": 1,
+      "plant_projection": [
+        9.0799,
+        23.2501
+      ],
+      "plant_ms": 497913,
+      "release_projection": [
+        9.3751,
+        22.4639
+      ]
+    },
+    {
+      "time_ms": 592548,
+      "camera_valid": true,
+      "view_id": 1,
+      "plant_projection": null,
+      "plant_ms": null,
+      "release_projection": [
+        9.4271,
+        23.5374
+      ]
+    },
+    {
+      "time_ms": 598349,
+      "camera_valid": true,
+      "view_id": 1,
+      "plant_projection": [
+        9.1033,
+        23.3155
+      ],
+      "plant_ms": 597916,
+      "release_projection": [
+        8.8033,
+        22.956
+      ]
+    }
+  ]
+}

@@ -9,6 +9,7 @@ from collections import Counter
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable
+from app.analysis.foot_evidence import foot_proxy_is_clipped
 
 SAMPLE_FPS = 8.0
 DETAILED_PERSON_HEIGHT_RATIO = .25
@@ -623,6 +624,9 @@ def attach_candidate_foot_tracks(
     for candidate in candidates:
         candidate_time = int(candidate["time_ms"])
         candidate_foot = candidate.get("foot_point_px")
+        candidate['frame_size_px'] = [frame_width, frame_height]
+        candidate['foot_point_source'] = 'person_box_lower_midpoint'
+        candidate['foot_point_clipped'] = foot_proxy_is_clipped(candidate_foot, candidate['frame_size_px'])
         if not isinstance(candidate_foot, (list, tuple)) or len(candidate_foot) != 2:
             continue
         track = []
@@ -641,6 +645,7 @@ def attach_candidate_foot_tracks(
             track.append({
                 "time_ms": record["time_ms"],
                 "foot_point_px": [round(foot[0], 2), round(foot[1], 2)],
+                "foot_point_clipped": foot_proxy_is_clipped(foot, [frame_width, frame_height], person['xyxy']),
             })
         if track:
             candidate["foot_track"] = track

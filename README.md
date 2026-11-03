@@ -94,7 +94,7 @@ $env:PYTHONPATH = (Get-Location).Path
 .\.venv\Scripts\python.exe evaluation\candidate_speed.py C:\Users\aicam\Downloads\IvMhOQO9ros-fixed-camera-repeat-10min-upload.mp4 --seconds 180 --hoop-x 748 --hoop-y 310 --model models\basketball-yolo26n-pilot-v4_openvino_model --pose models\yolo26n-pose_openvino_model --device intel:cpu --output work\performance\manual-180s.json
 ```
 
-웹 화면의 **AI 포함 전체 분석 (유료)** 버튼은 후보 탐지 뒤 OpenAI 판정까지 진행합니다. 분석 화면에는 실제 경과 시간과 완료 후 후보 탐지 소요 시간을 표시합니다.
+웹 화면의 **분석 시작** 버튼은 후보 탐지 뒤 OpenAI 판정까지 진행합니다. 분석 화면에는 실제 경과 시간을 표시합니다.
 
 
 ### 2026-11-02 분석 정확도·속도 보완
@@ -110,3 +110,9 @@ $env:PYTHONPATH = (Get-Location).Path
 - 57초 뒤 회수 동작 후보를 조건부 분리하고 원본은JSON에 보존한다. 기존 결과 재생에서5개만 분리했다. 509초 후보의511.766초 재탐지가1.8초 제한에 걸린 문제와598초 영상 끝 프레임 부족이 전체AI 실패가 되던 문제를 수정했다. 기존DB는 자동 변경하지 않았다.
 - 슛 편집에2D 위치 클릭을 추가했다. Chrome 클릭·좌표·키보드·범위 제한 확인. 실제 저장은 누르지 않았다. 백엔드176개·프론트 빌드 통과. 새 유료 전체 재분석은 하지 않았다. 후속 백엔드 수정은 서버를 다시 시작해야 반영되며 이번 마무리에서 서버를 종료하지 않았다.
 - 상세 결과: [localhost 비교 결과](docs/localhost-speed-comparison-2026-11-02.md)
+
+### 2026-11-03 구도별 코트·부분3점선과 좌표 품질
+
+- 코트 설정에서 대표 장면별 네 모서리·림을 저장할 수 있습니다. 선택3점선은 화면에 보이는45도~45도 구간만 지정해도 됩니다. 새 컬럼은 `backend`에서 `.venv\Scripts\python.exe -m alembic upgrade head`로 준비합니다.
+- 배경뿐 아니라 수동 바닥 기준점 주변을 검증하고 통과한 구도의 보정 행렬을 실제 좌표에 적용합니다. 화면에 잘린 사람 상자의 바닥 좌표는 발 위치 환산에 사용하지 않습니다. 이 변경으로 기존 기록을 자동 재분석하지 않습니다.
+- 사용자 기준점의12초 실제 시험은56.47초·2슛·두 위치 저장·58,571토큰이었습니다. 마지막 득점은 영상 끝으로 보류했고 스텝백/풀업 구분은 후속 검증 과제입니다. [실제 시험](docs/partial-three-point-test-2026-11-03.md), [추가 로컬 회귀·한계](docs/foot-motion-regression-2026-11-03.md).

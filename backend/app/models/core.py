@@ -168,6 +168,7 @@ class CourtCalibration(Base):
     image_points: Mapped[list[list[float]]] = mapped_column(JSON, nullable=False)
     court_points: Mapped[list[list[float]]] = mapped_column(JSON, nullable=False)
     hoop_point: Mapped[list[float]] = mapped_column(JSON, nullable=False)
+    three_point_line: Mapped[list[list[float]] | None] = mapped_column(JSON, nullable=True)
     transform: Mapped[list[list[float]]] = mapped_column(JSON, nullable=False)
     source: Mapped[CalibrationSource] = enum_column(CalibrationSource)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

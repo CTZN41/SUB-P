@@ -127,7 +127,8 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
     with session_factory() as session:
         job = session.get(AnalysisJob, job_id)
         analysis = session.get(Analysis, analysis_id)
-        calibration = session.scalar(select(CourtCalibration).where(CourtCalibration.analysis_id == analysis_id))
+        calibrations = list(session.scalars(select(CourtCalibration).where(CourtCalibration.analysis_id == analysis_id).order_by(CourtCalibration.frame_time_ms)))
+        calibration = calibrations[0] if calibrations else None
         if not job or not analysis or not calibration:
             return
         job.status = JobStatus.RUNNING
@@ -137,7 +138,8 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         analysis.current_stage = job.stage
         hoop_point = list(calibration.hoop_point)
         calibration_transform = [list(row) for row in calibration.transform]
-        calibration_payload = {"frame_time_ms":calibration.frame_time_ms,"transform":calibration_transform}
+        views = [{"frame_time_ms":c.frame_time_ms,"transform":c.transform,"image_points":c.image_points,"three_point_line":c.three_point_line} for c in calibrations]
+        calibration_payload = {**views[0], "views":views}
         duration_ms = int(analysis.duration_ms)
         session.commit()
 

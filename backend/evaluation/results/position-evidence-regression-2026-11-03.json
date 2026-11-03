@@ -1,0 +1,347 @@
+{
+  "scope": "Read-only saved evidence; no OpenAI calls, YOLO inference, data mutation or independent accuracy claim",
+  "cases": [
+    {
+      "analysis_id": "2a9396e5-9f05-4541-8cde-6cfa73cb1c55",
+      "duration_ms": 12017,
+      "manual_views": 1,
+      "samples": [
+        {
+          "time_ms": 5700,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            9.1802,
+            23.9655
+          ],
+          "new_plant_projection": null,
+          "plant_time_ms": null,
+          "new_release_projection": [
+            9.3338,
+            23.5739
+          ],
+          "manual_trace_side": null,
+          "old_zone": "three_wing_left",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 11433,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            8.8938,
+            23.0416
+          ],
+          "new_plant_projection": [
+            8.8938,
+            23.0416
+          ],
+          "plant_time_ms": 11067,
+          "new_release_projection": [
+            9.0499,
+            23.2332
+          ],
+          "manual_trace_side": "outside",
+          "old_zone": "three_wing_left",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        }
+      ]
+    },
+    {
+      "analysis_id": "25ab4bac-b912-4cff-9e9e-affff2b5a6a1",
+      "duration_ms": 599050,
+      "manual_views": 1,
+      "samples": [
+        {
+          "time_ms": 6001,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            12.1622,
+            18.1731
+          ],
+          "new_plant_projection": [
+            12.1546,
+            17.9714
+          ],
+          "plant_time_ms": 5601,
+          "new_release_projection": [
+            12.594,
+            18.3159
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_wing_left",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 11269,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            11.8204,
+            18.059
+          ],
+          "new_plant_projection": [
+            11.803,
+            17.8766
+          ],
+          "plant_time_ms": 10852,
+          "new_release_projection": [
+            11.3038,
+            17.5427
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_wing_left",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 92568,
+          "camera_valid": false,
+          "view_id": 1,
+          "old_plant_projection": [
+            7.1298,
+            29.8735
+          ],
+          "new_plant_projection": null,
+          "plant_time_ms": null,
+          "new_release_projection": null,
+          "manual_trace_side": null,
+          "old_zone": "three_wing_left",
+          "old_type": "side_step",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 192454,
+          "camera_valid": false,
+          "view_id": 1,
+          "old_plant_projection": null,
+          "new_plant_projection": null,
+          "plant_time_ms": null,
+          "new_release_projection": null,
+          "manual_trace_side": null,
+          "old_zone": "needs_review",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 498330,
+          "camera_valid": false,
+          "view_id": 1,
+          "old_plant_projection": null,
+          "new_plant_projection": null,
+          "plant_time_ms": null,
+          "new_release_projection": null,
+          "manual_trace_side": null,
+          "old_zone": "mid_wing_right",
+          "old_type": "step_back",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 592548,
+          "camera_valid": false,
+          "view_id": 1,
+          "old_plant_projection": null,
+          "new_plant_projection": null,
+          "plant_time_ms": null,
+          "new_release_projection": null,
+          "manual_trace_side": null,
+          "old_zone": "needs_review",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 598349,
+          "camera_valid": false,
+          "view_id": 1,
+          "old_plant_projection": null,
+          "new_plant_projection": null,
+          "plant_time_ms": null,
+          "new_release_projection": null,
+          "manual_trace_side": null,
+          "old_zone": "mid_wing_right",
+          "old_type": "step_back",
+          "saved_records_modified": false
+        }
+      ]
+    },
+    {
+      "analysis_id": "8023e57c-680b-4d3f-8f5c-1d9d688ac672",
+      "duration_ms": 32000,
+      "manual_views": 1,
+      "samples": [
+        {
+          "time_ms": 6033,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            11.9748,
+            18.4976
+          ],
+          "new_plant_projection": [
+            11.9519,
+            18.3113
+          ],
+          "plant_time_ms": 5633,
+          "new_release_projection": [
+            12.2612,
+            18.8387
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_wing_left",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 11267,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            11.6808,
+            18.6894
+          ],
+          "new_plant_projection": [
+            11.6661,
+            18.4806
+          ],
+          "plant_time_ms": 10867,
+          "new_release_projection": [
+            11.77,
+            18.5481
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_wing_left",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 28800,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            20.5421,
+            21.0119
+          ],
+          "new_plant_projection": [
+            20.3657,
+            21.2189
+          ],
+          "plant_time_ms": 28400,
+          "new_release_projection": [
+            25.4855,
+            16.1755
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_center",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        }
+      ]
+    },
+    {
+      "analysis_id": "80e15ffd-ebab-440e-915a-18378b3a5a95",
+      "duration_ms": 8500,
+      "manual_views": 1,
+      "samples": [
+        {
+          "time_ms": 5333,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            20.717,
+            21.0017
+          ],
+          "new_plant_projection": [
+            20.709,
+            21.0089
+          ],
+          "plant_time_ms": 4933,
+          "new_release_projection": [
+            20.3261,
+            19.9617
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_center",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        }
+      ]
+    },
+    {
+      "analysis_id": "07bdad38-f72f-4994-b08c-43bcbf3a75a8",
+      "duration_ms": 30000,
+      "manual_views": 1,
+      "samples": [
+        {
+          "time_ms": 6033,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            11.5073,
+            18.4451
+          ],
+          "new_plant_projection": [
+            11.4861,
+            18.2554
+          ],
+          "plant_time_ms": 5633,
+          "new_release_projection": [
+            11.7974,
+            18.789
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_wing_left",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 11267,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            11.2025,
+            18.6448
+          ],
+          "new_plant_projection": [
+            11.1901,
+            18.4321
+          ],
+          "plant_time_ms": 10867,
+          "new_release_projection": [
+            11.2961,
+            18.4995
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_wing_left",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        },
+        {
+          "time_ms": 28800,
+          "camera_valid": true,
+          "view_id": 0,
+          "old_plant_projection": [
+            20.286,
+            20.8885
+          ],
+          "new_plant_projection": [
+            20.1032,
+            21.1026
+          ],
+          "plant_time_ms": 28400,
+          "new_release_projection": [
+            25.3851,
+            15.8935
+          ],
+          "manual_trace_side": null,
+          "old_zone": "mid_center",
+          "old_type": "dribble_pull_up",
+          "saved_records_modified": false
+        }
+      ]
+    }
+  ]
+}

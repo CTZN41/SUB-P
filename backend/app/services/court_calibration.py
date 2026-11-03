@@ -15,6 +15,57 @@ class CalibrationError(ValueError):
     pass
 
 
+def arc_has_crossing(points: list[list[float]]) -> bool:
+    """Allow hand-drawn curvature and collinear corner lines, reject crossings."""
+    def cross(a, b, c):
+        return (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])
+    def on(a,b,p):
+        return abs(cross(a,b,p)) < 1e-6 and min(a[0],b[0])-1e-6 <= p[0] <= max(a[0],b[0])+1e-6 and min(a[1],b[1])-1e-6 <= p[1] <= max(a[1],b[1])+1e-6
+    # This is an open trace: unseen ends must never be joined artificially.
+    for i in range(len(points)-1):
+        a,b=points[i],points[i+1]
+        for j in range(i+2,len(points)-1):
+            c,d=points[j],points[j+1]
+            if cross(a,b,c)*cross(a,b,d)<0 and cross(c,d,a)*cross(c,d,b)<0:
+                return True
+            if on(a,b,c) or on(a,b,d) or on(c,d,a) or on(c,d,b):return True
+    return False
+
+
+def three_point_trace_side(points, foot, transform, boundary_px=6):
+    """Compare only rays crossing the observed open trace; no extrapolation."""
+    if transform is None or len(points) < 2:
+        return None
+    try:
+        origin = np.asarray(transform_point(np.linalg.inv(np.asarray(transform, dtype=float)), [25, 5.25]))
+        direction = np.asarray(foot, dtype=float) - origin
+        if not np.all(np.isfinite(origin)) or np.linalg.norm(direction) < 1e-6:
+            return None
+        def cross(a, b):
+            return float(a[0]*b[1]-a[1]*b[0])
+        hits = []
+        for a, b in zip(points, points[1:]):
+            offset = np.asarray(a, dtype=float)-origin
+            segment = np.asarray(b, dtype=float)-np.asarray(a, dtype=float)
+            denominator = cross(direction, segment)
+            if abs(denominator) < 1e-9:
+                continue
+            ray = cross(offset, segment)/denominator
+            along = cross(offset, direction)/denominator
+            if ray > 0 and -1e-9 <= along <= 1+1e-9:
+                hits.append(ray)
+        hits = sorted(hits)
+        unique = [r for i, r in enumerate(hits) if i == 0 or abs(r-hits[i-1]) > 1e-6]
+        if len(unique) != 1:
+            return None
+        ray = unique[0]
+        if abs(ray-1)*np.linalg.norm(direction) <= boundary_px:
+            return 'boundary'
+        return 'inside' if ray > 1 else 'outside'
+    except (ValueError, np.linalg.LinAlgError):
+        return None
+
+
 def uses_known_inconsistent_lane_points(court_points: list[list[float]]) -> bool:
     """Recognize the old 12ft virtual lane that conflicts with the 16ft map."""
     return len(court_points) == 4 and {tuple(point) for point in court_points} == {

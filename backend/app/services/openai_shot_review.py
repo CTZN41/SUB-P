@@ -16,6 +16,7 @@ from app.core.config import Settings
 from app.services.court_calibration import transform_point
 from app.services.court_zones import classify_zone
 from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
+from app.analysis.foot_evidence import foot_proxy_is_clipped
 
 
 FRAME_OFFSETS_MS = (
@@ -427,6 +428,8 @@ def _projected_foot_position(
     foot = candidate.get("foot_point_px")
     if transform is None or candidate.get("calibration_shifted") or not isinstance(foot, (list, tuple)) or len(foot) != 2:
         return None
+    if candidate.get('foot_point_clipped') or foot_proxy_is_clipped(foot, candidate.get('frame_size_px')):
+        return None
     try:
         if not np.isfinite(np.asarray(foot, dtype=float)).all():
             return None
@@ -455,6 +458,8 @@ def _projected_plant_position(
         return None, None
     projected = _projected_foot_position(transform, {
         "foot_point_px": sample.get("foot_point_px"),
+        "foot_point_clipped": sample.get('foot_point_clipped', False),
+        "frame_size_px": candidate.get('frame_size_px'),
         "calibration_shifted": candidate.get("calibration_shifted"),
     })
     return projected, sample["time_ms"] if projected else None
@@ -465,7 +470,7 @@ def _foot_projection_prompt(
     plant: tuple[float, float] | None = None,
 ) -> str:
     release_text = (
-        f"The local detector's candidate-frame foot projects to ({projected[0]:.1f}, "
+        f"The local detector's candidate-frame bounding-box lower midpoint projects to ({projected[0]:.1f}, "
         f"{projected[1]:.1f}) feet. "
     ) if projected else ""
     plant_text = (
@@ -479,6 +484,7 @@ def _foot_projection_prompt(
         return ""
     return (
         release_text + plant_text +
+        "These points are bounding-box approximations, not detected ankle or shoe contacts. "
         "This is supporting evidence, not ground truth: the detected foot or calibration may be "
         "inaccurate. Compare it with the visible planted and release shoes and court lines before choosing "
         "your own coordinates and zone. If they conflict and the image cannot resolve why, "
@@ -1099,8 +1105,11 @@ def review_candidates_with_openai(
             camera_context = camera_contexts.get(int(candidate.get("scene_id", 0)))
             local_transform = (camera_view_calibrations.get(int(candidate.get("scene_id",0)))
                                if camera_view_calibrations is not None else calibration_transform)
-            projected_foot = _projected_foot_position(local_transform, candidate)
-            projected_plant, plant_time_ms = _projected_plant_position(local_transform, candidate)
+            if camera_view_calibrations is not None:
+                local_transform = (None if candidate.get('calibration_view_valid') is False else candidate.get('validated_court_transform', local_transform))
+            projection_candidate = ({**candidate, 'calibration_shifted': False} if candidate.get('validated_court_transform') else candidate)
+            projected_foot = _projected_foot_position(local_transform, projection_candidate)
+            projected_plant, plant_time_ms = _projected_plant_position(local_transform, projection_candidate)
             images = (timed("prepare_images", evidence_rich_detail_inputs, video_path,
                             int(candidate["time_ms"]), candidate.get("foot_point_px"),
                             candidate.get("tracked_hoop_px")) if scoring_rim_evidence else
@@ -1288,6 +1297,32 @@ def review_candidates_with_openai(
                 escalated += 1
                 model_decisions["fallback"] = fallback.model_dump()
                 final_review = _consensus(primary, fallback)
+            # Camera matching must validate the floor, not just background.
+            # An AI confidence score cannot grant a missing calibration.
+            if candidate.get('calibration_view_valid') is False:
+                final_review.update(court_x=None, court_y=None, court_zone='needs_review', position_confidence=0, review_required=True,
+                                    position_reason='이 구도의 코트 기준점이 검증되지 않아 위치 확인 필요')
+            elif _projection_lateral_conflict(primary, projected_plant or projected_foot):
+                final_review.update(court_x=None, court_y=None, court_zone='needs_review', position_confidence=0, review_required=True,
+                                    position_reason='검증된 바닥 위치와 AI의 코트 좌우가 달라 위치 확인 필요')
+            arc = candidate.get('validated_three_point_line')
+            plant_sample = next((s for s in candidate.get('foot_track', []) if s.get('time_ms') == plant_time_ms), {})
+            # Do not replace a rejected pre-release sample with an airborne or
+            # clipped release-frame box and call it a verified plant.
+            foot = (plant_sample.get('foot_point_px') if plant_time_ms is not None else
+                    candidate.get('foot_point_px') if not candidate.get('foot_track') else None)
+            foot_clipped = (plant_sample.get('foot_point_clipped', False) if plant_time_ms is not None else candidate.get('foot_point_clipped', False))
+            if foot_clipped or foot_proxy_is_clipped(foot, candidate.get('frame_size_px')):
+                foot = None
+            line_check = {'status': 'not_available' if not arc else 'insufficient_foot_evidence'}
+            if arc and foot and final_review.get('court_x') is not None:
+                from app.services.court_calibration import three_point_trace_side
+                side = three_point_trace_side(arc, foot, local_transform)
+                line_check = {'status': 'checked' if side is not None else 'outside_trace_coverage', 'side': side}
+                ai_three = str(final_review.get('court_zone','')).startswith('three_')
+                if side == 'boundary' or (side == 'inside' and ai_three) or (side == 'outside' and not ai_three):
+                    final_review.update(court_x=None, court_y=None, court_zone='needs_review', position_confidence=0, review_required=True,
+                                        position_reason='수동 3점선과 슛 위치가 겹치거나 AI 판정과 달라 위치 확인 필요')
             local_ai_conflict = not final_review["is_shot"]
             candidate["ai_review"] = {
                 **final_review,
@@ -1299,7 +1334,9 @@ def review_candidates_with_openai(
                 "calibrated_foot_projection": list(projected_foot) if projected_foot else None,
                 "calibrated_plant_projection": list(projected_plant) if projected_plant else None,
                 "plant_sample_time_ms": plant_time_ms,
-                "input_window_ms": [-2500, extended_to_ms],
+                "foot_point_source": candidate.get('foot_point_source', 'person_box_lower_midpoint'),
+                "three_point_line_check": line_check,
+                "input_window_ms": [min(FRAME_OFFSETS_MS), extended_to_ms],
             }
             reviewed += 1
         except Exception as exc:

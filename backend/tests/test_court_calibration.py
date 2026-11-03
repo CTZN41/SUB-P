@@ -40,6 +40,24 @@ def test_transform_is_stable() -> None:
     assert transform_point(transform, [50, 50]) == [25.0, 23.5]
 
 
+def test_multiple_views_preserve_other_view_and_optional_arc(tmp_path):
+    client, aid, engine = make_client(tmp_path)
+    with client:
+        first = valid_payload()
+        first['three_point_line'] = [[30,220],[40,120],[160,40],[280,120],[290,220]]
+        assert client.put(f'/api/analyses/{aid}/calibration', json=first).status_code == 200
+        second = valid_payload(); second['frame_time_ms'] = 100
+        assert client.put(f'/api/analyses/{aid}/calibration', json=second).status_code == 200
+        views = client.get(f'/api/analyses/{aid}/calibrations').json()
+        assert len(views) == 2 and views[0]['three_point_line'] == first['three_point_line']
+        assert client.put(f'/api/analyses/{aid}/calibration', json=second).status_code == 200
+        assert len(client.get(f'/api/analyses/{aid}/calibrations').json()) == 2
+        invalid = dict(second, three_point_line=[[10,10]] * 5)
+        assert client.put(f'/api/analyses/{aid}/calibration', json=invalid).status_code == 400
+        assert len(client.get(f'/api/analyses/{aid}/calibrations').json()) == 2
+    engine.dispose()
+
+
 def test_frame_and_calibration_are_saved(tmp_path) -> None:
     client, analysis_id, engine = make_client(tmp_path)
     with client:
@@ -50,6 +68,20 @@ def test_frame_and_calibration_are_saved(tmp_path) -> None:
         fetched = client.get(f"/api/analyses/{analysis_id}/calibration")
         assert fetched.status_code == 200
         assert fetched.json()["image_points"] == valid_payload()["image_points"]
+    engine.dispose()
+
+
+def test_partial_straight_three_point_trace_can_be_saved(tmp_path):
+    client, aid, engine = make_client(tmp_path)
+    payload = valid_payload()
+    payload['three_point_line'] = [[50,150],[100,150],[150,150],[200,150],[250,150]]
+    with client:
+        response = client.put(f'/api/analyses/{aid}/calibration',json=payload)
+        assert response.status_code == 200
+        assert response.json()['three_point_line'] == payload['three_point_line']
+        crossed = dict(payload, three_point_line=[[40,40],[250,180],[40,180],[250,40],[280,200]])
+        assert client.put(f'/api/analyses/{aid}/calibration',json=crossed).status_code == 400
+        assert client.get(f'/api/analyses/{aid}/calibration').json()['three_point_line'] == payload['three_point_line']
     engine.dispose()
 
 

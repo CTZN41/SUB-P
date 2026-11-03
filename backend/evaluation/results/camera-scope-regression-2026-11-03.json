@@ -1,0 +1,163 @@
+{
+  "scope": "Actual-frame synthetic view transform and unrelated source rejection; no AI or DB writes",
+  "measurements": [
+    {
+      "case": "translate",
+      "status": "accepted",
+      "max_control_error_ft": 0.0231144976151331,
+      "floor_scores": [
+        0.9984897375106812,
+        0.9984210729598999,
+        0.9962571263313293,
+        0.9953875541687012
+      ],
+      "metrics": {
+        "matches": 3707,
+        "inliers": 2882,
+        "holdout_median_px": 0.7471,
+        "center_scale": 1.0005,
+        "changed": false
+      }
+    },
+    {
+      "case": "zoom",
+      "status": "accepted",
+      "max_control_error_ft": 0.010857716150277372,
+      "floor_scores": [
+        0.993844211101532,
+        0.9873294234275818,
+        0.9908885955810547,
+        0.9952768683433533
+      ],
+      "metrics": {
+        "matches": 2905,
+        "inliers": 2246,
+        "holdout_median_px": 0.9617,
+        "center_scale": 1.0495,
+        "changed": true
+      }
+    },
+    {
+      "case": "mirror",
+      "status": "rejected",
+      "reason": "unstable scene transform"
+    },
+    {
+      "source": "fOXMTSF7oug",
+      "status": "rejected",
+      "reason": "insufficient scene features"
+    },
+    {
+      "source": "ss10AxV3OzI",
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "giPL6ixkkhk",
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "Mx4H3OWD0KM",
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "ClWmiGgE9nI",
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    }
+  ],
+  "unrelated_court_samples": [
+    {
+      "source": "fOXMTSF7oug",
+      "time_ms": 120000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "fOXMTSF7oug",
+      "time_ms": 180000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "fOXMTSF7oug",
+      "time_ms": 240000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "ss10AxV3OzI",
+      "time_ms": 120000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "ss10AxV3OzI",
+      "time_ms": 180000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "ss10AxV3OzI",
+      "time_ms": 240000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "giPL6ixkkhk",
+      "time_ms": 120000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "giPL6ixkkhk",
+      "time_ms": 180000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "giPL6ixkkhk",
+      "time_ms": 240000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "Mx4H3OWD0KM",
+      "time_ms": 120000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "Mx4H3OWD0KM",
+      "time_ms": 180000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "Mx4H3OWD0KM",
+      "time_ms": 240000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "ClWmiGgE9nI",
+      "time_ms": 120000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "ClWmiGgE9nI",
+      "time_ms": 180000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    },
+    {
+      "source": "ClWmiGgE9nI",
+      "time_ms": 240000,
+      "status": "rejected",
+      "reason": "insufficient scene matches"
+    }
+  ]
+}

@@ -256,7 +256,7 @@ def get_calibration(
 ) -> CourtCalibration:
     find_analysis(session, analysis_id)
     calibration = session.scalar(
-        select(CourtCalibration).where(CourtCalibration.analysis_id == analysis_id)
+        select(CourtCalibration).where(CourtCalibration.analysis_id == analysis_id).order_by(CourtCalibration.frame_time_ms)
     )
     if calibration is None:
         raise HTTPException(status_code=404, detail={"code": "CALIBRATION_NOT_FOUND", "message": "저장된 코트 위치가 없습니다."})
@@ -283,13 +283,23 @@ def save_calibration(
     except CalibrationError as error:
         raise HTTPException(status_code=400, detail={"code": "CALIBRATION_INVALID", "message": str(error)}) from error
 
-    session.execute(delete(CourtCalibration).where(CourtCalibration.analysis_id == analysis_id))
+    arc = payload.three_point_line
+    if arc is not None:
+        from app.services.court_calibration import arc_has_crossing
+        import numpy as np
+        if (not 5 <= len(arc) <= 40 or any(len(p) != 2 or not all(np.isfinite(p)) or not (0 <= p[0] < width and 0 <= p[1] < height) for p in arc)
+                or len({tuple(p) for p in arc}) != len(arc)
+                or sum(float(np.linalg.norm(np.asarray(b)-np.asarray(a))) for a,b in zip(arc,arc[1:])) < max(12, min(width,height)*.02)
+                or arc_has_crossing(arc)):
+            raise HTTPException(status_code=400, detail={"code": "ARC_INVALID", "message": "화면에 보이는 3점선 구간을 따라 5~40개 점을 순서대로 지정해 주세요. 선이 교차하거나 한곳에 몰리면 안 됩니다."})
+    session.execute(delete(CourtCalibration).where(CourtCalibration.analysis_id == analysis_id, CourtCalibration.frame_time_ms == payload.frame_time_ms))
     calibration = CourtCalibration(
         analysis_id=analysis_id,
         frame_time_ms=payload.frame_time_ms,
         image_points=payload.image_points,
         court_points=payload.court_points,
         hoop_point=payload.hoop_point,
+        three_point_line=arc,
         transform=transform,
         source=CalibrationSource.USER,
         confirmed_at=datetime.now(timezone.utc),
@@ -298,6 +308,12 @@ def save_calibration(
     session.commit()
     session.refresh(calibration)
     return calibration
+
+
+@router.get("/{analysis_id}/calibrations", response_model=list[CourtCalibrationResponse])
+def get_calibrations(analysis_id: str, session: Annotated[Session, Depends(get_db_session)]) -> list[CourtCalibration]:
+    find_analysis(session, analysis_id)
+    return list(session.scalars(select(CourtCalibration).where(CourtCalibration.analysis_id == analysis_id).order_by(CourtCalibration.frame_time_ms)))
 
 
 def player_warnings(players: list[Player], play_type: PlayType) -> list[str]:

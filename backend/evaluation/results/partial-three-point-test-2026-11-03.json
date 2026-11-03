@@ -1,0 +1,100 @@
+{
+  "analysis_id": "2a9396e5-9f05-4541-8cde-6cfa73cb1c55",
+  "job_id": "eba2cc4f-3a97-4a9c-9e2b-ffa474726b9f",
+  "duration_ms": 12017,
+  "elapsed_seconds": 56.473409,
+  "status": "succeeded",
+  "saved_views": 1,
+  "view_frame_ms": 3000,
+  "arc_point_count": 15,
+  "candidate_count": 2,
+  "saved_shots": 2,
+  "missing_positions": 0,
+  "outcome_unclear": 1,
+  "api_usage": {
+    "input_tokens": 57307,
+    "output_tokens": 1264,
+    "total_tokens": 58571
+  },
+  "timing_seconds": {
+    "local_candidates": 9.25,
+    "focused_rescan_and_shot_gate": 13.73,
+    "camera_view_validation": 1.11,
+    "detailed_ai_review": 22.25
+  },
+  "runtime_options": {
+    "gate_workers": 2,
+    "detail_workers": 2,
+    "prefetch": true,
+    "model_reuse": true,
+    "async_status": true,
+    "scoring_rim_evidence": true,
+    "camera_view_guard": true
+  },
+  "candidates": [
+    {
+      "time_ms": 5700,
+      "expected_time_ms": 5548,
+      "camera_valid": true,
+      "foot_projection": [
+        9.3338,
+        23.5739
+      ],
+      "plant_projection": [
+        9.1802,
+        23.9655
+      ],
+      "plant_sample_ms": 5300,
+      "plant_foot_px": [
+        1045.56,
+        1080.0
+      ],
+      "trace_side": "outside",
+      "court_xy": [
+        9.3,
+        23.6
+      ],
+      "zone": "three_wing_left",
+      "position_confidence": 0.74,
+      "shot_type": "dribble_pull_up",
+      "outcome": "made",
+      "model": "gpt-6.1-terra"
+    },
+    {
+      "time_ms": 11433,
+      "expected_time_ms": 11349,
+      "camera_valid": true,
+      "foot_projection": [
+        9.0499,
+        23.2332
+      ],
+      "plant_projection": [
+        8.8938,
+        23.0416
+      ],
+      "plant_sample_ms": 11067,
+      "plant_foot_px": [
+        972.3,
+        1072.32
+      ],
+      "trace_side": "outside",
+      "court_xy": [
+        9.0,
+        23.2
+      ],
+      "zone": "three_wing_left",
+      "position_confidence": 0.82,
+      "shot_type": "dribble_pull_up",
+      "outcome": "unclear",
+      "model": "gpt-6.1-terra"
+    }
+  ],
+  "limitations": [
+    "Two shots only; not independent overall accuracy.",
+    "Manual calibration changed as well as code; cannot isolate arc effect.",
+    "Last shot outcome excluded because clip ends.",
+    "Second shot returned dribble_pull_up, unlike previous step_back interpretation.",
+    "First plant foot sample reaches image bottom at y=1080.",
+    "Result API verified, fresh browser interaction unavailable."
+  ]
+}

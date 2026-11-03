@@ -55,6 +55,26 @@ def guarded_calibration(reference, current, court_transform):
         return None, {"status":"different_or_unverified_view","reason":str(error)}
 
 
+def validate_floor_alignment(reference, current, matrix, points):
+    """Check manual floor landmark patches independently of background matches."""
+    warped = cv2.warpPerspective(current, np.linalg.inv(matrix), (reference.shape[1], reference.shape[0]))
+    a = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY)
+    b = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+    scores = []
+    for x, y in points[:4]:
+        x, y = int(x), int(y)
+        if x < 28 or y < 28 or x+28 >= a.shape[1] or y+28 >= a.shape[0]:
+            continue
+        patch = a[y-22:y+23, x-22:x+23]
+        if float(patch.std()) < 12:
+            continue
+        score = cv2.matchTemplate(b[y-25:y+26,x-25:x+26], patch, cv2.TM_CCOEFF_NORMED).max()
+        scores.append(float(score))
+    if len(scores) < 3 or sum(s >= .75 for s in scores) < 3:
+        raise ValueError('manual floor landmarks do not agree')
+    return scores
+
+
 def group_camera_views(video, candidates, calibration):
     """Experimental grouping; unmatched views receive no old court transform."""
     capture=cv2.VideoCapture(str(video))
@@ -65,18 +85,35 @@ def group_camera_views(video, candidates, calibration):
         ok,reference=capture.read()
         if not ok:
             raise ValueError("calibration frame unavailable")
-        references=[reference]
-        transforms={0:calibration["transform"]}
+        profiles = calibration.get('views') or [calibration]
+        references = []
+        for profile in profiles:
+            capture.set(cv2.CAP_PROP_POS_MSEC, profile['frame_time_ms'])
+            ok, image = capture.read()
+            if not ok:
+                raise ValueError('saved calibration frame unavailable')
+            references.append(image)
+        transforms={i:p['transform'] for i,p in enumerate(profiles)}
         reports=[]
         for candidate in candidates:
             capture.set(cv2.CAP_PROP_POS_MSEC,max(0,int(candidate["time_ms"])-300))
             ok,frame=capture.read()
             selected=None
             if ok:
-                for index,ref in enumerate(references):
+                # Prefer a nearby manually saved view; no camera grouping alone
+                # grants permission to reuse that view's numeric coordinates.
+                order = sorted(range(len(profiles)), key=lambda i: abs(profiles[i]['frame_time_ms']-candidate['time_ms']))
+                for index in order:
+                    ref = references[index]
                     try:
-                        align_view(ref,frame)
+                        matrix, _ = align_view(ref,frame)
+                        points = profiles[index].get('image_points')
+                        if not points:
+                            raise ValueError('manual floor landmarks missing')
+                        validate_floor_alignment(ref,frame,matrix,points)
                         selected=index
+                        candidate['validated_court_transform'] = transform_calibration(profiles[index]['transform'],matrix)
+                        candidate['validated_three_point_line'] = (cv2.perspectiveTransform(np.float32([profiles[index]['three_point_line']]),matrix)[0].tolist() if profiles[index].get('three_point_line') else None)
                         break
                     except ValueError:
                         continue
@@ -84,11 +121,13 @@ def group_camera_views(video, candidates, calibration):
                 selected=len(references)
                 if not ok:
                     raise ValueError("candidate frame unavailable")
-                references.append(frame)
+                selected = len(profiles)
                 transforms[selected]=None
+                candidate.pop('validated_court_transform', None)
+                candidate.pop('validated_three_point_line', None)
             candidate["source_scene_id"]=candidate.get("scene_id",0)
             candidate["scene_id"]=selected
-            candidate["calibration_view_valid"]=transforms[selected] is not None
+            candidate["calibration_view_valid"]=candidate.get('validated_court_transform') is not None
             reports.append({"time_ms":candidate["time_ms"],"view_id":selected,
                             "old_calibration_usable":transforms[selected] is not None})
         return transforms,reports

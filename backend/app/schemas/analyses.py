@@ -63,6 +63,7 @@ class CourtCalibrationRequest(BaseModel):
     image_points: list[list[float]]
     court_points: list[list[float]]
     hoop_point: list[float]
+    three_point_line: list[list[float]] | None = None
 
 
 class CourtCalibrationResponse(BaseModel):
@@ -74,6 +75,7 @@ class CourtCalibrationResponse(BaseModel):
     image_points: list[list[float]]
     court_points: list[list[float]]
     hoop_point: list[float]
+    three_point_line: list[list[float]] | None = None
     transform: list[list[float]]
     confirmed_at: datetime | None
 

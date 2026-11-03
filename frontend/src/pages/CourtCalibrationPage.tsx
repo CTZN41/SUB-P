@@ -21,6 +21,7 @@ function legacyLaneOrder(points: number[][]): number[] | null {
 }
 
 type Analysis = { id: string; title: string; duration_ms: number; width: number; height: number; play_type: string }
+type SavedView = { id: string; frame_time_ms: number; image_points: number[][]; court_points: number[][]; hoop_point: number[]; confirmed_at: string | null; three_point_line?: number[][] | null }
 
 export function CourtCalibrationPage() {
   const { analysisId = '' } = useParams()
@@ -38,6 +39,9 @@ export function CourtCalibrationPage() {
   const [loadedFrameUrl, setLoadedFrameUrl] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [guideMessage, setGuideMessage] = useState('')
+  const [views, setViews] = useState<SavedView[]>([])
+  const [arc, setArc] = useState<number[][]>([])
+  const [drawingArc, setDrawingArc] = useState(false)
   const frameUrl = useMemo(() => `${API_BASE}/analyses/${analysisId}/calibration/frame?time_ms=${timeMs}`, [analysisId, timeMs])
   const frameReady = loadedFrameUrl === frameUrl
   const laneTemplate = matchesTemplate(courtPoints, INITIAL_COURT_POINTS)
@@ -45,8 +49,10 @@ export function CourtCalibrationPage() {
   const supportedTemplate = laneTemplate || fullCourtTemplate
   const previousLaneOrder = legacyLaneOrder(courtPoints)
   const allPointsPlaced = placedPoints.every(Boolean)
+  const missingPointNames = [...pointNames, '림 중심'].filter((_, index) => !placedPoints[index])
 
   function resetCalibration() {
+    setArc([]); setDrawingArc(false)
     setPoints(INITIAL_POINTS)
     setCourtPoints(INITIAL_COURT_POINTS)
     setPointNames(INITIAL_POINT_NAMES)
@@ -67,6 +73,9 @@ export function CourtCalibrationPage() {
       if (savedResponse.status === 404) return
       if (!savedResponse.ok) throw new Error('저장된 코트 기준점을 불러오지 못했습니다.')
       const saved = await savedResponse.json()
+      const list = await fetch(`${API_BASE}/analyses/${analysisId}/calibrations`)
+      if (list.ok) setViews(await list.json())
+      setArc((saved.three_point_line ?? []).map(([x,y]: number[]) => [x/details.width*100,y/details.height*100]))
       setPoints(saved.image_points.map(([x, y]: number[]) => [x / details.width * 100, y / details.height * 100]))
       setCourtPoints(saved.court_points)
       setPlacedPoints(matchesTemplate(saved.court_points, INITIAL_COURT_POINTS) || matchesTemplate(saved.court_points, FULL_COURT_POINTS) ? [true, true, true, true, true] : [false, false, false, false, false])
@@ -97,18 +106,19 @@ export function CourtCalibrationPage() {
     setConfirmed(false)
   }
 
-  async function save() {
+  async function save(continueAfter = true) {
     if (!analysis || !frameReady || !confirmed || !supportedTemplate || !allPointsPlaced) return
     setSaving(true); setError('')
     const toPixels = (point: number[]) => [point[0] * analysis.width / 100, point[1] * analysis.height / 100]
     try {
       const response = await fetch(`${API_BASE}/analyses/${analysisId}/calibration`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frame_time_ms: timeMs, image_points: points.map(toPixels), court_points: courtPoints, hoop_point: toPixels(hoop) }),
+        body: JSON.stringify({ frame_time_ms: timeMs, image_points: points.map(toPixels), court_points: courtPoints, hoop_point: toPixels(hoop), three_point_line: arc.length ? arc.map(toPixels) : null }),
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.detail?.message ?? '코트 위치를 저장하지 못했습니다.')
-      navigate(analysis.play_type === 'solo' ? `/progress/${analysisId}` : `/players/${analysisId}`)
+      if (continueAfter) navigate(analysis.play_type === 'solo' ? `/progress/${analysisId}` : `/players/${analysisId}`)
+      else { const list = await fetch(`${API_BASE}/analyses/${analysisId}/calibrations`); if (list.ok) setViews(await list.json()); setGuideMessage('이 구도를 저장했습니다. 다른 구도의 장면으로 이동해 추가로 지정할 수 있습니다.') }
     } catch (caught) { setError(caught instanceof Error ? caught.message : '코트 위치를 저장하지 못했습니다.') }
     finally { setSaving(false) }
   }
@@ -117,15 +127,27 @@ export function CourtCalibrationPage() {
     <AnalysisBackLink to="/history" />
     <header className="setup-header"><div><p className="eyebrow">COURT SETUP</p><h1>코트 위치 확인</h1><p className="lead">네 모서리와 골대 점을 영상의 실제 코트 선과 림 중심에 맞춰 주세요.</p></div><span className="step-chip">{analysis?.play_type === 'solo' ? '1 / 2 설정' : '1 / 3 설정'}</span></header>
     <section className="setup-card">
-      <div className="frame-toolbar"><strong>{analysis?.title ?? '영상을 불러오는 중'}</strong><label>대표 장면<input type="range" min="0" max={Math.max(0, (analysis?.duration_ms ?? 0) - 500)} step="500" value={timeMs} onChange={(e) => { setTimeMs(Number(e.target.value)); setPlacedPoints([false, false, false, false, false]); setConfirmed(false); setError(''); setGuideMessage('') }} /></label><span>{(timeMs / 1000).toFixed(1)}초</span></div>
+      <label>저장한 구도<select value={views.some(v => v.frame_time_ms === timeMs) ? timeMs : ''} onChange={e => {
+        const view = views.find(v => v.frame_time_ms === Number(e.target.value)); if (!view || !analysis) return
+        setTimeMs(view.frame_time_ms); setPoints(view.image_points.map(([x,y]) => [x/analysis.width*100,y/analysis.height*100])); setCourtPoints(view.court_points)
+        setPointNames(matchesTemplate(view.court_points, INITIAL_COURT_POINTS) ? INITIAL_POINT_NAMES : FULL_COURT_NAMES)
+        setHoop([view.hoop_point[0]/analysis.width*100,view.hoop_point[1]/analysis.height*100]); setPlacedPoints([true,true,true,true,true]); setConfirmed(!!view.confirmed_at)
+        setArc((view.three_point_line ?? []).map(([x,y]) => [x/analysis.width*100,y/analysis.height*100])); setDrawingArc(false)
+      }}><option value="">새 구도 지정</option>{views.map(v => <option key={v.id} value={v.frame_time_ms}>{(v.frame_time_ms/1000).toFixed(1)}초 구도</option>)}</select></label>
+      <div className="actions"><button type="button" className="button secondary" onClick={() => setDrawingArc(!drawingArc)}>{drawingArc ? '3점선 지정 끝내기' : '3점선 지정 (선택)'}</button>{arc.length > 0 && <button type="button" className="button secondary" onClick={() => setArc(a => a.slice(0,-1))}>3점선 마지막 점 취소</button>}</div>
+      {drawingArc && <p>화면에 보이는 3점선 구간만 따라 순서대로 5~40개 점을 눌러 주세요. 45도~45도 구간만 지정해도 됩니다. 보이지 않는 부분은 연결하지 마세요. {arc.length}/40</p>}
+      <div className="frame-toolbar"><strong>{analysis?.title ?? '영상을 불러오는 중'}</strong><label>대표 장면<input type="range" min="0" max={Math.max(0, (analysis?.duration_ms ?? 0) - 500)} step="500" value={timeMs} onChange={(e) => { setTimeMs(Number(e.target.value)); setArc([]); setDrawingArc(false); setPlacedPoints([false, false, false, false, false]); setConfirmed(false); setError(''); setGuideMessage('') }} /></label><span>{(timeMs / 1000).toFixed(1)}초</span></div>
       <div className="calibration-frame" style={{ backgroundImage: frameReady ? `url(${frameUrl})` : 'none', aspectRatio: analysis ? `${analysis.width} / ${analysis.height}` : '16 / 9' }} onPointerDown={(event) => {
-        const target = event.target as HTMLElement
-        const index = Number(target.dataset.point)
-        if (!Number.isNaN(index)) {
+        if (!frameReady) return
+        const marker = (event.target as Element).closest<HTMLElement>('[data-point]')
+        if (marker) {
+          const index = Number(marker.dataset.point)
           event.currentTarget.setPointerCapture(event.pointerId)
           setDraggingPoint(index)
           movePoint(index, event)
+          return
         }
+        if (drawingArc) { if (arc.length >= 40) return; const r = event.currentTarget.getBoundingClientRect(); setArc(a => [...a, [Math.max(0,Math.min(99.99,(event.clientX-r.left)/r.width*100)),Math.max(0,Math.min(99.99,(event.clientY-r.top)/r.height*100))]]) }
       }} onPointerMove={(event) => {
         if (draggingPoint !== null) movePoint(draggingPoint, event)
       }} onPointerUp={(event) => {
@@ -134,7 +156,7 @@ export function CourtCalibrationPage() {
       }} onPointerCancel={() => {
         setDraggingPoint(null)
       }}>
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points={points.map((point) => point.join(',')).join(' ')} /></svg>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points={points.map((point) => point.join(',')).join(' ')} /><polyline points={arc.map(p => p.join(',')).join(' ')} style={{ fill: 'none', stroke: '#36e4f1', strokeWidth: .3 }} />{arc.map(([x,y],i) => <circle key={i} cx={x} cy={y} r=".45" fill="#36e4f1" />)}</svg>
         {points.map((point, index) => <button key={index} data-point={index} className="calibration-point" style={{ left: `${point[0]}%`, top: `${point[1]}%` }} aria-label={pointNames[index] ?? `바닥 기준점 ${index + 1}`} title={pointNames[index]}>{index + 1}</button>)}
         <button data-point="4" className="calibration-point hoop-point" style={{ left: `${hoop[0]}%`, top: `${hoop[1]}%` }} aria-label="골대 중심">골대</button>
       </div>
@@ -153,9 +175,11 @@ export function CourtCalibrationPage() {
       </div>
       {!supportedTemplate && <p className="inline-warning">{previousLaneOrder ? '기존 기록의 기준은 현재 페인트존 경계와 달라 화면 점을 그대로 사용하지 않습니다.' : '이 기록의 가상 좌표는 현재 코트 경계 기준과 다릅니다.'} ‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 다시 지정해 주세요. 기존 분석 결과는 자동으로 바뀌지 않습니다.</p>}
       {guideMessage && <p className="inline-warning">{guideMessage}</p>}
+      {!allPointsPlaced && <p className="inline-warning" role="status">아직 확인하지 않은 기준점: {missingPointNames.join(', ')}. 해당 점을 실제 위치로 옮기거나, 이미 맞다면 한 번 눌러 주세요. 3점선 지정은 별도로 유지됩니다.</p>}
       <label className="check-row"><input type="checkbox" checked={confirmed} disabled={!allPointsPlaced || !supportedTemplate} onChange={(event) => setConfirmed(event.target.checked)} />영상에 반코트와 골대가 보이고 기준점을 실제 위치에 맞춘 것을 확인했습니다.</label>
+      {allPointsPlaced && supportedTemplate && !confirmed && <p role="status">위 확인란을 체크하면 저장할 수 있습니다.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="actions"><button type="button" className="button secondary" onClick={resetCalibration} disabled={saving}>재설정</button><button className="button primary" onClick={save} disabled={!analysis || !frameReady || !confirmed || saving || !supportedTemplate || !allPointsPlaced}>{saving ? '저장 중…' : analysis?.play_type === 'solo' ? '확인하고 분석 준비로' : '확인하고 선수 설정으로'}</button></div>
+      <div className="actions"><button type="button" className="button secondary" onClick={resetCalibration} disabled={saving}>재설정</button><button type="button" className="button secondary" onClick={() => save(false)} disabled={!analysis || !frameReady || !confirmed || saving || !supportedTemplate || !allPointsPlaced}>이 구도 저장</button><button className="button primary" onClick={() => save()} disabled={!analysis || !frameReady || !confirmed || saving || !supportedTemplate || !allPointsPlaced}>{saving ? '저장 중…' : analysis?.play_type === 'solo' ? '확인하고 분석 준비로' : '확인하고 선수 설정으로'}</button></div>
     </section>
   </div>
 }

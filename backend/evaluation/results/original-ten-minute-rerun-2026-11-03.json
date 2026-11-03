@@ -1,0 +1,68 @@
+{
+  "analysis_id": "25ab4bac-b912-4cff-9e9e-affff2b5a6a1",
+  "job_id": "49789658-2629-4267-8a06-be80f640bd62",
+  "status": "succeeded",
+  "started_at": "2026-11-03T02:54:44.445766Z",
+  "finished_at": "2026-11-03T03:16:54.433475Z",
+  "elapsed_seconds": 1329.987709,
+  "candidate_count": 85,
+  "saved_count": 85,
+  "results": {
+    "made": 71,
+    "missed": 12,
+    "needs_review": 2
+  },
+  "position_missing": 6,
+  "review_status_count": 6,
+  "api_usage": {
+    "input_tokens": 2992734,
+    "output_tokens": 39040
+  },
+  "models": [
+    "gpt-6.1-terra"
+  ],
+  "timing_seconds": {
+    "local_candidates": 244.23,
+    "focused_rescan_and_shot_gate": 531.85,
+    "camera_view_validation": 32.01,
+    "detailed_ai_review": 486.66
+  },
+  "runtime_options": {
+    "gate_workers": 2,
+    "detail_workers": 2,
+    "prefetch": true,
+    "model_reuse": true,
+    "async_status": true,
+    "scoring_rim_evidence": true,
+    "camera_view_guard": true
+  },
+  "status_io": {
+    "cancel_queries": 319,
+    "progress_writes": 160,
+    "db_seconds": 656.3846018999466
+  },
+  "ai_review_summary": {
+    "reviewed": 90,
+    "failed": 0,
+    "escalated": 0,
+    "primary_model": "gpt-6.1-terra",
+    "fallback_model": null
+  },
+  "gate_summary": {
+    "usage": {
+      "input_tokens": 613389,
+      "output_tokens": 8100
+    }
+  },
+  "total_tokens": 3031774,
+  "estimated_cost_usd_standard": 3.187934,
+  "estimated_cost_krw_at_1400": 4463.107599999999,
+  "exclusive_display_counts": {
+    "made": 70,
+    "missed": 12,
+    "outcome_review": 2,
+    "position_review": 1
+  },
+  "total_stage_seconds": 1294.75,
+  "outside_stage_seconds": 35.24
+}
