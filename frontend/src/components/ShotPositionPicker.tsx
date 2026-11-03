@@ -1,5 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from 'react'
 import './ShotPositionPicker.css'
+import { THREE_POINT_LINE } from '../utils/courtZones'
 
 export function ShotPositionPicker({ x, y, disabled = false, saved = false, onChange }: {
   x: string
@@ -42,7 +43,7 @@ export function ShotPositionPicker({ x, y, disabled = false, saved = false, onCh
       <g className="position-court-lines">
         <rect x="1" y="1" width="498" height="468" />
         <rect x="170" y="0" width="160" height="190" />
-        <path d="M30 0V141.98A237.5 237.5 0 0 0 470 141.98V0" />
+        <path d={THREE_POINT_LINE} />
         <path d="M210 52.5A40 40 0 0 0 290 52.5M190 190A60 60 0 0 0 310 190M190 470A60 60 0 0 1 310 470M220 35H280" />
         <circle cx="250" cy="52.5" r="7" />
       </g>

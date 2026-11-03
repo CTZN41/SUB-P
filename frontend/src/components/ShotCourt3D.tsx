@@ -3,8 +3,9 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import './ShotCourt3D.css'
 import { formatShotTime } from '../utils/shotPresentation'
-import { COURT_ZONES } from '../utils/courtZones'
+import { COURT_ZONES, classifyCourtZone } from '../utils/courtZones'
 import { addCourtZones, styleCourtZones } from './courtZoneMeshes'
+import { orientCourtMarkers } from './courtMarkerOrientation'
 
 export type CourtShot = {
   id: string
@@ -19,7 +20,7 @@ export type CourtShot = {
   zone_code?: string | null
 }
 
-const DEFAULT_CAMERA = new THREE.Vector3(62, 64, 76)
+const DEFAULT_CAMERA = new THREE.Vector3(0, 7.5, 58)
 const COURT_TARGET = new THREE.Vector3(0, 0, 0)
 const COURT_FIT_POINTS = [
   ...[-28, 28].flatMap((x) => [-26.5, 26.5].flatMap((z) => [-.7, .5].map((y) => new THREE.Vector3(x, y, z)))),
@@ -49,8 +50,8 @@ function courtLine(scene: THREE.Scene, points: Array<[number, number]>, closed =
     points.map(([x, y]) => new THREE.Vector3(x - 25, 0.11, y - 23.5)),
   )
   const line = closed
-    ? new THREE.LineLoop(geometry, new THREE.LineBasicMaterial({ color: '#f8f1db' }))
-    : new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: '#f8f1db' }))
+    ? new THREE.LineLoop(geometry, new THREE.LineBasicMaterial({ color: '#ffffff' }))
+    : new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: '#ffffff' }))
   scene.add(line)
 }
 
@@ -65,18 +66,22 @@ function addCourt(scene: THREE.Scene) {
   const apron = new THREE.Mesh(new THREE.BoxGeometry(56, 0.65, 53), new THREE.MeshStandardMaterial({ color: '#222a28', roughness: 1 }))
   apron.position.y = -0.38
   scene.add(apron)
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(50, 0.22, 47), new THREE.MeshStandardMaterial({ color: '#b88d5a', roughness: .87 }))
+  const asphalt = document.createElement('canvas')
+  asphalt.width = asphalt.height = 128
+  const context = asphalt.getContext('2d')!
+  const grain = context.createImageData(128, 128)
+  for (let index = 0; index < grain.data.length; index += 4) {
+    const shade = 104 + Math.floor(Math.random() * 17)
+    grain.data.set([shade, shade, shade, 255], index)
+  }
+  context.putImageData(grain, 0, 0)
+  const texture = new THREE.CanvasTexture(asphalt)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(10, 9.4)
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(50, 0.22, 47), new THREE.MeshStandardMaterial({ map: texture, roughness: 1, metalness: 0 }))
   floor.position.y = -0.12
   scene.add(floor)
-  for (let x = 0; x < 50; x += 2) {
-    const plank = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.98, 46.96),
-      new THREE.MeshStandardMaterial({ color: x % 4 === 0 ? '#c69c69' : '#b48754', roughness: .9, side: THREE.DoubleSide }),
-    )
-    plank.rotation.x = -Math.PI / 2
-    plank.position.set(x - 24, 0.015, 0)
-    scene.add(plank)
-  }
 
   courtLine(scene, [[0, 0], [50, 0], [50, 47], [0, 47]], true)
   courtLine(scene, [[17, 0], [33, 0], [33, 19], [17, 19]], true)
@@ -171,7 +176,11 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
   }, [onSelect, shots])
 
   function render() {
-    if (sceneRef.current && cameraRef.current) rendererRef.current?.render(sceneRef.current, cameraRef.current)
+    if (sceneRef.current && cameraRef.current) {
+      const pose = orientCourtMarkers(markersRef.current, cameraRef.current)
+      if (mountRef.current) mountRef.current.dataset.markerTilt = String(THREE.MathUtils.radToDeg(pose.tilt).toFixed(1))
+      rendererRef.current?.render(sceneRef.current, cameraRef.current)
+    }
   }
 
   useEffect(() => {
@@ -190,8 +199,8 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
     mount.appendChild(renderer.domElement)
     const scene = new THREE.Scene()
     scene.background = new THREE.Color('#0c1512')
-    scene.add(new THREE.HemisphereLight('#ffffff', '#54675e', 2.2))
-    const light = new THREE.DirectionalLight('#fff4d8', 2.3)
+    scene.add(new THREE.HemisphereLight('#ffffff', '#606060', 2.2))
+    const light = new THREE.DirectionalLight('#ffffff', 2.3)
     light.position.set(-15, 55, 30)
     scene.add(light)
     addCourt(scene)
@@ -204,14 +213,19 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
     controls.target.copy(COURT_TARGET)
     controls.enablePan = false
     controls.minDistance = 28
-    controls.maxDistance = 160
+    controls.maxDistance = minimumCourtDistance(camera, controls.target) * 1.12
     controls.minPolarAngle = .25
     controls.maxPolarAngle = Math.PI / 2.15
     controls.update()
     const draw = () => {
-      controls.minDistance = activeZoneRef.current ? 14 : minimumCourtDistance(camera, controls.target) * .55
+      const fitDistance = minimumCourtDistance(camera, controls.target)
+      controls.minDistance = activeZoneRef.current ? 14 : fitDistance * .55
+      controls.maxDistance = fitDistance * 1.12
       const offset = camera.position.clone().sub(controls.target)
-      if (offset.length() < controls.minDistance) camera.position.copy(controls.target).add(offset.setLength(controls.minDistance))
+      const distance = THREE.MathUtils.clamp(offset.length(), controls.minDistance, controls.maxDistance)
+      camera.position.copy(controls.target).add(offset.setLength(distance))
+      const pose = orientCourtMarkers(markers, camera)
+      mount.dataset.markerTilt = String(THREE.MathUtils.radToDeg(pose.tilt).toFixed(1))
       renderer.render(scene, camera)
     }
     controls.addEventListener('change', draw)
@@ -244,7 +258,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
         const id = marker.userData.shotId as string | undefined
         if (!id || !(marker instanceof THREE.Mesh)) continue
         const center = marker.position.clone().project(camera)
-        const edge = marker.position.clone().add(new THREE.Vector3(marker.geometry.parameters.width / 2, 0, 0)).project(camera)
+        const edge = marker.localToWorld(new THREE.Vector3(marker.geometry.parameters.width / 2, 0, 0)).project(camera)
         const x = bounds.left + (center.x + 1) * bounds.width / 2
         const y = bounds.top + (1 - center.y) * bounds.height / 2
         const radius = Math.max(18, Math.abs(edge.x - center.x) * bounds.width / 2 + 8)
@@ -257,8 +271,8 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
       raycaster.setFromCamera(new THREE.Vector2((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1), camera)
       const hit = raycaster.intersectObjects([...zonesRef.current.values()], true).find(item => item.object instanceof THREE.Mesh)
       if (hit) {
-        const code = hit.object.userData.zoneCode as string
-        setActiveZone(current => current === code ? null : code)
+        const code = classifyCourtZone(hit.point.x + 25, hit.point.z + 23.5)
+        if (code) setActiveZone(current => current === code ? null : code)
       }
     }
     const cancel = () => { pointerDown = null }
@@ -284,7 +298,10 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
         if (item instanceof THREE.Mesh || item instanceof THREE.Line || item instanceof THREE.LineLoop) {
           item.geometry.dispose()
           const materials = Array.isArray(item.material) ? item.material : [item.material]
-          materials.forEach((material) => material.dispose())
+          materials.forEach((material) => {
+            if (material instanceof THREE.MeshStandardMaterial) material.map?.dispose()
+            material.dispose()
+          })
         }
       })
       textures.forEach((texture) => texture.dispose())
@@ -316,10 +333,10 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
       const key = `${shot.result}-${selected}-${number}`
       let texture = texturesRef.current.get(key)
       if (!texture) { texture = markerTexture(shot.result, selected, number); texturesRef.current.set(key, texture) }
-      const size = selected ? 3.8 : 3.3
+      const size = selected ? 2.2 : 1.9
       const marker = new THREE.Mesh(
         new THREE.PlaneGeometry(size, size),
-        new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: activeZone && shot.zone_code !== activeZone ? .3 : 1, side: THREE.DoubleSide, depthWrite: false }),
+        new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: activeZone && shot.zone_code !== activeZone ? .3 : 1, side: THREE.DoubleSide, depthWrite: false, depthTest: false }),
       )
       marker.rotation.x = -Math.PI / 2
       marker.position.set(
@@ -329,6 +346,8 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
       )
       marker.userData.shotId = shot.id
       marker.userData.zoneCode = shot.zone_code
+      marker.userData.markerSize = size
+      marker.userData.floorHeight = zonesRef.current.get(shot.zone_code ?? '')?.position.y ?? 0
       marker.renderOrder = 2
       markers.add(marker)
     }
@@ -356,7 +375,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, jerseyNumber, showPl
       const progress = Math.min(1, (now - started) / 450)
       const eased = 1 - (1 - progress) ** 3
       for (const [code, zone] of zonesRef.current) zone.position.y = THREE.MathUtils.lerp(heights.get(code) ?? 0, code === activeZone ? 1.6 : 0, eased)
-      for (const marker of markersRef.current?.children ?? []) marker.position.y = .17 + (zonesRef.current.get(marker.userData.zoneCode)?.position.y ?? 0)
+      for (const marker of markersRef.current?.children ?? []) marker.userData.floorHeight = zonesRef.current.get(marker.userData.zoneCode)?.position.y ?? 0
       if (cameraAnimatingRef.current) {
         camera.position.lerpVectors(fromPosition, destination, eased)
         controls.target.lerpVectors(fromTarget, target, eased)

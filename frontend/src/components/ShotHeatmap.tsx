@@ -1,4 +1,4 @@
-import { COURT_ZONES as ZONES } from '../utils/courtZones'
+import { COURT_ZONES as ZONES, THREE_POINT_LINE, classifyCourtZone } from '../utils/courtZones'
 
 type ZoneStat = {
   attempts: number
@@ -63,7 +63,14 @@ export function ShotHeatmap({
           role="button"
           tabIndex={0}
           aria-label={`${zone.label}, ${stat?.made ?? 0}/${stat?.attempts ?? 0}, ${detail}`}
-          onClick={() => onSelect(zone.code)}
+          onClick={(event) => {
+            const svg = event.currentTarget.ownerSVGElement
+            const matrix = svg?.getScreenCTM()
+            if (!matrix) return
+            const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse())
+            const code = classifyCourtZone(point.x / 10, point.y / 10)
+            if (code) onSelect(code)
+          }}
           onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(zone.code) } }}
         >
           <path d={zone.path}><title>{`${zone.label} · ${stat?.made ?? 0}/${stat?.attempts ?? 0} · ${detail}`}</title></path>
@@ -71,10 +78,10 @@ export function ShotHeatmap({
       })}
       <g className="court-lines" aria-hidden="true">
         <rect x="1" y="1" width="498" height="468" rx="8" />
-        <path d="M30 0V140M470 0V140M30 140C55 215 110 265 200 286Q250 300 300 286C390 265 445 215 470 140" />
+        <path d={THREE_POINT_LINE} />
         <rect x="170" y="0" width="160" height="190" />
-        <path d="M210 53A40 40 0 0 0 290 53" />
-        <circle cx="250" cy="53" r="7" />
+        <path d="M210 52.5A40 40 0 0 0 290 52.5" />
+        <circle cx="250" cy="52.5" r="7" />
         <path d="M228 34H272" />
         <path d="M205 190A45 45 0 0 0 295 190" />
         <path d="M190 470A60 60 0 0 1 310 470" />

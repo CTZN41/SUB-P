@@ -1,0 +1,2 @@
+# Development only: regenerate/test the shared 2D/3D court geometry.
+shapely==2.1.2

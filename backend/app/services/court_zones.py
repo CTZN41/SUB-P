@@ -17,6 +17,10 @@ CORNER_THREE_END_Y_FT = 14.0
 PAINT_LEFT_X_FT = 17.0
 PAINT_RIGHT_X_FT = 33.0
 FREE_THROW_LINE_Y_FT = 19.0
+BASELINE_MID_END_Y_FT = 13.0
+MID_CENTER_HALF_WIDTH_FT = 6.0
+THREE_CENTER_HALF_WIDTH_FT = 8.0
+BOUNDARY_EPSILON_FT = 1e-9
 
 
 class ZoneCode(str, Enum):
@@ -72,14 +76,14 @@ def classify_zone(x: float, y: float) -> ZoneCode:
         return ZoneCode.THREE_CORNER_LEFT
     if y <= CORNER_THREE_END_Y_FT and x >= COURT_WIDTH_FT - CORNER_THREE_X_FT:
         return ZoneCode.THREE_CORNER_RIGHT
-    if distance >= THREE_POINT_RADIUS_FT:
-        if dx < -8.0:
+    if distance >= THREE_POINT_RADIUS_FT - BOUNDARY_EPSILON_FT:
+        if dx < -THREE_CENTER_HALF_WIDTH_FT:
             return ZoneCode.THREE_WING_LEFT
-        if dx > 8.0:
+        if dx > THREE_CENTER_HALF_WIDTH_FT:
             return ZoneCode.THREE_WING_RIGHT
         return ZoneCode.THREE_CENTER
 
-    if distance <= RESTRICTED_RADIUS_FT:
+    if distance <= RESTRICTED_RADIUS_FT + BOUNDARY_EPSILON_FT:
         return ZoneCode.RESTRICTED
 
     if PAINT_LEFT_X_FT <= x <= PAINT_RIGHT_X_FT and y <= FREE_THROW_LINE_Y_FT:
@@ -90,12 +94,12 @@ def classify_zone(x: float, y: float) -> ZoneCode:
             return ZoneCode.PAINT_CENTER
         return ZoneCode.PAINT_RIGHT
 
-    if y <= 13.0 and x < PAINT_LEFT_X_FT:
+    if y <= BASELINE_MID_END_Y_FT and x < PAINT_LEFT_X_FT:
         return ZoneCode.MID_BASELINE_LEFT
-    if y <= 13.0 and x > PAINT_RIGHT_X_FT:
+    if y <= BASELINE_MID_END_Y_FT and x > PAINT_RIGHT_X_FT:
         return ZoneCode.MID_BASELINE_RIGHT
-    if dx < -6.0:
+    if dx < -MID_CENTER_HALF_WIDTH_FT:
         return ZoneCode.MID_WING_LEFT
-    if dx > 6.0:
+    if dx > MID_CENTER_HALF_WIDTH_FT:
         return ZoneCode.MID_WING_RIGHT
     return ZoneCode.MID_CENTER
