@@ -51,13 +51,15 @@ def add_focused_candidates(
     pose_model_path: Path, result: dict[str, Any], *,
     cancelled=None, max_windows: int | None = None, rescan_fps: float = 30,
     inference_device: str = "cpu",
-    prefetch_frames: bool = False, model_reuse=None,
+    prefetch_frames: bool = False, model_reuse=None, activity_progress=None,
 ) -> dict[str, Any]:
     """Add only distinct high-fps candidates; preserve every original candidate."""
     windows = select_rescan_windows(result, max_windows=max_windows)
     reports: list[dict[str, Any]] = []
     added = 0
-    for start_ms, end_ms in windows:
+    for window_index, (start_ms, end_ms) in enumerate(windows):
+        if activity_progress:
+            activity_progress('추가 후보 탐지', window_index, len(windows))
         high = analyze_video(
             source, model_path, hoop_point, pose_model_path=pose_model_path,
             sample_fps=rescan_fps, start_ms=start_ms, end_ms=end_ms,
@@ -79,6 +81,8 @@ def add_focused_candidates(
         reports.append({"window_ms": [start_ms, end_ms], "candidate_count": len(high["candidates"]),
                         'decoder_context_start_ms': high.get('context_start_ms'),
                         'rule_trace': high.get('candidate_rule_trace')})
+        if activity_progress:
+            activity_progress('추가 후보 탐지', window_index + 1, len(windows))
     result["candidates"].sort(key=lambda item: item["time_ms"])
     result["focused_rescan"] = {"windows": reports, "added_candidates": added}
     return result

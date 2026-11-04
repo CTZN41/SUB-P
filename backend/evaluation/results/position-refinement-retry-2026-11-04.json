@@ -1,0 +1,93 @@
+{
+  "scope": "Actual candidates through review_candidates_with_openai, no DB writes",
+  "retry_only": true,
+  "fixed_evidence": [
+    "saved camera interpretation",
+    "saved independent sole measurements",
+    "saved low-confidence primary response"
+  ],
+  "analysis_id": "6f39ab0d-eb7f-45c8-8fcd-67892e0c20ac",
+  "seconds": 11.395,
+  "rows": [
+    {
+      "number": 4,
+      "time_ms": 57467,
+      "before": {
+        "court_zone": "mid_baseline_right",
+        "court_x": 35.2,
+        "court_y": 9.4,
+        "position_confidence": 0.68,
+        "coordinate_confidence": 0.68,
+        "zone_confidence": 0.76,
+        "uncertainty_scope": "coordinate",
+        "position_reason": "The plant is inside the arc and outside the lane on the calibrated court-right side. The approximate coordinates reflect the visible plant and the supplied projection, not exact measured shoe contact."
+      },
+      "after": {
+        "court_zone": "mid_baseline_right",
+        "court_x": 34.0,
+        "court_y": 10.0,
+        "position_confidence": 0.68,
+        "coordinate_confidence": 0.68,
+        "zone_confidence": 0.76,
+        "uncertainty_scope": "coordinate",
+        "position_reason": "The final planted shoes are outside the far lane edge, on the calibrated court-right side, and comfortably inside the arc. Their exact map position is approximate, but the visible separation from the lane and arc supports a right-baseline midrange location rather than a physical distance-band split."
+      },
+      "before_accepted": false,
+      "after_accepted": false,
+      "before_outcome": "missed",
+      "after_outcome": "missed",
+      "attempts": [
+        {
+          "model": "gpt-6.1-terra",
+          "task": "shot_review",
+          "effort": "low",
+          "usage": {}
+        },
+        {
+          "model": "gpt-6.1-terra",
+          "task": "coordinate_precision",
+          "effort": "low",
+          "usage": {
+            "input_tokens": 6970,
+            "output_tokens": 525,
+            "total_tokens": 7495
+          }
+        }
+      ],
+      "sole_contact": null,
+      "status": "complete"
+    }
+  ],
+  "api_usage": {
+    "input_tokens": 6970,
+    "output_tokens": 525
+  },
+  "runtime": {
+    "api_calls": 1,
+    "request_reused": 0,
+    "decision_reused": 0,
+    "stage_reused": [],
+    "input_tokens": 6970,
+    "output_tokens": 525,
+    "reused_input_tokens": 0,
+    "reused_output_tokens": 0,
+    "api_seconds": 10.394377700053155,
+    "api_errors": 0
+  },
+  "api_usage_complete": true,
+  "review_summary": {
+    "status": "complete",
+    "reviewed": 1,
+    "failed": 0,
+    "escalated": 0,
+    "primary_model": "gpt-6.1-terra",
+    "fallback_model": null,
+    "candidate_limit": 1,
+    "camera_conflicts": 0,
+    "camera_contexts": [],
+    "usage": {
+      "input_tokens": 6970,
+      "output_tokens": 525
+    }
+  }
+}

@@ -346,3 +346,21 @@ def test_last_of_twelve_candidates_keeps_a_recheck_call(monkeypatch) -> None:
     assert result["candidates"][-1]["shot_gate"]["resolution"] == "retimed_after_rescan"
     assert result["shot_gate_summary"]["calls"] == 13
     assert result["shot_gate_summary"]["unreviewed_candidates"] == 0
+def test_negative_gate_reports_follow_up_work(monkeypatch):
+    from app.services.candidate_enrichment import enrich_candidates
+    from app.core.config import Settings
+    from pathlib import Path
+    monkeypatch.setattr('app.services.candidate_enrichment.review_shot_existence',
+                        lambda *a, **kw: {'status': 'complete', 'verdict': 'not_shot', 'confidence': .99})
+    monkeypatch.setattr('app.services.candidate_enrichment.review_prior_shot_existence',
+                        lambda *a, **kw: {'status': 'complete', 'verdict': 'not_shot', 'confidence': .99})
+    monkeypatch.setattr('app.services.candidate_enrichment.analyze_video', lambda *a, **kw: {'candidates': []})
+    activity = []
+    result = {'duration_ms': 20000, 'candidates': [{'time_ms': 10000, 'scene_id': 0}]}
+    enrich_candidates(Path('video.mp4'), Path('model.pt'), Path('pose.pt'), [50, 20], result,
+                      Settings(_env_file=None, app_env='test', openai_api_key='test'),
+                      gate_workers=2, activity_progress=lambda *event: activity.append(event))
+    assert ('추가 후보 탐지', 0, 1) in activity
+    assert ('추가 후보 탐지', 1, 1) in activity
+    assert ('추가 슛 검증', 0, 1) in activity
+    assert ('추가 슛 검증', 1, 1) in activity

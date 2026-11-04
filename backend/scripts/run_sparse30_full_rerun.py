@@ -5,6 +5,7 @@ record. No auth setting, token, old shot or old work result is changed.
 Launch once; the manifest/lock prevents accidental duplicate paid reruns.
 """
 import asyncio
+import argparse
 from copy import deepcopy
 import hashlib
 import json
@@ -34,13 +35,20 @@ def shot_fingerprint(session, analysis_id):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--source-analysis-id', default='cb49b783-591d-4999-a131-286d6ee80b54')
+    parser.add_argument('--verification-name', default='sparse-30-full-rerun')
+    parser.add_argument('--title', default='11/04 30슛 개선판 전체 재시험')
+    args = parser.parse_args()
+    if Path(args.verification_name).name != args.verification_name or args.verification_name in ('.', '..'):
+        raise ValueError('A single verification directory name is required')
     settings = get_settings()
     if not (settings.openai_shot_review_enabled and settings.openai_api_key
             and 'terra' in settings.openai_vision_model.lower()):
         raise RuntimeError('Configured Terra full review is required')
     engine = create_database_engine(settings.database_url)
     factory = create_session_factory(engine)
-    work = settings.work_path/'verification-2026-11-04/sparse-30-full-rerun'
+    work = settings.work_path/'verification-2026-11-04'/args.verification_name
     work.mkdir(parents=True,exist_ok=True)
     lock = work/'launch.lock'
     try:
@@ -50,7 +58,7 @@ def main():
         return
     os.close(descriptor)
     manifest_path=work/'manifest.json'
-    manifest={'source_analysis_id':'cb49b783-591d-4999-a131-286d6ee80b54',
+    manifest={'source_analysis_id':args.source_analysis_id,
               'worker_pid':os.getpid(),'phase':'preparing',
               'execution_path':'trusted_local_launcher_same_localhost_worker',
               'model':settings.openai_vision_model,'runtime':settings.candidate_runtime}
@@ -73,7 +81,7 @@ def main():
             manifest['source_result_sha256']=hashlib.sha256(source_result.read_bytes()).hexdigest()
             session.info.update(auth_required=True,auth_user_id=source.owner_id)
             upload=UploadFile(filename=source.original_name,file=(settings.upload_path/source.id/'original.mp4').open('rb'))
-            analysis=asyncio.run(register_video(session,settings,title='11/04 30슛 개선판 전체 재시험',
+            analysis=asyncio.run(register_video(session,settings,title=args.title,
                 play_type=source.play_type,recorded_date=source.recorded_date,player_name=None,
                 contains_others=source.contains_others,consent_confirmed=source.consent_confirmed,
                 ai_notice_confirmed=source.ai_notice_confirmed,upload=upload))

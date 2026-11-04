@@ -16,7 +16,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 from sqlalchemy import select
 from app.core.config import get_settings
 from app.db.session import create_database_engine,create_session_factory
-from app.models import AnalysisJob,Shot
+from app.models import AnalysisJob,CourtCalibration,Shot
+from app.services.phase8_shots import _court_position
 
 
 def shot_data(shot,number):
@@ -39,9 +40,14 @@ def summary(shots):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--report',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--report',action='store_true')
+    parser.add_argument('--verification-name', default='sparse-30-full-rerun')
+    args=parser.parse_args()
+    if Path(args.verification_name).name != args.verification_name or args.verification_name in ('.', '..'):
+        raise ValueError('A single verification directory name is required')
     settings=get_settings();root=Path(__file__).resolve().parents[1]
-    work=settings.work_path/'verification-2026-11-04/sparse-30-full-rerun'
+    work=settings.work_path/'verification-2026-11-04'/args.verification_name
     manifest=json.loads((work/'manifest.json').read_text(encoding='utf-8'))
     engine=create_database_engine(settings.database_url)
     with create_session_factory(engine)() as session:
@@ -58,11 +64,23 @@ def main():
             return
         before=[shot_data(s,n) for n,s in enumerate(session.scalars(select(Shot).where(Shot.analysis_id==manifest['source_analysis_id']).order_by(Shot.candidate_time_ms,Shot.created_at)),1)]
         after=[shot_data(s,n) for n,s in enumerate(session.scalars(select(Shot).where(Shot.analysis_id==manifest['analysis_id']).order_by(Shot.candidate_time_ms,Shot.created_at)),1)]
+        def calibration_values(analysis_id):
+            return [[c.frame_time_ms,c.image_points,c.court_points,c.hoop_point,c.three_point_line,c.transform]
+                    for c in session.scalars(select(CourtCalibration).where(
+                        CourtCalibration.analysis_id==analysis_id).order_by(CourtCalibration.frame_time_ms))]
+        calibration_identical = calibration_values(manifest['source_analysis_id']) == calibration_values(manifest['analysis_id'])
     engine.dispose()
     result=json.loads((settings.work_path/manifest['analysis_id']/'phase7-candidates.json').read_text(encoding='utf-8'))
     previous=json.loads((settings.work_path/manifest['source_analysis_id']/'phase7-candidates.json').read_text(encoding='utf-8'))
     labels_path=Path('C:/Users/aicam/Downloads/SUB-P-10min-30shots-black-gaps-60fps.csv')
-    labels=list(csv.DictReader(labels_path.open(encoding='utf-8-sig')))
+    if labels_path.is_file():
+        with labels_path.open(encoding='utf-8-sig') as label_file:
+            labels=list(csv.DictReader(label_file))
+        label_source='historical repeated-shot labels'
+    else:
+        labels=[{'number':s['number'],'reference_release_s':s['time_ms']/1000,
+                 'historical_outcome':s['result']} for s in before]
+        label_source='previous analysis stored decisions'
     used=set();matches=[];missing=[]
     for label in labels:
         target=round(float(label['reference_release_s'])*1000)
@@ -75,13 +93,13 @@ def main():
                         'timing_error_ms':s['time_ms']-target,
                         'outcome_matches':s['result']==label['historical_outcome']})
     highlights=[]
-    for number in (3,4,14,17,18,23,24,26,29,30):
+    for number in (3,4,7,8,14,18,22,24,26,29,30):
         original=before[number-1]
         choices=[s for s in after if abs(s['time_ms']-original['time_ms'])<=1500]
         highlights.append({'original_number':number,'before':original,
                            'after':min(choices,key=lambda s:abs(s['time_ms']-original['time_ms'])) if choices else None})
     report={**current,'source_analysis_id':manifest['source_analysis_id'],'result_url':manifest['result_url'],
-        'registration_seconds':manifest['registration_seconds'],
+        'registration_seconds':manifest['registration_seconds'],'calibration_identical':calibration_identical,
         'before':{'counts':summary(before),'stage_seconds':previous.get('timing_seconds'),'api_usage':previous.get('api_usage')},
         'after':{'counts':summary(after),'raw_result_counts':dict(Counter(s['result'] for s in after)),
                  'review_status_count':sum(s['status']=='needs_review' for s in after),
@@ -95,13 +113,41 @@ def main():
         'excluded':[{'time_ms':c['time_ms'],'exclusion':c.get('exclusion')} for c in result.get('excluded_non_shot_candidates',[])],
         'source_result_unchanged':hashlib.sha256((settings.work_path/manifest['source_analysis_id']/'phase7-candidates.json').read_bytes()).hexdigest()==manifest['source_result_sha256'],
         'source_shots_unchanged':manifest.get('source_shots_unchanged'),
-        'label_limit':'Historical labels from repeated shots; not independent real-video accuracy'}
+        'label_source':label_source,
+        'label_limit':'Comparison to historical labels or saved AI decisions, not independently measured accuracy'}
+    before_by_time={s['time_ms']:s for s in before}
+    report['position_comparison']=[]
+    for match in matches:
+        original=before_by_time[match['reference_time_ms']] if label_source=='previous analysis stored decisions' else min(
+            before,key=lambda s:abs(s['time_ms']-match['reference_time_ms']))
+        new=match['new_shot']
+        old_xy=original['court_x'] is not None and original['court_y'] is not None
+        new_xy=new['court_x'] is not None and new['court_y'] is not None
+        report['position_comparison'].append({'before_number':original['number'],'after_number':new['number'],
+            'time_ms':original['time_ms'],'before_position':old_xy,'after_position':new_xy,
+            'before_zone':original['zone_code'],'after_zone':new['zone_code'],
+            'coordinate_shift_ft':round(math.hypot(new['court_x']-original['court_x'],new['court_y']-original['court_y']),3)
+                                  if old_xy and new_xy else None})
     decided=[m for m in matches if m['new_shot']['result'] in ('made','missed')]
     report['historical_outcome_comparison']={'matched':len(matches),'decided':len(decided),
         'decided_agree':sum(m['outcome_matches'] for m in decided),
         'decided_disagree':[m for m in decided if not m['outcome_matches']],
         'held':[m for m in matches if m['new_shot']['result'] not in ('made','missed')]}
-    destination=root/'evaluation/results/sparse30-full-rerun-2026-11-04.json'
+    position_stages=Counter()
+    contact_applications=Counter()
+    for candidate in result.get('candidates',[]):
+        ai=candidate.get('ai_review') or {}
+        decisions=ai.get('model_decisions') or {}
+        for stage,key in (('primary','primary'),('before_contact','pre_contact_policy')):
+            position_stages[stage]+=int(_court_position(decisions.get(key,ai),[])[0] is not None)
+        position_stages['final']+=int(_court_position(ai,[])[0] is not None)
+        if ai.get('sole_contact'):
+            contact_applications[ai['sole_contact'].get('application','legacy')]+=1
+    report['after']['position_stage_counts']=dict(position_stages)
+    report['after']['contact_applications']=dict(contact_applications)
+    report_name = ('sparse30-full-rerun' if args.verification_name == 'sparse-30-full-rerun'
+                   else args.verification_name)
+    destination=root/'evaluation/results'/f'{report_name}-2026-11-04.json'
     destination.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps({'status':report['status'],'elapsed_seconds':report['elapsed_seconds'],'before':report['before']['counts'],
         'after':report['after']['counts'],'matched':len(matches),'missing':len(missing),'extra':len(report['extra']),

@@ -132,7 +132,7 @@ function markerTexture(result: string, selected: boolean, number: number) {
   return texture
 }
 
-export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jerseyNumber, showPlayerName = true, onSelect, onOpenDetails, detailsOpen = false, typeLabels, zone, onZoneChange }: {
+export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jerseyNumber, showPlayerName = true, onSelect, onOpenDetails, detailsOpen = false, typeLabels, zone, onZoneChange, initialCameraPosition }: {
   shots: CourtShot[]
   numbers: Record<string, number>
   selectedShot: CourtShot | null
@@ -145,7 +145,9 @@ export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jers
   typeLabels: Record<string, string>
   zone?: string | null
   onZoneChange?: (zone: string | null) => void
+  initialCameraPosition?: [number, number, number]
 }) {
+  const initialCamera = useRef(initialCameraPosition ? new THREE.Vector3(...initialCameraPosition) : DEFAULT_CAMERA.clone())
   const mountRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<THREE.Scene | null>(null)
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
@@ -208,7 +210,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jers
     const markers = new THREE.Group()
     scene.add(markers)
     const camera = new THREE.PerspectiveCamera(48, 1, .1, 400)
-    camera.position.copy(DEFAULT_CAMERA)
+    camera.position.copy(initialCamera.current)
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.target.copy(COURT_TARGET)
     controls.enablePan = false
@@ -366,8 +368,8 @@ export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jers
     const fromPosition = camera.position.clone()
     const fromTarget = controls.target.clone()
     const direction = camera.position.clone().sub(controls.target).normalize()
-    const distance = bounds ? Math.max(25, bounds.getSize(new THREE.Vector3()).length() * 1.5) : DEFAULT_CAMERA.length()
-    const destination = activeZone ? target.clone().addScaledVector(direction, distance) : DEFAULT_CAMERA.clone()
+    const distance = bounds ? Math.max(25, bounds.getSize(new THREE.Vector3()).length() * 1.5) : initialCamera.current.length()
+    const destination = activeZone ? target.clone().addScaledVector(direction, distance) : initialCamera.current.clone()
     const heights = new Map([...zonesRef.current].map(([code, zone]) => [code, zone.position.y]))
     const started = performance.now()
     cameraAnimatingRef.current = true
@@ -406,7 +408,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jers
     if (!camera || !controls) return
     cameraAnimatingRef.current = false
     setActiveZone(null)
-    camera.position.copy(DEFAULT_CAMERA)
+    camera.position.copy(initialCamera.current)
     controls.target.copy(COURT_TARGET)
     controls.update()
     render()

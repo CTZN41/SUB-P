@@ -1,0 +1,93 @@
+{
+  "scope": "Actual candidates through review_candidates_with_openai, no DB writes",
+  "retry_only": true,
+  "fixed_evidence": [
+    "saved camera interpretation",
+    "saved independent sole measurements",
+    "saved low-confidence primary response"
+  ],
+  "analysis_id": "6f39ab0d-eb7f-45c8-8fcd-67892e0c20ac",
+  "seconds": 10.548,
+  "rows": [
+    {
+      "number": 8,
+      "time_ms": 150933,
+      "before": {
+        "court_zone": "mid_wing_right",
+        "court_x": 38.0,
+        "court_y": 16.0,
+        "position_confidence": 0.67,
+        "coordinate_confidence": 0.67,
+        "zone_confidence": 0.72,
+        "uncertainty_scope": "coordinate",
+        "position_reason": "The shooting plant is beyond the far lane edge and inside the arc, projecting to the right midrange side. Exact coordinates are approximate."
+      },
+      "after": {
+        "court_zone": "mid_wing_right",
+        "court_x": 39.0,
+        "court_y": 17.0,
+        "position_confidence": 0.68,
+        "coordinate_confidence": 0.68,
+        "zone_confidence": 0.8,
+        "uncertainty_scope": "coordinate",
+        "position_reason": "The final grounded shoes are outside the far lane edge but clearly inside the three-point arc, supporting a right-side midrange location. The exact map coordinates are approximate; the visible separation from the arc does not suggest a two/three-point boundary crossing."
+      },
+      "before_accepted": false,
+      "after_accepted": false,
+      "before_outcome": "made",
+      "after_outcome": "made",
+      "attempts": [
+        {
+          "model": "gpt-6.1-terra",
+          "task": "shot_review",
+          "effort": "low",
+          "usage": {}
+        },
+        {
+          "model": "gpt-6.1-terra",
+          "task": "coordinate_precision",
+          "effort": "low",
+          "usage": {
+            "input_tokens": 6800,
+            "output_tokens": 455,
+            "total_tokens": 7255
+          }
+        }
+      ],
+      "sole_contact": null,
+      "status": "complete"
+    }
+  ],
+  "api_usage": {
+    "input_tokens": 6800,
+    "output_tokens": 455
+  },
+  "runtime": {
+    "api_calls": 1,
+    "request_reused": 0,
+    "decision_reused": 0,
+    "stage_reused": [],
+    "input_tokens": 6800,
+    "output_tokens": 455,
+    "reused_input_tokens": 0,
+    "reused_output_tokens": 0,
+    "api_seconds": 9.61448669998208,
+    "api_errors": 0
+  },
+  "api_usage_complete": true,
+  "review_summary": {
+    "status": "complete",
+    "reviewed": 1,
+    "failed": 0,
+    "escalated": 0,
+    "primary_model": "gpt-6.1-terra",
+    "fallback_model": null,
+    "candidate_limit": 1,
+    "camera_conflicts": 0,
+    "camera_contexts": [],
+    "usage": {
+      "input_tokens": 6800,
+      "output_tokens": 455
+    }
+  }
+}

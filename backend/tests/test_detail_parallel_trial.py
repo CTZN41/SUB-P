@@ -59,8 +59,15 @@ def test_parallel_retries_preserve_order_usage_and_decisions(monkeypatch):
     a = review.review_candidates_with_openai(Path("unused"), deepcopy(source), settings,
                                            client=object(), detail_workers=1)
     peak[0] = 0
+    activity = []
+    def record_activity(candidate, task):
+        with lock:
+            activity.append((candidate, task))
     b = review.review_candidates_with_openai(Path("unused"), deepcopy(source), settings,
-                                           client=object(), detail_workers=2)
+                                           client=object(), detail_workers=2, review_activity=record_activity)
+    assert {'camera_context', 'prepare_images', 'shot_review', 'outcome_review', 'position_review'} <= {task for _, task in activity}
+    last_activity = dict(activity)
+    assert all(task is None for task in last_activity.values())
     assert peak[0] == 2
     for result in (a, b):
         for candidate in result["candidates"]:

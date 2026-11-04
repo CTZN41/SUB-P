@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from app.core.config import Settings
 from app.services.court_calibration import transform_point
 from app.services.court_zones import classify_zone, THREE_POINT_RADIUS_FT, HOOP_X_FT, HOOP_Y_FT
-from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
+from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE, BOUNDARY_EVIDENCE_CONFIDENCE
 from app.analysis.foot_evidence import foot_proxy_is_clipped
 from app.analysis.candidate_windows import WINDOW_RULES
 from app.services.zone_boundary_policy import (normalize_zone_boundary, position_conflict_prompt,
@@ -591,6 +591,23 @@ def _court_geometry_prompt() -> str:
     )
 
 
+def _position_reliability_prompt() -> str:
+    return (
+        "Numeric XY is an approximate court-map estimate, not a pixel-exact measurement. "
+        "Judge its reliability from the final grounded shoes across frames, court landmarks and camera orientation. "
+        "Separate uncertainty about the precise distance from a line from evidence that the feet could be on either side. "
+        "Small coordinate variation within a clearly supported distance band is coordinate uncertainty; "
+        "it does not by itself make the location unsupported. Use physical_boundary when plausible shoe/line "
+        "uncertainty crosses a restricted-area, paint or two/three-point boundary. "
+        "When ground contact itself cannot be established, use coordinate or view uncertainty and explain the missing evidence. "
+        "Return null coordinates when the visible evidence cannot support a location. "
+        "Report coordinate_confidence for XY and zone_confidence for the sector name separately, with "
+        "position_confidence (or confidence in a position-only response) equal to coordinate_confidence. "
+        "Use internal_zone_boundary only for adjacent sector naming ambiguity within one distance band. "
+        "Describe the actual uncertainty in the reason without treating an approximate XY as an exact sole measurement. "
+    )
+
+
 def _review_once(
     client,
     model: str,
@@ -652,10 +669,8 @@ def _review_once(
                     "free-throw line must have y>19. Make the numeric coordinates agree with the "
                     "chosen zone. Return court_zone="
                     "needs_review and null coordinates when the feet or court lines cannot support a reliable "
-                    "location. Report coordinate_confidence for the numeric XY and zone_confidence for the sector name separately. "
-                    "Set position_confidence to coordinate_confidence; do not lower the XY score solely for an adjacent virtual-sector name. "
-                    "Use uncertainty_scope=internal_zone_boundary only for naming ambiguity within the same paint, midrange or three-point band. "
-                    "Unclear sole contact, paint/restricted or two/three-point distance is physical_boundary or coordinate uncertainty and must lower coordinate_confidence. "
+                    "location. "
+                    + _position_reliability_prompt() +
                     "For outcome, first use visible rim passage or rim deflection. If those are not "
                     "clear, consider the ball falling below the rim, the player's rebound behavior, and a "
                     "visible scoreboard or shot-counter change as secondary evidence. Never invent evidence "
@@ -762,12 +777,7 @@ def _review_position_once(
                     "or court markings do not support a reliable location. "
                     "The paint spans x=17..33 and y=0..19; a center midrange shot must have y>19. "
                     "The numeric coordinates must classify into the named zone. "
-                    "Return coordinate_confidence for XY reliability and zone_confidence for the sector name separately. "
-                    "Set confidence equal to coordinate_confidence, not the minimum sector-name confidence. "
-                    "Use uncertainty_scope=internal_zone_boundary only for adjacent sector naming ambiguity within the same paint, midrange or three-point distance band. "
-                    "Restricted-area, paint versus midrange and two/three-point boundaries are physical_boundary; never treat them as sector naming issues. "
-                    "Unclear ground contact must lower coordinate_confidence; never call it only a naming issue. "
-                    + inconsistency
+                    + _position_reliability_prompt() + inconsistency
                 ),
             }, *images],
         }],
@@ -849,6 +859,21 @@ def _position_needs_fallback(decision: ShotReviewDecision) -> bool:
         or decision.court_y is None
         or decision.position_confidence < POSITION_ESCALATION_CONFIDENCE
     )
+
+
+def _needs_coordinate_review(decision, candidate, shoe_evidence, attempts) -> bool:
+    """One location-only retry when visible shoes support a low-scoring XY."""
+    if (not decision.is_shot or not _position_needs_fallback(decision)
+            or decision.court_zone == 'needs_review' or decision.court_x is None or decision.court_y is None
+            or decision.uncertainty_scope in ('physical_boundary', 'view')
+            or _position_zone_mismatch(decision) or _visual_arc_conflict(decision)
+            or candidate.get('calibration_view_valid') is not True or not candidate.get('validated_court_transform')
+            or shoe_evidence.get('status') != 'available'
+            or any(a['task'] != 'shot_review' for a in attempts)):
+        return False
+    available = set(shoe_evidence.get('offsets_ms', [])) - set(shoe_evidence.get('image_edge_offsets_ms', []))
+    grounded = {t for t in decision.grounded_frame_offsets_ms if t in available and -1200 <= t < 0}
+    return len(grounded) >= 2 and bool(decision.arc_evidence.strip())
 
 
 def _position_zone_mismatch(decision: ShotReviewDecision | PositionReviewDecision) -> bool:
@@ -1162,9 +1187,11 @@ def review_candidates_with_openai(
     fast_image_sampling: bool = False,
     require_outcome_evidence: bool = False,
     review_progress=None,
+    review_activity=None,
     scoring_rim_evidence: bool = False,
     camera_view_calibrations: dict[int, list[list[float]] | None] | None = None,
     zone_boundary_tolerance_cm: float = DEFAULT_ZONE_BOUNDARY_CM,
+    coordinate_precision_trial: bool = False,
 ) -> dict:
     """Attach AI review metadata without making local analysis depend on the API."""
     if not settings.openai_shot_review_enabled:
@@ -1182,6 +1209,8 @@ def review_candidates_with_openai(
         raise ValueError("trial supports one or two workers")
     candidates = result.get("candidates", [])[: settings.openai_max_candidate_reviews]
     reviewed = 0
+    if review_activity:
+        review_activity('camera', 'camera_context')
     calibration_left_direction = _calibrated_court_left_direction(calibration_transform)
     if camera_view_calibrations is None:
         camera_contexts, camera_context_records, escalated = _build_shared_camera_contexts(
@@ -1199,6 +1228,8 @@ def review_candidates_with_openai(
             camera_context_records.extend(records)
             escalated += count
     failed = 0
+    if review_activity:
+        review_activity('camera', None)
     from app.services.review_frame_trial import (fast_candidate_frame_inputs, fast_outcome_frame_inputs,
         dense_rim_inputs, evidence_rich_detail_inputs, dense_shoe_inputs, position_only_inputs)
     from app.services.outcome_evidence_trial import needs_direct_outcome_check, strict_outcome_once, scoring_evidence_client
@@ -1213,10 +1244,14 @@ def review_candidates_with_openai(
         steps = []
         def timed(label, function, *args, **kwargs):
             started = perf_counter()
+            if review_activity:
+                review_activity(id(candidate), label)
             try:
                 return function(*args, **kwargs)
             finally:
                 steps.append({"task": label, "seconds": round(perf_counter() - started, 4)})
+                if review_activity:
+                    review_activity(id(candidate), None)
         gate = candidate.get("shot_gate") or {}
         if gate.get("verdict") == "not_shot" and gate.get("confidence", 0) >= .9:
             candidate["ai_review"] = {
@@ -1276,7 +1311,7 @@ def review_candidates_with_openai(
                     visual_arc.grounded_frame_offsets_ms = [t for t in visual_arc.grounded_frame_offsets_ms if t in allowed]
                     attempts.append({'model': settings.openai_vision_model, 'task': 'visual_arc', 'effort': 'low', 'usage': usage})
                     model_decisions['visual_arc'] = visual_arc.model_dump()
-                    visual_unresolved = visual_arc.confidence < POSITION_AUTO_CONFIRM_CONFIDENCE or not _grounded_arc_evidence(visual_arc)
+                    visual_unresolved = visual_arc.confidence < BOUNDARY_EVIDENCE_CONFIDENCE or not _grounded_arc_evidence(visual_arc)
                     if visual_unresolved:
                         _invalidate_conflicting_position(primary, '접지 신발과 3점선 관계를 영상에서 확정하지 못해 위치 확인 필요')
                     else:
@@ -1390,6 +1425,26 @@ def review_candidates_with_openai(
                     _invalidate_conflicting_position(
                         primary, "레이업 발 디딤 위치 재판정에 실패해 위치 확인 필요",
                     )
+            if coordinate_precision_trial and _needs_coordinate_review(primary, projection_candidate, shoe_evidence, attempts):
+                try:
+                    position, usage = timed('position_review', _review_position_once,
+                        client, settings.openai_vision_model, position_images,
+                        camera_context=camera_context, projected_foot=projected_foot, projected_plant=projected_plant,
+                        inconsistency=(
+                            "The first response supplied coordinates but was uncertain about their precision. "
+                            "Independently inspect the grounded shoes and visible landmarks. Separate small XY "
+                            "estimation error from a possible physical distance-band crossing, and describe which "
+                            "evidence supports the location or prevents confirmation. Do not copy the first estimate. "
+                        ))
+                    attempts.append({'model': settings.openai_vision_model, 'task': 'coordinate_precision',
+                                     'effort': 'low', 'usage': usage})
+                    allowed = set(shoe_evidence['offsets_ms']) - set(shoe_evidence.get('image_edge_offsets_ms', []))
+                    position.grounded_frame_offsets_ms = [t for t in position.grounded_frame_offsets_ms if t in allowed]
+                    model_decisions['coordinate_precision'] = position.model_dump()
+                    if not _position_zone_mismatch(position) and _grounded_arc_evidence(position):
+                        _apply_position_review(primary, position)
+                except Exception as error:
+                    model_decisions['coordinate_precision'] = {'status': 'failed', 'error_type': type(error).__name__}
             extended_to_ms = 3500
             outcome_path_used = False
             if _outcome_needs_dedicated_review(primary) or ((require_outcome_evidence or scoring_rim_evidence) and needs_direct_outcome_check(primary)):
@@ -1478,17 +1533,19 @@ def review_candidates_with_openai(
             contact_result = None
             from app.services.sole_contact import needs_contact_verification, review_contact_pixels, apply_contact_evidence
             if Path(video_path).is_file() and needs_contact_verification(final_review, projection_candidate, projected_plant):
+                model_decisions['pre_contact_policy'] = dict(final_review)
                 try:
                     contact_result, usage = timed('sole_contact_pixels', review_contact_pixels,
                         client, settings.openai_vision_model, video_path, projection_candidate)
                     if contact_result.get('api_called'):
                         attempts.append({'model': settings.openai_vision_model, 'task': 'sole_contact_pixels',
                                          'effort': 'low', 'usage': usage})
-                    model_decisions['pre_contact_policy'] = dict(final_review)
-                    apply_contact_evidence(final_review, contact_result)
+                    apply_contact_evidence(final_review, contact_result, projection_candidate, shoe_evidence)
                 except Exception as error:
-                    contact_result = {'status': 'needs_review', 'reason': 'contact_verification_failed', 'error_type': type(error).__name__}
-                    apply_contact_evidence(final_review, contact_result)
+                    reason = ('contact_measurement_invalid' if contact_result and contact_result.get('status') == 'resolved'
+                              else 'contact_verification_failed')
+                    contact_result = {'status': 'needs_review', 'reason': reason, 'error_type': type(error).__name__}
+                    apply_contact_evidence(final_review, contact_result, projection_candidate, shoe_evidence)
             # Camera matching must validate the floor, not just background.
             # An AI confidence score cannot grant a missing calibration.
             if candidate.get('calibration_view_valid') is False:
@@ -1527,7 +1584,8 @@ def review_candidates_with_openai(
                 "model_decisions": model_decisions,
                 'zone_boundary':boundary_audit,
                 'sole_contact':contact_result,
-                'position_evidence_source':'sole_pixel_sequence' if contact_result else 'visual_position_review',
+                'position_evidence_source': ('sole_pixel_sequence' if contact_result and contact_result.get('status') == 'resolved'
+                                            else 'visual_position_review'),
                 "calibrated_foot_projection": list(projected_foot) if projected_foot else None,
                 "calibrated_plant_projection": list(projected_plant) if projected_plant else None,
                 "plant_sample_time_ms": plant_time_ms,

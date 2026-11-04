@@ -95,7 +95,8 @@ def test_confident_review_becomes_complete_shot(tmp_path) -> None:
 
 @pytest.mark.parametrize(
     ("confidence", "expected_status"),
-    [(0.69, ShotStatus.NEEDS_REVIEW), (0.70, ShotStatus.AUTO), (0.72, ShotStatus.AUTO)],
+    [(0.64, ShotStatus.NEEDS_REVIEW), (0.65, ShotStatus.AUTO),
+     (0.68, ShotStatus.AUTO), (0.70, ShotStatus.AUTO), (0.72, ShotStatus.AUTO)],
 )
 def test_position_auto_confirmation_boundary(tmp_path, confidence, expected_status) -> None:
     engine = create_engine(f"sqlite:///{(tmp_path / 'phase8.db').as_posix()}")

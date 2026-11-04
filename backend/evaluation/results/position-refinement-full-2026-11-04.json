@@ -1,0 +1,2089 @@
+{
+  "analysis_id": "1989d18d-8bf9-40f4-824b-d315639adffa",
+  "status": "succeeded",
+  "stage": "완료",
+  "processed_ms": 600000,
+  "elapsed_seconds": 792.5,
+  "error_code": null,
+  "source_analysis_id": "6f39ab0d-eb7f-45c8-8fcd-67892e0c20ac",
+  "result_url": "http://127.0.0.1:5173/results/1989d18d-8bf9-40f4-824b-d315639adffa",
+  "registration_seconds": 15.639,
+  "calibration_identical": true,
+  "before": {
+    "counts": {
+      "total": 30,
+      "made": 12,
+      "missed": 0,
+      "position_review": 18,
+      "outcome_review": 0
+    },
+    "stage_seconds": {
+      "local_candidates": 222.64,
+      "focused_rescan_and_shot_gate": 209.62,
+      "camera_view_validation": 14.09,
+      "detailed_ai_review": 320.56
+    },
+    "api_usage": {
+      "input_tokens": 1202148,
+      "output_tokens": 23978
+    },
+    "elapsed_seconds": 786.188
+  },
+  "after": {
+    "counts": {
+      "total": 30,
+      "made": 14,
+      "missed": 4,
+      "position_review": 12,
+      "outcome_review": 0
+    },
+    "raw_result_counts": {
+      "made": 26,
+      "missed": 4
+    },
+    "review_status_count": 12,
+    "stage_seconds": {
+      "local_candidates": 250.74,
+      "focused_rescan_and_shot_gate": 214.16,
+      "camera_view_validation": 16.36,
+      "detailed_ai_review": 290.95
+    },
+    "api_usage": {
+      "input_tokens": 1223078,
+      "output_tokens": 24436
+    },
+    "model": "gpt-6.1-terra",
+    "runtime_options": {
+      "gate_workers": 2,
+      "detail_workers": 2,
+      "prefetch": true,
+      "model_reuse": true,
+      "async_status": true,
+      "scoring_rim_evidence": true,
+      "camera_view_guard": true
+    },
+    "window_policy": {
+      "version": "2026-11-04",
+      "rescan_offsets_ms": [
+        -2000,
+        3500
+      ],
+      "plant_refresh_offsets_ms": [
+        -1400,
+        150
+      ],
+      "edge_policy": "truncate_to_available_range",
+      "overlap_policy": "union_for_local_rescans",
+      "decoder_pre_context_ms": 3000,
+      "stage_rules": {
+        "pose_hint": {
+          "offsets_ms": [
+            -2000,
+            3500
+          ],
+          "anchor": "pose_hint_time"
+        },
+        "rejected_candidate": {
+          "offsets_ms": [
+            -2000,
+            3500
+          ],
+          "anchor": "original_candidate_time"
+        },
+        "shot_gate": {
+          "offsets_ms": [
+            -1400,
+            900
+          ],
+          "anchor": "current_candidate_time"
+        },
+        "prior_shot_gate": {
+          "offsets_ms": [
+            -3200,
+            100
+          ],
+          "anchor": "late_candidate_time"
+        },
+        "plant_refresh": {
+          "offsets_ms": [
+            -1400,
+            150
+          ],
+          "anchor": "corrected_release_time"
+        },
+        "ground_contact": {
+          "offsets_ms": [
+            -1200,
+            -150
+          ],
+          "anchor": "corrected_release_time"
+        },
+        "sole_pixels": {
+          "offsets_ms": [
+            -400,
+            200
+          ],
+          "anchor": "pose_stable_plant_time"
+        },
+        "detail_review": {
+          "offsets_ms": [
+            -4000,
+            3500
+          ],
+          "anchor": "corrected_release_time"
+        },
+        "outcome_extension": {
+          "offsets_ms": [
+            -4000,
+            5500
+          ],
+          "anchor": "corrected_release_time"
+        }
+      }
+    },
+    "foot_track_refresh_summary": {
+      "refreshed": 21,
+      "items": [
+        {
+          "status": "complete",
+          "release_ms": 6000,
+          "window_ms": [
+            4600,
+            6150
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 0.4606
+        },
+        {
+          "status": "complete",
+          "release_ms": 20900,
+          "window_ms": [
+            19500,
+            21050
+          ],
+          "samples": 21,
+          "stable_plant_found": true,
+          "seconds": 3.7183
+        },
+        {
+          "status": "complete",
+          "release_ms": 57467,
+          "window_ms": [
+            56067,
+            57617
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 2.0776
+        },
+        {
+          "status": "complete",
+          "release_ms": 111267,
+          "window_ms": [
+            109867,
+            111417
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 0.4755
+        },
+        {
+          "status": "complete",
+          "release_ms": 198333,
+          "window_ms": [
+            196933,
+            198483
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 1.7913
+        },
+        {
+          "status": "complete",
+          "release_ms": 216500,
+          "window_ms": [
+            215100,
+            216650
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.5003
+        },
+        {
+          "status": "complete",
+          "release_ms": 243267,
+          "window_ms": [
+            241867,
+            243417
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 1.9462
+        },
+        {
+          "status": "complete",
+          "release_ms": 267767,
+          "window_ms": [
+            266367,
+            267917
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 0.4573
+        },
+        {
+          "status": "complete",
+          "release_ms": 292633,
+          "window_ms": [
+            291233,
+            292783
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 2.9723
+        },
+        {
+          "status": "complete",
+          "release_ms": 311333,
+          "window_ms": [
+            309933,
+            311483
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 1.6759
+        },
+        {
+          "status": "complete",
+          "release_ms": 320967,
+          "window_ms": [
+            319567,
+            321117
+          ],
+          "samples": 21,
+          "stable_plant_found": true,
+          "seconds": 0.547
+        },
+        {
+          "status": "complete",
+          "release_ms": 357833,
+          "window_ms": [
+            356433,
+            357983
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 3.935
+        },
+        {
+          "status": "complete",
+          "release_ms": 398333,
+          "window_ms": [
+            396933,
+            398483
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 1.5406
+        },
+        {
+          "status": "complete",
+          "release_ms": 406100,
+          "window_ms": [
+            404700,
+            406250
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 0.4771
+        },
+        {
+          "status": "complete",
+          "release_ms": 428933,
+          "window_ms": [
+            427533,
+            429083
+          ],
+          "samples": 23,
+          "stable_plant_found": true,
+          "seconds": 1.8542
+        },
+        {
+          "status": "complete",
+          "release_ms": 451300,
+          "window_ms": [
+            449900,
+            451450
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.7649
+        },
+        {
+          "status": "complete",
+          "release_ms": 511400,
+          "window_ms": [
+            510000,
+            511550
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 1.7238
+        },
+        {
+          "status": "complete",
+          "release_ms": 521033,
+          "window_ms": [
+            519633,
+            521183
+          ],
+          "samples": 21,
+          "stable_plant_found": true,
+          "seconds": 0.5419
+        },
+        {
+          "status": "complete",
+          "release_ms": 543267,
+          "window_ms": [
+            541867,
+            543417
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 1.8183
+        },
+        {
+          "status": "complete",
+          "release_ms": 567833,
+          "window_ms": [
+            566433,
+            567983
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 3.711
+        },
+        {
+          "status": "complete",
+          "release_ms": 592533,
+          "window_ms": [
+            591133,
+            592683
+          ],
+          "samples": 24,
+          "stable_plant_found": false,
+          "seconds": 1.4345
+        }
+      ]
+    },
+    "shot_gate_summary": {
+      "calls": 37,
+      "rescans": 5,
+      "call_limit": 600,
+      "unreviewed_candidates": 0,
+      "usage": {
+        "input_tokens": 203432,
+        "output_tokens": 2820
+      },
+      "response_seconds": 123.26
+    },
+    "status_io": {
+      "cancel_queries": 187,
+      "progress_writes": 93,
+      "db_seconds": 401.05154689989286,
+      "db_retries": 0
+    },
+    "position_stage_counts": {
+      "primary": 16,
+      "before_contact": 19,
+      "final": 18
+    },
+    "contact_applications": {
+      "held_for_review": 3,
+      "preserved_visual_position": 1
+    },
+    "api_usage_complete": true,
+    "reuse": {
+      "api_calls": 89,
+      "request_reused": 2,
+      "decision_reused": 0,
+      "stage_reused": [],
+      "input_tokens": 1223078,
+      "output_tokens": 24436,
+      "reused_input_tokens": 11554,
+      "reused_output_tokens": 157,
+      "api_seconds": 627.6218387999106,
+      "api_errors": 0,
+      "inference": {
+        "hits": 2810,
+        "misses": 14781,
+        "evictions": 0
+      },
+      "inference_cache_bytes": 3321987
+    },
+    "ai_status": "complete",
+    "failed": 0,
+    "excluded_count": 1,
+    "position_hold_causes": {
+      "coordinate_confidence_below_70": 9,
+      "free_throw_boundary_or_sole_ambiguity": 2,
+      "takeoff_not_bracketed": 1
+    }
+  },
+  "matches": [
+    {
+      "reference_number": 1,
+      "reference_time_ms": 6000,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 1,
+        "id": "ae804db4-bc99-4738-933a-074d266a7a19",
+        "time_ms": 6000,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 18.0,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 2,
+      "reference_time_ms": 20900,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 2,
+        "id": "729c2fd1-8476-49fe-8659-5fe28cddb200",
+        "time_ms": 20900,
+        "result": "made",
+        "court_x": 35.5,
+        "court_y": 15.7,
+        "zone_code": "mid_wing_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 3,
+      "reference_time_ms": 36933,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 3,
+        "id": "66170a06-fdad-426c-8392-ce9e5b14042e",
+        "time_ms": 36933,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The shooter dribbles forward, gathers and plants for a jumper, without a visible retreating or lateral space-creating step. The rim crops show the ball descending through the net. The plant's proximity to the free-throw line leaves the paint-versus-midrange location unresolved.",
+        "position_confidence": 0
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 4,
+      "reference_time_ms": 57467,
+      "historical_outcome": "missed",
+      "new_shot": {
+        "number": 4,
+        "id": "e53bb8c3-f497-4e43-b55e-0e1e576c85ef",
+        "time_ms": 57467,
+        "result": "missed",
+        "court_x": 35.2,
+        "court_y": 9.4,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.75
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 5,
+      "reference_time_ms": 85467,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 5,
+        "id": "8303593e-3422-465a-865b-bb7d1f25122e",
+        "time_ms": 85467,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "side_step",
+        "status": "needs_review",
+        "review_reason": "The final plant is outside the left lane edge and inside the arc, toward the left baseline side. Coordinates are approximate because the sole contacts and court projection are not precisely measured.; After dribbling, the shooter moves laterally left from a wide stance, replants and rises for the jumper; no clear retreating step is visible. Rim crops show the ball descending through the hoop and net.",
+        "position_confidence": 0.68
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 6,
+      "reference_time_ms": 111267,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 6,
+        "id": "684cec23-6c5a-40c4-b959-b93c8b53f5da",
+        "time_ms": 111267,
+        "result": "made",
+        "court_x": 12.3,
+        "court_y": 18.9,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 7,
+      "reference_time_ms": 128800,
+      "historical_outcome": "missed",
+      "new_shot": {
+        "number": 7,
+        "id": "db79bc32-91d6-49f2-9f7f-ea4440cf7e4e",
+        "time_ms": 128800,
+        "result": "missed",
+        "court_x": 21.0,
+        "court_y": 21.3,
+        "zone_code": "mid_center",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 8,
+      "reference_time_ms": 150933,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 8,
+        "id": "12009cd9-4e45-4553-8e2c-27f44e9fad3b",
+        "time_ms": 150933,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The final plant is beyond the far lane edge and inside the arc, projecting to the right midrange. Exact feet-to-lane distance is approximate in the oblique view.; The shooter dribbles forward, gathers and plants for a jumper without a visible retreating or lateral space-creating step. Rim crops show the ball descending through the hoop and net.",
+        "position_confidence": 0.67
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 9,
+      "reference_time_ms": 178000,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 9,
+        "id": "1e3809e9-82d4-4ba5-bc53-5009283548c6",
+        "time_ms": 178000,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "side_step",
+        "status": "needs_review",
+        "review_reason": "The final plant is outside the left lane edge and inside the three-point arc, near the baseline side. The coordinates are approximate; the shoes and court lines support the left baseline midrange sector more strongly than an exact point.; After dribbling, the shooter takes a pronounced lateral step toward court-left, replants, and jumps for a shot. The rim crops show the ball at rim level and then below and to the right, but do not clearly establish passage through the net or a rim deflection out.; 득점 전용 검토: From +700 to +950 ms, the",
+        "position_confidence": 0.66
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 10,
+      "reference_time_ms": 198333,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 10,
+        "id": "83bb27c4-8004-42ee-b5c0-d8596f57c279",
+        "time_ms": 198333,
+        "result": "made",
+        "court_x": 11.0,
+        "court_y": 25.5,
+        "zone_code": "three_wing_left",
+        "shot_type": "step_back",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 11,
+      "reference_time_ms": 206133,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 11,
+        "id": "b80afcae-f381-4bef-b341-57b1133c9e15",
+        "time_ms": 205633,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The final plant is inside the arc and outside the left lane edge. The precise map coordinates are approximate rather than a sole-level measurement.; The shooter dribbles forward into a plant and jumper, with no clear retreating or lateral space-creating step. The ball is later visible below the basket, but the sampled rim views do not clearly show downward passage through the net or a rim deflection out.; 득점 전용 검토: The ball descends above the ba",
+        "position_confidence": 0.67
+      },
+      "timing_error_ms": -500,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 12,
+      "reference_time_ms": 216500,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 12,
+        "id": "eda732e9-cde5-4176-b40a-a79f1aa8db69",
+        "time_ms": 216500,
+        "result": "made",
+        "court_x": 35.4,
+        "court_y": 15.7,
+        "zone_code": "mid_wing_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 13,
+      "reference_time_ms": 243267,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 13,
+        "id": "3c4a9c8e-259c-45e9-8612-56019775a0fd",
+        "time_ms": 243267,
+        "result": "made",
+        "court_x": 26.0,
+        "court_y": 22.0,
+        "zone_code": "mid_center",
+        "shot_type": "step_back",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 14,
+      "reference_time_ms": 267833,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 14,
+        "id": "0b343822-962a-47b6-9a5a-5491d6494f3a",
+        "time_ms": 267767,
+        "result": "made",
+        "court_x": 36.5,
+        "court_y": 12.8,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": -66,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 15,
+      "reference_time_ms": 292633,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 15,
+        "id": "005745ae-e56b-49ee-adee-586ec0470db7",
+        "time_ms": 292633,
+        "result": "made",
+        "court_x": 10.5,
+        "court_y": 25.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 16,
+      "reference_time_ms": 311333,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 16,
+        "id": "74a5174d-924e-4940-ab2b-d532da79f354",
+        "time_ms": 311333,
+        "result": "made",
+        "court_x": 12.3,
+        "court_y": 18.8,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 17,
+      "reference_time_ms": 320967,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 17,
+        "id": "dcc7fb27-48d9-4db6-8eba-3ba392203057",
+        "time_ms": 320967,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The final plant is inside the arc and beyond the lane's right side; the exact shoe projection is approximate.; He dribbles toward the hoop, plants and rises for a jumper without a visible retreating or lateral space-creating step. The rim crop shows the ball descending through the net.",
+        "position_confidence": 0.69
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 18,
+      "reference_time_ms": 337067,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 18,
+        "id": "edcb4572-7d25-4707-afcd-bf616b4acd2e",
+        "time_ms": 337067,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The player dribbles forward, plants and rises for a jumper; no retreating or lateral space-creating step is visible. The rim crops show the ball descending through the net. The plant lies too close to the free-throw boundary to reliably assign paint or midrange.",
+        "position_confidence": 0
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 19,
+      "reference_time_ms": 356933,
+      "historical_outcome": "missed",
+      "new_shot": {
+        "number": 19,
+        "id": "6ea8579a-81cc-4dd9-aa7e-b172a12b9766",
+        "time_ms": 357833,
+        "result": "missed",
+        "court_x": 35.2,
+        "court_y": 9.6,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 900,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 20,
+      "reference_time_ms": 398333,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 20,
+        "id": "d7f6428c-8f2f-48ee-b6e6-264b7723f655",
+        "time_ms": 398333,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "step_back",
+        "status": "needs_review",
+        "review_reason": "The final grounded stance is outside the visible arc and projects left of the lane under the shared calibration. The coordinates are an approximate map estimate, not an exact sole measurement.; After dribbling inside the arc, the shooter retreats toward the arc, replants, and jumps; the retreat is visible before release. The ball appears above the rim and then below the basket with net movement, but the sampled images do not directly show downward passage through the rim or a deflection,so",
+        "position_confidence": 0.65
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 21,
+      "reference_time_ms": 406100,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 21,
+        "id": "fc0851eb-383a-47af-991e-930263565dc3",
+        "time_ms": 406100,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 18.0,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 22,
+      "reference_time_ms": 428933,
+      "historical_outcome": "missed",
+      "new_shot": {
+        "number": 22,
+        "id": "e5ba922b-2993-49ba-a8a7-a03f9c77ad2e",
+        "time_ms": 428933,
+        "result": "missed",
+        "court_x": 20.0,
+        "court_y": 20.8,
+        "zone_code": "mid_center",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 23,
+      "reference_time_ms": 451300,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 23,
+        "id": "0466d48b-3abd-470f-8313-e68487ec1567",
+        "time_ms": 451300,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The final plant is right of the lane and visibly in midrange. Its approximate baseline-to-wing position is close to the virtual y=13 ft sector boundary; mid_baseline_right is the better estimate, but the adjacent wing label remains plausible.; The player dribbles toward the basket, gathers and plants for a jumper without a visible retreating or lateral space-creating step. The rim crops show the ball descending through the net.",
+        "position_confidence": 0.65
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 24,
+      "reference_time_ms": 478000,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 24,
+        "id": "d9596401-56fc-4042-8b98-da4a3f604c74",
+        "time_ms": 478000,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "side_step",
+        "status": "needs_review",
+        "review_reason": "The final plant is outside the left lane edge and inside the arc, toward the baseline. The coordinates are approximate rather than a direct shoe measurement.; After dribbling, the shooter makes a pronounced lateral move left, replants and rises for a jumper; no clear retreating step is visible. The rim crops show the descending ball entering the hoop and passing through the net.",
+        "position_confidence": 0.68
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 25,
+      "reference_time_ms": 492533,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 25,
+        "id": "b8eb9b01-9a6b-4150-bd29-31ff0ef38bfd",
+        "time_ms": 492533,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "side_step",
+        "status": "needs_review",
+        "review_reason": "The final plant is visually beyond the arc and projects left of the lane. The coordinates are approximate and place the shot outside the virtual arc; they are not an exact measurement of the soles.; After dribbling, the player shifts laterally toward court-left and brings the feet into a new plant before the jumper; no clear retreat away from the hoop is visible. The rim crops show the ball descending through the net.",
+        "position_confidence": 0.68
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 26,
+      "reference_time_ms": 511400,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 26,
+        "id": "b3aa891c-8d15-43e3-8d9a-06cbe2b4de91",
+        "time_ms": 511400,
+        "result": "made",
+        "court_x": 12.2,
+        "court_y": 18.8,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 27,
+      "reference_time_ms": 521033,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 27,
+        "id": "88b676f6-20cd-4233-bd06-e401a7b3a54a",
+        "time_ms": 521033,
+        "result": "made",
+        "court_x": 35.0,
+        "court_y": 16.0,
+        "zone_code": "mid_wing_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.75
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 28,
+      "reference_time_ms": 543267,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 28,
+        "id": "6422d519-5e92-4a46-83a4-577e58a4f6e7",
+        "time_ms": 543267,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "step_back",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; After advancing toward the hoop, the shooter retreats from the forward plant, replants farther away, and rises for a jumper, making this a step-back. The rim crop shows the ball descending through the net at about +1200 ms.",
+        "position_confidence": 0
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 29,
+      "reference_time_ms": 567833,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 29,
+        "id": "a66bdef3-265f-4e7e-adef-48335a36e414",
+        "time_ms": 567833,
+        "result": "made",
+        "court_x": 36.5,
+        "court_y": 12.8,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 30,
+      "reference_time_ms": 592533,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 30,
+        "id": "a791a197-be7e-450c-a560-7e09be139209",
+        "time_ms": 592533,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 26.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "timing_error_ms": 0,
+      "outcome_matches": true
+    }
+  ],
+  "missing": [],
+  "extra": [],
+  "highlights": [
+    {
+      "original_number": 3,
+      "before": {
+        "number": 3,
+        "id": "530e243c-3f1c-4b26-abc9-af7459c5931b",
+        "time_ms": 36933,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The shooter dribbles forward, gathers and plants for a jumper without a visible retreating or lateral space-creating step. Rim crops show the ball descending through the net. The plant is close to the paint boundary.",
+        "position_confidence": 0
+      },
+      "after": {
+        "number": 3,
+        "id": "66170a06-fdad-426c-8392-ce9e5b14042e",
+        "time_ms": 36933,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The shooter dribbles forward, gathers and plants for a jumper, without a visible retreating or lateral space-creating step. The rim crops show the ball descending through the net. The plant's proximity to the free-throw line leaves the paint-versus-midrange location unresolved.",
+        "position_confidence": 0
+      }
+    },
+    {
+      "original_number": 4,
+      "before": {
+        "number": 4,
+        "id": "e13fd41e-1e5f-44b7-ad1c-bc030218720a",
+        "time_ms": 57467,
+        "result": "missed",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The plant is inside the arc and outside the lane on the calibrated court-right side. The approximate coordinates reflect the visible plant and the supplied projection, not exact measured shoe contact.; The shooter dribbles toward the hoop, gathers and plants for a jumper without a visible retreating or lateral space-creating step. The ball bounces on the rim and falls off its right side rather than passing through.",
+        "position_confidence": 0.68
+      },
+      "after": {
+        "number": 4,
+        "id": "e53bb8c3-f497-4e43-b55e-0e1e576c85ef",
+        "time_ms": 57467,
+        "result": "missed",
+        "court_x": 35.2,
+        "court_y": 9.4,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.75
+      }
+    },
+    {
+      "original_number": 7,
+      "before": {
+        "number": 7,
+        "id": "ae11e9c1-771a-47f0-b224-7c299fd3257b",
+        "time_ms": 128800,
+        "result": "missed",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The shooter dribbles forward, gathers and plants for a jumper without a visible retreating or lateral space-creating step. The rim crops show the ball at the rim and then deflecting upward and outward to the right.",
+        "position_confidence": 0
+      },
+      "after": {
+        "number": 7,
+        "id": "db79bc32-91d6-49f2-9f7f-ea4440cf7e4e",
+        "time_ms": 128800,
+        "result": "missed",
+        "court_x": 21.0,
+        "court_y": 21.3,
+        "zone_code": "mid_center",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      }
+    },
+    {
+      "original_number": 8,
+      "before": {
+        "number": 8,
+        "id": "4f7cb215-3f7b-4524-b922-fd6160a65765",
+        "time_ms": 150933,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The shooting plant is beyond the far lane edge and inside the arc, projecting to the right midrange side. Exact coordinates are approximate.; The player dribbles toward the basket, gathers and plants for a jumper without a visible retreating or lateral space-creating step. Rim crops show the ball descending through the rim and net.",
+        "position_confidence": 0.67
+      },
+      "after": {
+        "number": 8,
+        "id": "12009cd9-4e45-4553-8e2c-27f44e9fad3b",
+        "time_ms": 150933,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The final plant is beyond the far lane edge and inside the arc, projecting to the right midrange. Exact feet-to-lane distance is approximate in the oblique view.; The shooter dribbles forward, gathers and plants for a jumper without a visible retreating or lateral space-creating step. Rim crops show the ball descending through the hoop and net.",
+        "position_confidence": 0.67
+      }
+    },
+    {
+      "original_number": 14,
+      "before": {
+        "number": 14,
+        "id": "7fbed444-7b7d-47a0-8cfc-8fdabe294a12",
+        "time_ms": 267833,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The shooting plant is inside the arc and outside the far lane edge, on the calibrated court-right side. The coordinates are approximate because the camera is oblique.; The player dribbles forward toward the basket, gathers, plants both feet and rises for a jumper; there is no visible retreating or lateral space-creating step. Rim crops show the ball descending through the net.",
+        "position_confidence": 0.67
+      },
+      "after": {
+        "number": 14,
+        "id": "0b343822-962a-47b6-9a5a-5491d6494f3a",
+        "time_ms": 267767,
+        "result": "made",
+        "court_x": 36.5,
+        "court_y": 12.8,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      }
+    },
+    {
+      "original_number": 18,
+      "before": {
+        "number": 18,
+        "id": "cc451aae-54de-4841-9c0f-e92a29dbebeb",
+        "time_ms": 337067,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The player dribbles toward the hoop, plants and rises for a jumper without a visible retreating or lateral space-creating step. The rim crops show the ball descending through the net.",
+        "position_confidence": 0
+      },
+      "after": {
+        "number": 18,
+        "id": "edcb4572-7d25-4707-afcd-bf616b4acd2e",
+        "time_ms": 337067,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The player dribbles forward, plants and rises for a jumper; no retreating or lateral space-creating step is visible. The rim crops show the ball descending through the net. The plant lies too close to the free-throw boundary to reliably assign paint or midrange.",
+        "position_confidence": 0
+      }
+    },
+    {
+      "original_number": 22,
+      "before": {
+        "number": 22,
+        "id": "9cea2cab-5f35-4723-88a9-69351794cadd",
+        "time_ms": 428933,
+        "result": "missed",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The player dribbles forward toward the hoop, gathers and plants for a jumper without a visible retreating or lateral space-creating step. The rim crops show the ball deflecting away to the right of the basket.",
+        "position_confidence": 0
+      },
+      "after": {
+        "number": 22,
+        "id": "e5ba922b-2993-49ba-a8a7-a03f9c77ad2e",
+        "time_ms": 428933,
+        "result": "missed",
+        "court_x": 20.0,
+        "court_y": 20.8,
+        "zone_code": "mid_center",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      }
+    },
+    {
+      "original_number": 24,
+      "before": {
+        "number": 24,
+        "id": "84fbb890-72a8-4dd5-86c9-10448d3b5378",
+        "time_ms": 478000,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "side_step",
+        "status": "needs_review",
+        "review_reason": "The final plant is left of the lane and inside the arc, near the baseline side. Coordinates are approximate, not measured shoe contacts.; After dribbling, the player takes a pronounced lateral bound to the left, brings the feet into a new plant, and rises for a jumper. The rim crops show the ball descending through the net.",
+        "position_confidence": 0.68
+      },
+      "after": {
+        "number": 24,
+        "id": "d9596401-56fc-4042-8b98-da4a3f604c74",
+        "time_ms": 478000,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "side_step",
+        "status": "needs_review",
+        "review_reason": "The final plant is outside the left lane edge and inside the arc, toward the baseline. The coordinates are approximate rather than a direct shoe measurement.; After dribbling, the shooter makes a pronounced lateral move left, replants and rises for a jumper; no clear retreating step is visible. The rim crops show the descending ball entering the hoop and passing through the net.",
+        "position_confidence": 0.68
+      }
+    },
+    {
+      "original_number": 26,
+      "before": {
+        "number": 26,
+        "id": "80e80964-8929-43fb-a8a5-9d64910a923f",
+        "time_ms": 511400,
+        "result": "made",
+        "court_x": 12.2,
+        "court_y": 18.8,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "after": {
+        "number": 26,
+        "id": "b3aa891c-8d15-43e3-8d9a-06cbe2b4de91",
+        "time_ms": 511400,
+        "result": "made",
+        "court_x": 12.2,
+        "court_y": 18.8,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      }
+    },
+    {
+      "original_number": 29,
+      "before": {
+        "number": 29,
+        "id": "9afd7dac-79d6-45cc-83f9-7a959cf4ed12",
+        "time_ms": 567833,
+        "result": "made",
+        "court_x": 36.5,
+        "court_y": 12.8,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "after": {
+        "number": 29,
+        "id": "a66bdef3-265f-4e7e-adef-48335a36e414",
+        "time_ms": 567833,
+        "result": "made",
+        "court_x": 36.5,
+        "court_y": 12.8,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      }
+    },
+    {
+      "original_number": 30,
+      "before": {
+        "number": 30,
+        "id": "9f3f4de9-7f22-4971-b94b-0e9a3309e43c",
+        "time_ms": 592533,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "side_step",
+        "status": "needs_review",
+        "review_reason": "The plant projects left of the lane and near the three-point boundary. A shoe overlaps the arc, making the distance estimate approximate.; After dribbling, the shooter moves laterally toward court-left, brings the trailing foot across into a new plant, and rises for a jumper. The rim crop shows the ball descending through the net.",
+        "position_confidence": 0.56
+      },
+      "after": {
+        "number": 30,
+        "id": "a791a197-be7e-450c-a560-7e09be139209",
+        "time_ms": 592533,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 26.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      }
+    }
+  ],
+  "shots": [
+    {
+      "number": 1,
+      "id": "ae804db4-bc99-4738-933a-074d266a7a19",
+      "time_ms": 6000,
+      "result": "made",
+      "court_x": 12.0,
+      "court_y": 18.0,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.7
+    },
+    {
+      "number": 2,
+      "id": "729c2fd1-8476-49fe-8659-5fe28cddb200",
+      "time_ms": 20900,
+      "result": "made",
+      "court_x": 35.5,
+      "court_y": 15.7,
+      "zone_code": "mid_wing_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 3,
+      "id": "66170a06-fdad-426c-8392-ce9e5b14042e",
+      "time_ms": 36933,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "dribble_pull_up",
+      "status": "needs_review",
+      "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The shooter dribbles forward, gathers and plants for a jumper, without a visible retreating or lateral space-creating step. The rim crops show the ball descending through the net. The plant's proximity to the free-throw line leaves the paint-versus-midrange location unresolved.",
+      "position_confidence": 0
+    },
+    {
+      "number": 4,
+      "id": "e53bb8c3-f497-4e43-b55e-0e1e576c85ef",
+      "time_ms": 57467,
+      "result": "missed",
+      "court_x": 35.2,
+      "court_y": 9.4,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.75
+    },
+    {
+      "number": 5,
+      "id": "8303593e-3422-465a-865b-bb7d1f25122e",
+      "time_ms": 85467,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "side_step",
+      "status": "needs_review",
+      "review_reason": "The final plant is outside the left lane edge and inside the arc, toward the left baseline side. Coordinates are approximate because the sole contacts and court projection are not precisely measured.; After dribbling, the shooter moves laterally left from a wide stance, replants and rises for the jumper; no clear retreating step is visible. Rim crops show the ball descending through the hoop and net.",
+      "position_confidence": 0.68
+    },
+    {
+      "number": 6,
+      "id": "684cec23-6c5a-40c4-b959-b93c8b53f5da",
+      "time_ms": 111267,
+      "result": "made",
+      "court_x": 12.3,
+      "court_y": 18.9,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 7,
+      "id": "db79bc32-91d6-49f2-9f7f-ea4440cf7e4e",
+      "time_ms": 128800,
+      "result": "missed",
+      "court_x": 21.0,
+      "court_y": 21.3,
+      "zone_code": "mid_center",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 8,
+      "id": "12009cd9-4e45-4553-8e2c-27f44e9fad3b",
+      "time_ms": 150933,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "dribble_pull_up",
+      "status": "needs_review",
+      "review_reason": "The final plant is beyond the far lane edge and inside the arc, projecting to the right midrange. Exact feet-to-lane distance is approximate in the oblique view.; The shooter dribbles forward, gathers and plants for a jumper without a visible retreating or lateral space-creating step. Rim crops show the ball descending through the hoop and net.",
+      "position_confidence": 0.67
+    },
+    {
+      "number": 9,
+      "id": "1e3809e9-82d4-4ba5-bc53-5009283548c6",
+      "time_ms": 178000,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "side_step",
+      "status": "needs_review",
+      "review_reason": "The final plant is outside the left lane edge and inside the three-point arc, near the baseline side. The coordinates are approximate; the shoes and court lines support the left baseline midrange sector more strongly than an exact point.; After dribbling, the shooter takes a pronounced lateral step toward court-left, replants, and jumps for a shot. The rim crops show the ball at rim level and then below and to the right, but do not clearly establish passage through the net or a rim deflection out.; 득점 전용 검토: From +700 to +950 ms, the",
+      "position_confidence": 0.66
+    },
+    {
+      "number": 10,
+      "id": "83bb27c4-8004-42ee-b5c0-d8596f57c279",
+      "time_ms": 198333,
+      "result": "made",
+      "court_x": 11.0,
+      "court_y": 25.5,
+      "zone_code": "three_wing_left",
+      "shot_type": "step_back",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.7
+    },
+    {
+      "number": 11,
+      "id": "b80afcae-f381-4bef-b341-57b1133c9e15",
+      "time_ms": 205633,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "dribble_pull_up",
+      "status": "needs_review",
+      "review_reason": "The final plant is inside the arc and outside the left lane edge. The precise map coordinates are approximate rather than a sole-level measurement.; The shooter dribbles forward into a plant and jumper, with no clear retreating or lateral space-creating step. The ball is later visible below the basket, but the sampled rim views do not clearly show downward passage through the net or a rim deflection out.; 득점 전용 검토: The ball descends above the ba",
+      "position_confidence": 0.67
+    },
+    {
+      "number": 12,
+      "id": "eda732e9-cde5-4176-b40a-a79f1aa8db69",
+      "time_ms": 216500,
+      "result": "made",
+      "court_x": 35.4,
+      "court_y": 15.7,
+      "zone_code": "mid_wing_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 13,
+      "id": "3c4a9c8e-259c-45e9-8612-56019775a0fd",
+      "time_ms": 243267,
+      "result": "made",
+      "court_x": 26.0,
+      "court_y": 22.0,
+      "zone_code": "mid_center",
+      "shot_type": "step_back",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 14,
+      "id": "0b343822-962a-47b6-9a5a-5491d6494f3a",
+      "time_ms": 267767,
+      "result": "made",
+      "court_x": 36.5,
+      "court_y": 12.8,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 15,
+      "id": "005745ae-e56b-49ee-adee-586ec0470db7",
+      "time_ms": 292633,
+      "result": "made",
+      "court_x": 10.5,
+      "court_y": 25.0,
+      "zone_code": "three_wing_left",
+      "shot_type": "side_step",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.7
+    },
+    {
+      "number": 16,
+      "id": "74a5174d-924e-4940-ab2b-d532da79f354",
+      "time_ms": 311333,
+      "result": "made",
+      "court_x": 12.3,
+      "court_y": 18.8,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.7
+    },
+    {
+      "number": 17,
+      "id": "dcc7fb27-48d9-4db6-8eba-3ba392203057",
+      "time_ms": 320967,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "dribble_pull_up",
+      "status": "needs_review",
+      "review_reason": "The final plant is inside the arc and beyond the lane's right side; the exact shoe projection is approximate.; He dribbles toward the hoop, plants and rises for a jumper without a visible retreating or lateral space-creating step. The rim crop shows the ball descending through the net.",
+      "position_confidence": 0.69
+    },
+    {
+      "number": 18,
+      "id": "edcb4572-7d25-4707-afcd-bf616b4acd2e",
+      "time_ms": 337067,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "dribble_pull_up",
+      "status": "needs_review",
+      "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; The player dribbles forward, plants and rises for a jumper; no retreating or lateral space-creating step is visible. The rim crops show the ball descending through the net. The plant lies too close to the free-throw boundary to reliably assign paint or midrange.",
+      "position_confidence": 0
+    },
+    {
+      "number": 19,
+      "id": "6ea8579a-81cc-4dd9-aa7e-b172a12b9766",
+      "time_ms": 357833,
+      "result": "missed",
+      "court_x": 35.2,
+      "court_y": 9.6,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 20,
+      "id": "d7f6428c-8f2f-48ee-b6e6-264b7723f655",
+      "time_ms": 398333,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "step_back",
+      "status": "needs_review",
+      "review_reason": "The final grounded stance is outside the visible arc and projects left of the lane under the shared calibration. The coordinates are an approximate map estimate, not an exact sole measurement.; After dribbling inside the arc, the shooter retreats toward the arc, replants, and jumps; the retreat is visible before release. The ball appears above the rim and then below the basket with net movement, but the sampled images do not directly show downward passage through the rim or a deflection,so",
+      "position_confidence": 0.65
+    },
+    {
+      "number": 21,
+      "id": "fc0851eb-383a-47af-991e-930263565dc3",
+      "time_ms": 406100,
+      "result": "made",
+      "court_x": 12.0,
+      "court_y": 18.0,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 22,
+      "id": "e5ba922b-2993-49ba-a8a7-a03f9c77ad2e",
+      "time_ms": 428933,
+      "result": "missed",
+      "court_x": 20.0,
+      "court_y": 20.8,
+      "zone_code": "mid_center",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 23,
+      "id": "0466d48b-3abd-470f-8313-e68487ec1567",
+      "time_ms": 451300,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "dribble_pull_up",
+      "status": "needs_review",
+      "review_reason": "The final plant is right of the lane and visibly in midrange. Its approximate baseline-to-wing position is close to the virtual y=13 ft sector boundary; mid_baseline_right is the better estimate, but the adjacent wing label remains plausible.; The player dribbles toward the basket, gathers and plants for a jumper without a visible retreating or lateral space-creating step. The rim crops show the ball descending through the net.",
+      "position_confidence": 0.65
+    },
+    {
+      "number": 24,
+      "id": "d9596401-56fc-4042-8b98-da4a3f604c74",
+      "time_ms": 478000,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "side_step",
+      "status": "needs_review",
+      "review_reason": "The final plant is outside the left lane edge and inside the arc, toward the baseline. The coordinates are approximate rather than a direct shoe measurement.; After dribbling, the shooter makes a pronounced lateral move left, replants and rises for a jumper; no clear retreating step is visible. The rim crops show the descending ball entering the hoop and passing through the net.",
+      "position_confidence": 0.68
+    },
+    {
+      "number": 25,
+      "id": "b8eb9b01-9a6b-4150-bd29-31ff0ef38bfd",
+      "time_ms": 492533,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "side_step",
+      "status": "needs_review",
+      "review_reason": "The final plant is visually beyond the arc and projects left of the lane. The coordinates are approximate and place the shot outside the virtual arc; they are not an exact measurement of the soles.; After dribbling, the player shifts laterally toward court-left and brings the feet into a new plant before the jumper; no clear retreat away from the hoop is visible. The rim crops show the ball descending through the net.",
+      "position_confidence": 0.68
+    },
+    {
+      "number": 26,
+      "id": "b3aa891c-8d15-43e3-8d9a-06cbe2b4de91",
+      "time_ms": 511400,
+      "result": "made",
+      "court_x": 12.2,
+      "court_y": 18.8,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 27,
+      "id": "88b676f6-20cd-4233-bd06-e401a7b3a54a",
+      "time_ms": 521033,
+      "result": "made",
+      "court_x": 35.0,
+      "court_y": 16.0,
+      "zone_code": "mid_wing_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.75
+    },
+    {
+      "number": 28,
+      "id": "6422d519-5e92-4a46-83a4-577e58a4f6e7",
+      "time_ms": 543267,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "step_back",
+      "status": "needs_review",
+      "review_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요; After advancing toward the hoop, the shooter retreats from the forward plant, replants farther away, and rises for a jumper, making this a step-back. The rim crop shows the ball descending through the net at about +1200 ms.",
+      "position_confidence": 0
+    },
+    {
+      "number": 29,
+      "id": "a66bdef3-265f-4e7e-adef-48335a36e414",
+      "time_ms": 567833,
+      "result": "made",
+      "court_x": 36.5,
+      "court_y": 12.8,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 30,
+      "id": "a791a197-be7e-450c-a560-7e09be139209",
+      "time_ms": 592533,
+      "result": "made",
+      "court_x": 12.0,
+      "court_y": 26.0,
+      "zone_code": "three_wing_left",
+      "shot_type": "side_step",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.7
+    }
+  ],
+  "excluded": [
+    {
+      "time_ms": 475600,
+      "exclusion": {
+        "reason": "high_confidence_pre_shot_dribble",
+        "related_shot_time_ms": 478000
+      }
+    }
+  ],
+  "source_result_unchanged": true,
+  "source_shots_unchanged": true,
+  "label_source": "previous analysis stored decisions",
+  "label_limit": "Comparison to historical labels or saved AI decisions, not independently measured accuracy",
+  "position_comparison": [
+    {
+      "before_number": 1,
+      "after_number": 1,
+      "time_ms": 6000,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_wing_left",
+      "after_zone": "mid_wing_left",
+      "coordinate_shift_ft": 2.0
+    },
+    {
+      "before_number": 2,
+      "after_number": 2,
+      "time_ms": 20900,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_wing_right",
+      "after_zone": "mid_wing_right",
+      "coordinate_shift_ft": 0.0
+    },
+    {
+      "before_number": 3,
+      "after_number": 3,
+      "time_ms": 36933,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 4,
+      "after_number": 4,
+      "time_ms": 57467,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "mid_baseline_right",
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 5,
+      "after_number": 5,
+      "time_ms": 85467,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 6,
+      "after_number": 6,
+      "time_ms": 111267,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_wing_left",
+      "after_zone": "mid_wing_left",
+      "coordinate_shift_ft": 0.0
+    },
+    {
+      "before_number": 7,
+      "after_number": 7,
+      "time_ms": 128800,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "mid_center",
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 8,
+      "after_number": 8,
+      "time_ms": 150933,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 9,
+      "after_number": 9,
+      "time_ms": 178000,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 10,
+      "after_number": 10,
+      "time_ms": 198333,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "three_wing_left",
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 11,
+      "after_number": 11,
+      "time_ms": 206133,
+      "before_position": true,
+      "after_position": false,
+      "before_zone": "mid_wing_left",
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 12,
+      "after_number": 12,
+      "time_ms": 216500,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_wing_right",
+      "after_zone": "mid_wing_right",
+      "coordinate_shift_ft": 0.0
+    },
+    {
+      "before_number": 13,
+      "after_number": 13,
+      "time_ms": 243267,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_center",
+      "after_zone": "mid_center",
+      "coordinate_shift_ft": 0.141
+    },
+    {
+      "before_number": 14,
+      "after_number": 14,
+      "time_ms": 267833,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "mid_baseline_right",
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 15,
+      "after_number": 15,
+      "time_ms": 292633,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "three_wing_left",
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 16,
+      "after_number": 16,
+      "time_ms": 311333,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_wing_left",
+      "after_zone": "mid_wing_left",
+      "coordinate_shift_ft": 0.0
+    },
+    {
+      "before_number": 17,
+      "after_number": 17,
+      "time_ms": 320967,
+      "before_position": true,
+      "after_position": false,
+      "before_zone": "mid_wing_right",
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 18,
+      "after_number": 18,
+      "time_ms": 337067,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 19,
+      "after_number": 19,
+      "time_ms": 356933,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "mid_baseline_right",
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 20,
+      "after_number": 20,
+      "time_ms": 398333,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 21,
+      "after_number": 21,
+      "time_ms": 406100,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_wing_left",
+      "after_zone": "mid_wing_left",
+      "coordinate_shift_ft": 5.08
+    },
+    {
+      "before_number": 22,
+      "after_number": 22,
+      "time_ms": 428933,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "mid_center",
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 23,
+      "after_number": 23,
+      "time_ms": 451300,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 24,
+      "after_number": 24,
+      "time_ms": 478000,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 25,
+      "after_number": 25,
+      "time_ms": 492533,
+      "before_position": false,
+      "after_position": false,
+      "before_zone": null,
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 26,
+      "after_number": 26,
+      "time_ms": 511400,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_wing_left",
+      "after_zone": "mid_wing_left",
+      "coordinate_shift_ft": 0.0
+    },
+    {
+      "before_number": 27,
+      "after_number": 27,
+      "time_ms": 521033,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "mid_wing_right",
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 28,
+      "after_number": 28,
+      "time_ms": 543267,
+      "before_position": true,
+      "after_position": false,
+      "before_zone": "mid_center",
+      "after_zone": null,
+      "coordinate_shift_ft": null
+    },
+    {
+      "before_number": 29,
+      "after_number": 29,
+      "time_ms": 567833,
+      "before_position": true,
+      "after_position": true,
+      "before_zone": "mid_baseline_right",
+      "after_zone": "mid_baseline_right",
+      "coordinate_shift_ft": 0.0
+    },
+    {
+      "before_number": 30,
+      "after_number": 30,
+      "time_ms": 592533,
+      "before_position": false,
+      "after_position": true,
+      "before_zone": null,
+      "after_zone": "three_wing_left",
+      "coordinate_shift_ft": null
+    }
+  ],
+  "historical_outcome_comparison": {
+    "matched": 30,
+    "decided": 30,
+    "decided_agree": 30,
+    "decided_disagree": [],
+    "held": []
+  },
+  "input_video_sha256_identical": true,
+  "method_notes": [
+    "Full new local detection, shot validation, camera interpretation, shoe measurement and AI review",
+    "All 30 prior saved shots matched within 1.5 seconds without duplicate matches",
+    "Previous AI decisions are comparison labels because the external reference CSV was unavailable",
+    "Candidate 7 cleared the 2ft contact-trigger window in this run and had no measured-sole check"
+  ],
+  "deltas": {
+    "elapsed_seconds": 6.312,
+    "elapsed_percent": 0.8,
+    "position_saved_before": 12,
+    "position_saved_after": 18,
+    "tokens_before": 1226126,
+    "tokens_after": 1247514,
+    "token_percent": 1.74
+  }
+}

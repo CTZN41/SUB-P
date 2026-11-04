@@ -24,6 +24,56 @@ def evidence():
     return d,candidate,shoes
 
 
+@pytest.mark.parametrize('retry_confidence', [.78, .65])
+@pytest.mark.parametrize('grounded', [True, False])
+@pytest.mark.parametrize('trial', [True, False])
+def test_low_coordinate_confidence_gets_one_location_only_retry(tmp_path, monkeypatch, retry_confidence, grounded, trial):
+    d, candidate, shoes = evidence()
+    d.court_x, d.court_y, d.court_zone = 25, 25, 'mid_center'
+    d.position_confidence = d.coordinate_confidence = .63
+    d.uncertainty_scope = 'coordinate'
+    candidate['foot_track'] = []
+    calls = []
+    monkeypatch.setattr(review, '_build_shared_camera_contexts', lambda *a: ({0: camera_context()}, [], 0))
+    monkeypatch.setattr(review, 'candidate_frame_inputs', lambda *a: [{'type': 'input_text', 'text': 'scene'}])
+    monkeypatch.setattr('app.services.review_frame_trial.dense_shoe_inputs',
+                        lambda *a: ([{'type': 'input_text', 'text': 'grounded shoes'}], shoes))
+    monkeypatch.setattr(review, '_review_once', lambda *a, **k: (d, {'input_tokens': 10, 'output_tokens': 2}))
+    def position_retry(*args, **kwargs):
+        calls.append(kwargs)
+        return review.PositionReviewDecision(
+            court_x=25, court_y=25, court_zone='mid_center', confidence=retry_confidence,
+            coordinate_confidence=retry_confidence, zone_confidence=.8, uncertainty_scope='coordinate',
+            camera_view='left_sideline', overhead_lateral_relation='aligned_with_lane', distance_band='midrange',
+            projection_evidence=['grounded shoes and lane'], reason='Visible shoes beyond the free throw line',
+            visual_arc_relation='inside', grounded_frame_offsets_ms=[-900, -767] if grounded else [], arc_evidence='Inside the arc'), {
+                'input_tokens': 4, 'output_tokens': 1}
+    monkeypatch.setattr(review, '_review_position_once', position_retry)
+    result = review.review_candidates_with_openai(tmp_path / 'unused.mp4', {'candidates': [candidate]},
+        Settings(_env_file=None, openai_api_key='test', openai_vision_fallback_model=None), client=object(),
+        coordinate_precision_trial=trial)
+    ai = result['candidates'][0]['ai_review']
+    assert len(calls) == int(trial)
+    assert [a['task'] for a in ai['attempts']] == (['shot_review', 'coordinate_precision'] if trial else ['shot_review'])
+    assert ai['position_confidence'] == (retry_confidence if trial and grounded else .63)
+    assert result['ai_review']['usage'] == {'input_tokens': 14 if trial else 10, 'output_tokens': 3 if trial else 2}
+    assert ai['outcome'] == 'made' and ai['shot_type'] == 'set_shot'
+
+
+@pytest.mark.parametrize('weakness', ['physical_boundary', 'view', 'missing_images', 'prior_review', 'clipped'])
+def test_coordinate_retry_requires_new_supported_evidence_and_no_prior_position_retry(weakness):
+    d, candidate, shoes = evidence()
+    d.court_x, d.court_y, d.court_zone = 25, 25, 'mid_center'
+    d.position_confidence = d.coordinate_confidence = .63
+    d.uncertainty_scope = 'coordinate'
+    attempts = [{'task': 'shot_review'}]
+    if weakness in ('physical_boundary', 'view'): d.uncertainty_scope = weakness
+    if weakness == 'missing_images': shoes['status'] = 'unavailable'
+    if weakness == 'prior_review': attempts.append({'task': 'position_consistency'})
+    if weakness == 'clipped': shoes['image_edge_offsets_ms'] = shoes['offsets_ms']
+    assert not review._needs_coordinate_review(d, candidate, shoes, attempts)
+
+
 @pytest.mark.parametrize('width',[15,30])
 def test_supported_adjacent_label_keeps_xy_confidence_outcome_and_type(width):
     d,c,shoes=evidence();before=d.model_dump()
@@ -68,7 +118,7 @@ def test_physical_boundaries_or_opposite_side_are_never_renamed(xy,named,width):
 @pytest.mark.parametrize('weakness',['confidence','view','transform','pose','single_frame','clipped','arc','plant'])
 def test_weak_ground_or_calibration_evidence_cannot_bypass_checks(weakness):
     d,c,shoes=evidence();projection=(18.6,20.3)
-    if weakness=='confidence':d.position_confidence=.69
+    if weakness=='confidence':d.position_confidence=.64
     if weakness=='view':c['calibration_view_valid']=False
     if weakness=='transform':c.pop('validated_court_transform')
     if weakness=='pose':c['foot_track']=[]

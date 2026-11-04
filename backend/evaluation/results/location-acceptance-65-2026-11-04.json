@@ -1,0 +1,150 @@
+{
+  "analysis_id": "1989d18d-8bf9-40f4-824b-d315639adffa",
+  "thresholds": [
+    {
+      "threshold": 0.7,
+      "accepted": 18,
+      "total": 30,
+      "numbers": [
+        1,
+        2,
+        4,
+        6,
+        7,
+        10,
+        12,
+        13,
+        14,
+        15,
+        16,
+        19,
+        21,
+        22,
+        26,
+        27,
+        29,
+        30
+      ]
+    },
+    {
+      "threshold": 0.68,
+      "accepted": 22,
+      "total": 30,
+      "numbers": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7,
+        10,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        19,
+        21,
+        22,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30
+      ]
+    },
+    {
+      "threshold": 0.65,
+      "accepted": 27,
+      "total": 30,
+      "numbers": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30
+      ]
+    },
+    {
+      "threshold": 0.6,
+      "accepted": 27,
+      "total": 30,
+      "numbers": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30
+      ]
+    }
+  ],
+  "api_calls": 0,
+  "saved": {
+    "total": 30,
+    "position_confirmed": 27,
+    "held_numbers": [
+      3,
+      18,
+      28
+    ],
+    "outcomes": {
+      "made": 26,
+      "missed": 4
+    },
+    "identities_outcomes_types_preserved": true
+  },
+  "screen_counts": {
+    "made": 23,
+    "position_review": 3,
+    "missed": 4
+  },
+  "confirmation_rate": 0.9,
+  "model_responses_unchanged": true,
+  "chrome_verified": true
+}

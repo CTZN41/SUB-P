@@ -10,7 +10,7 @@ type ZoneStat = {
 }
 
 
-function zoneTarget(code: string): number {
+export function zoneTarget(code: string): number {
   if (code === 'restricted') return 80
   if (code.startsWith('paint_')) return 60
   if (code.startsWith('mid_')) return 45

@@ -2,10 +2,11 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteAnalysisRecords } from '../utils/deleteAnalysisRecords'
 import './AnalysisHistory.css'
+import { formatShotTime } from '../utils/shotPresentation'
 
 const API_BASE = '/api'
 
-type RecordItem = {
+export type RecordItem = {
   id: string
   title: string
   original_name: string
@@ -18,7 +19,7 @@ type RecordItem = {
   state_detail: string | null
 }
 
-export function AnalysisHistory({ recent = false }: { recent?: boolean }) {
+export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: boolean; onRecordsChange?: (records: RecordItem[]) => void }) {
   const [records, setRecords] = useState<RecordItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -39,6 +40,10 @@ export function AnalysisHistory({ recent = false }: { recent?: boolean }) {
   useEffect(() => {
     void Promise.resolve().then(load).catch((caught) => setError(caught.message)).finally(() => setLoading(false))
   }, [load])
+
+  useEffect(() => {
+    if (!loading) onRecordsChange?.(records)
+  }, [records, loading, onRecordsChange])
 
   useEffect(() => {
     if (deleting.length && !dialogRef.current?.open) dialogRef.current?.showModal()
@@ -81,7 +86,7 @@ export function AnalysisHistory({ recent = false }: { recent?: boolean }) {
   const selected = records.filter(item => selectedIds.includes(item.id))
   const allSelected = records.length > 0 && selected.length === records.length
   function requestDelete(items: RecordItem[]) { setDeleting(items); setError(''); setNotice('') }
-  return <section className="history-section" aria-label={recent ? '최근 분석 기록' : '분석 기록'}>
+  return <section className={`history-section${recent ? ' recent-history' : ''}`} aria-label={recent ? '최근 분석 기록' : '분석 기록'}>
     <div className="history-heading"><h2>{recent ? '최근 분석 기록' : '영상별 기록'}</h2>{recent && <Link to="/history">전체 보기</Link>}</div>
     {loading && <p>기록을 불러오는 중입니다.</p>}
     {!loading && !error && records.length === 0 && <p>아직 저장된 분석 기록이 없습니다.</p>}
@@ -100,9 +105,13 @@ export function AnalysisHistory({ recent = false }: { recent?: boolean }) {
     <div className="history-list">{visible.map((item, index) => <Fragment key={item.id}>
       {!recent && (index === 0 || new Date(visible[index - 1].created_at).toLocaleDateString('ko-KR') !== new Date(item.created_at).toLocaleDateString('ko-KR')) && <h3 className="history-day-heading">{new Date(item.created_at).toLocaleDateString('ko-KR')}</h3>}
       <article className={`history-item${selectedIds.includes(item.id) ? ' is-selected' : ''}`}>
+      {recent && <div className="history-thumbnail" aria-hidden="true">
+        {item.video_available && <img loading="lazy" src={`${API_BASE}/analyses/${item.id}/calibration/frame?time_ms=${Math.min(6000, Math.floor(item.duration_ms / 2))}`} alt="" onError={event => { event.currentTarget.hidden = true }} />}
+        <span className="history-thumbnail-duration">{formatShotTime(item.duration_ms)}</span>
+      </div>}
       {!recent && <input className="history-record-checkbox" type="checkbox" aria-label={`${item.title} 선택`} checked={selectedIds.includes(item.id)} disabled={busy}
         onChange={event => setSelectedIds(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} />}
-      <div className="history-record-info"><h3>{item.title}</h3><p>{new Date(item.created_at).toLocaleString('ko-KR')} · {item.original_name} · {(item.duration_ms / 1000).toFixed(1)}초</p>
+      <div className="history-record-info"><h3>{item.title}</h3><p title={item.original_name}>{recent ? new Date(item.created_at).toLocaleDateString('ko-KR') : `${new Date(item.created_at).toLocaleString('ko-KR')} · ${item.original_name} · ${(item.duration_ms / 1000).toFixed(1)}초`}</p>
         <span className={`history-state ${item.video_available ? '' : 'broken'}`}>{item.state_label}</span>
         {item.state_detail && <p className="history-detail">{item.state_detail}</p>}
       </div>

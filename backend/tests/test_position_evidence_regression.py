@@ -131,8 +131,9 @@ def test_retimed_release_does_not_reuse_old_frame_pixels_as_release_feet():
     ('outside', 'touching', 'needs_review'),
     ('outside', 'outside', 'three_wing_left'),
 ])
+@pytest.mark.parametrize('visual_confidence', [.69, .70, .9])
 def test_independent_visual_gate_cannot_be_overridden_by_old_numbers(
-        monkeypatch, visual_relation, retry_relation, expected):
+        monkeypatch, visual_relation, retry_relation, expected, visual_confidence):
     from app.core.config import Settings
     from app.services import review_frame_trial as frames
     monkeypatch.setattr(review, '_build_shared_camera_contexts', lambda *a: ({0: camera_context()}, [], 0))
@@ -144,7 +145,7 @@ def test_independent_visual_gate_cannot_be_overridden_by_old_numbers(
     monkeypatch.setattr(review, '_review_once', lambda *a, **kw: (
         decision(court_zone='three_wing_left', court_x=12, court_y=25, position_confidence=.75),
         {'input_tokens': 1, 'output_tokens': 1}))
-    visual = review.VisualArcDecision(visual_arc_relation=visual_relation, confidence=.9,
+    visual = review.VisualArcDecision(visual_arc_relation=visual_relation, confidence=visual_confidence,
         grounded_frame_offsets_ms=[-550, -400], arc_evidence='Shoes behind arc')
     monkeypatch.setattr(review, '_review_visual_arc_once', lambda *a: (visual, {'input_tokens': 1, 'output_tokens': 1}))
     def retry(*a, **kw):
@@ -158,7 +159,7 @@ def test_independent_visual_gate_cannot_be_overridden_by_old_numbers(
     result = review.review_candidates_with_openai(Path('unused'), {'candidates': [{'time_ms': 2000}]},
         Settings(_env_file=None, openai_api_key='test', openai_vision_fallback_model=None), client=object())
     a = result['candidates'][0]['ai_review']
-    assert a['court_zone'] == expected, a
+    assert a['court_zone'] == ('needs_review' if visual_confidence < .70 else expected), a
     assert a['outcome'] == 'made' and a['shot_type'] == 'set_shot'
 
 

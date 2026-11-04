@@ -18,6 +18,7 @@ def enrich_candidates(
     hoop_point: list[float], result: dict, settings: Settings,
     *, cancelled=None, inference_device: str = "cpu", prefetch_frames: bool = False,
     model_reuse=None, gate_workers: int = 1, gate_client=None, gate_progress=None,
+    activity_progress=None,
 ) -> dict:
     """Improve candidates while keeping uncertain or rejected ones reviewable."""
     result['candidate_window_policy'] = window_policy()
@@ -28,6 +29,7 @@ def enrich_candidates(
                 cancelled=cancelled,
                 inference_device=inference_device,
                 prefetch_frames=prefetch_frames, model_reuse=model_reuse,
+                **({'activity_progress': activity_progress} if activity_progress else {}),
             )
         except Phase7Canceled:
             raise
@@ -88,6 +90,8 @@ def enrich_candidates(
         from threading import Lock
         progress_lock, completed = Lock(), [0]
         items = result["candidates"][:min(settings.openai_max_candidate_reviews,max_calls)]
+        if gate_progress:
+            gate_progress(0, len(items))
         def initial_gate(candidate):
             if cancelled and cancelled():
                 raise Phase7Canceled("trial canceled")
@@ -104,6 +108,9 @@ def enrich_candidates(
         calls = len(primary_results)
     max_rescans = min(48, max(4, len(result["candidates"]) // 8,
                               ceil(int(result["duration_ms"])/60000)*2))
+    rescan_total = min(max_rescans, sum(
+        gate.get('verdict') == 'not_shot' and gate.get('confidence', 0) >= .9
+        for gate in primary_results)) if primary_results is not None else None
     for candidate_index, candidate in enumerate(result["candidates"][:settings.openai_max_candidate_reviews]):
         if cancelled and cancelled():
             raise Phase7Canceled("사용자가 분석을 취소했습니다.")
@@ -137,6 +144,8 @@ def enrich_candidates(
             candidate["shot_gate"]["resolution"] = "needs_review"
             continue
         rescans += 1
+        if activity_progress:
+            activity_progress('추가 후보 탐지', rescans - 1, rescan_total)
         rescan_start, rescan_end = rescan_window(time_ms, 0, int(result['duration_ms']))
         try:
             high = analyze_video(
@@ -158,17 +167,24 @@ def enrich_candidates(
              if -RESCAN_BEFORE_MS <= int(item["time_ms"]) - time_ms <= RESCAN_AFTER_MS),
             key=lambda item: abs(int(item["time_ms"]) - time_ms),
         )
-        for alternative in alternatives[:3]:
+        if activity_progress:
+            activity_progress('추가 후보 탐지', rescans, rescan_total)
+        for alternative_index, alternative in enumerate(alternatives[:3]):
             if calls >= max_calls:
                 break
             alt_time = int(alternative["time_ms"])
             if abs(alt_time - time_ms) < 150:
                 continue
             calls += 1
+            if activity_progress:
+                activity_progress('추가 슛 검증', alternative_index, min(3, len(alternatives)))
             try:
                 alt_gate = review_shot_existence(video_path, alt_time, settings, **({"client":gate_client} if gate_client is not None else {}))
             except Exception:
                 continue
+            finally:
+                if activity_progress:
+                    activity_progress('추가 슛 검증', alternative_index + 1, min(3, len(alternatives)))
             count_result(alt_gate)
             if alt_gate.get("verdict") != "shot" or alt_gate.get("confidence", 0) < .9:
                 continue
@@ -190,10 +206,15 @@ def enrich_candidates(
             if calls >= max_calls or time_ms < PRIOR_BEFORE_MS:
                 continue
             calls += 1
+            if activity_progress:
+                activity_progress('추가 슛 검증', 0, 1)
             try:
                 prior_gate = review_prior_shot_existence(video_path, time_ms, settings, **({"client":gate_client} if gate_client is not None else {}))
             except Exception:
                 continue
+            finally:
+                if activity_progress:
+                    activity_progress('추가 슛 검증', 1, 1)
             count_result(prior_gate)
             offset = prior_gate.get("release_offset_ms")
             if (
@@ -224,7 +245,8 @@ def enrich_candidates(
     from app.services.ground_contact import refresh_retimed_foot_tracks
     refresh_retimed_foot_tracks(video_path, model_path, pose_model_path, hoop_point, result,
                                cancelled=cancelled, inference_device=inference_device,
-                               prefetch_frames=prefetch_frames, model_reuse=model_reuse)
+                               prefetch_frames=prefetch_frames, model_reuse=model_reuse,
+                               **({'activity_progress': activity_progress} if activity_progress else {}))
     result["candidates"].sort(key=lambda item: item["time_ms"])
     result["shot_gate_summary"] = {
         "calls": calls, "rescans": rescans, "call_limit": max_calls,

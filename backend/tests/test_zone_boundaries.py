@@ -63,7 +63,7 @@ def test_every_virtual_boundary_requires_the_same_evidence(case, weakness):
     d = make_decision(x, y, case['named_zone'])
     c, shoes = synthetic_evidence(x, y, 0)
     projection = (x, y)
-    if weakness == 'confidence': d.position_confidence = .69
+    if weakness == 'confidence': d.position_confidence = .64
     if weakness == 'calibration': c['calibration_view_valid'] = False
     if weakness == 'pose': c['foot_track'] = []
     if weakness == 'single_ground': d.grounded_frame_offsets_ms = [-900]

@@ -18,13 +18,14 @@ from typing import Literal
 from app.services.ground_contact import plant_sample
 from app.services.court_zones import classify_zone
 from app.analysis.candidate_windows import WINDOW_RULES
-from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
+from app.services.shot_review_policy import BOUNDARY_EVIDENCE_CONFIDENCE
+from app.services.zone_boundaries import physical_clearance
 
 CONTACT_BEFORE_MS = WINDOW_RULES['sole_pixels'].before_ms
 CONTACT_AFTER_MS = WINDOW_RULES['sole_pixels'].after_ms  # bracket takeoff, not evidence of grounded feet
 MIN_CONTACT_FRAMES = 3
 MIN_CONTACT_SPAN_MS = 60
-CONTACT_CONFIDENCE = POSITION_AUTO_CONFIRM_CONFIDENCE
+CONTACT_CONFIDENCE = BOUNDARY_EVIDENCE_CONFIDENCE
 
 
 class SolePixel(BaseModel):
@@ -414,13 +415,46 @@ def review_contact_pixels(client, model, video: Path, candidate: dict):
             or sensitivity.get('court_zone') != result.get('court_zone')):
         result.update(status='needs_review', reason='pixel_error_sensitivity_crosses_boundary')
     result.update(preparation=metadata, model_measurement=sequence.model_dump(), api_called=True,
-                  wider_error_check={k: v for k, v in sensitivity.items() if k not in ('measured_frames', 'diagnostic_frames')})
+                  wider_error_check={**{k: v for k, v in sensitivity.items() if k not in ('measured_frames', 'diagnostic_frames')},
+                                     'diagnostic_sides': [f['side'] for f in sensitivity.get('diagnostic_frames', [])]})
     return result, usage
 
 
-def apply_contact_evidence(review: dict, result: dict):
+def _keep_supported_visual_position(review, result, candidate, shoe_evidence) -> bool:
+    from app.services.phase8_shots import _court_position
+
+    if (result.get('reason') not in ('observed_free_throw_line_missing', 'sole_contact_occluded_or_low_confidence',
+                                     'contact_verification_failed')
+            or candidate.get('calibration_view_valid') is not True or not candidate.get('validated_court_transform')
+            or review.get('uncertainty_scope') in ('physical_boundary', 'view')
+            or not review.get('is_shot') or shoe_evidence.get('status') != 'available'):
+        return False
+    x, y, zone = _court_position(review, [])
+    if zone is None or physical_clearance(x, y) <= 30 / 30.48:
+        return False
+    expected_arc = 'outside' if zone.startswith('three_') else 'inside'
+    if review.get('visual_arc_relation') != expected_arc or not review.get('arc_evidence', '').strip():
+        return False
+    available = set(shoe_evidence.get('offsets_ms', [])) - set(shoe_evidence.get('image_edge_offsets_ms', []))
+    grounded = {t for t in review.get('grounded_frame_offsets_ms', []) if t in available and -1200 <= t < 0}
+    if len(grounded) < 2:
+        return False
+    diagnostics = result.get('diagnostic_frames', [])
+    expected_side = 'outside' if zone.startswith('mid_') else 'inside'
+    if result.get('reason') == 'sole_contact_occluded_or_low_confidence':
+        wider_sides = result.get('wider_error_check', {}).get('diagnostic_sides', [])
+        if not diagnostics or not wider_sides or any(side != expected_side for side in wider_sides):
+            return False
+    return all(frame.get('side') == expected_side for frame in diagnostics)
+
+
+def apply_contact_evidence(review: dict, result: dict, candidate=None, shoe_evidence=None):
     """Change only location based on new measurements; keep shot/type/outcome."""
     if result.get('status') != 'resolved':
+        if _keep_supported_visual_position(review, result, candidate or {}, shoe_evidence or {}):
+            result['application'] = 'preserved_visual_position'
+            return
+        result['application'] = 'held_for_review'
         review.update(court_x=None, court_y=None, court_zone='needs_review', position_confidence=0,
                       coordinate_confidence=None, review_required=True,
                       position_reason='접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요')
@@ -429,6 +463,7 @@ def apply_contact_evidence(review: dict, result: dict):
     x, y = result['court_x'], result['court_y']
     if result['confidence'] < CONTACT_CONFIDENCE or classify_zone(x, y).value != result['court_zone']:
         raise ValueError('invalid_measured_contact_result')
+    result['application'] = 'measured_position'
     review.update(court_x=x, court_y=y, court_zone=result['court_zone'],
                   position_confidence=result['confidence'], coordinate_confidence=result['confidence'],
                   zone_confidence=result['confidence'], uncertainty_scope='none',

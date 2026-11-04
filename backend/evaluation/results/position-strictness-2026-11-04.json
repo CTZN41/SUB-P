@@ -1,0 +1,2405 @@
+{
+  "previous_analysis": "dc3ec7ee-325d-4637-9b5b-94387183ad05",
+  "current_analysis": "6f39ab0d-eb7f-45c8-8fcd-67892e0c20ac",
+  "previous": {
+    "screen_buckets": {
+      "made": 22,
+      "missed": 4,
+      "position_review": 3,
+      "outcome_review": 1
+    },
+    "accepted_positions": {
+      "primary": 24,
+      "before_contact": 26,
+      "final": 26
+    },
+    "rows": [
+      {
+        "number": 1,
+        "time_ms": 6000,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.5,
+          "court_y": 18.6,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is inside the arc and outside the left lane edge. The approximate projection places it in the left midrange wing."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.5,
+          "court_y": 18.6,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is inside the arc and outside the left lane edge. The approximate projection places it in the left midrange wing."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 2,
+        "time_ms": 20900,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.7,
+          "court_y": 15.7,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is inside the arc and projects to the right of the lane under the supplied orientation. The approximate pre-release projection is consistent with a right-wing midrange location."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.7,
+          "court_y": 15.7,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is inside the arc and projects to the right of the lane under the supplied orientation. The approximate pre-release projection is consistent with a right-wing midrange location."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 3,
+        "time_ms": 36933,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "paint_left",
+          "court_x": 20.0,
+          "court_y": 18.0,
+          "position_confidence": 0.72,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The last planted shoes are near the free-throw line on the left side of the lane, just inside the paint. The coordinates are approximate and use the planted shoes rather than the airborne release box."
+        },
+        "final": {
+          "court_zone": "paint_left",
+          "court_x": 20.0,
+          "court_y": 18.0,
+          "position_confidence": 0.72,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The last planted shoes are near the free-throw line on the left side of the lane, just inside the paint. The coordinates are approximate and use the planted shoes rather than the airborne release box."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 4,
+        "time_ms": 57467,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 35.4,
+          "court_y": 10.0,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes project just outside the right lane edge, near the baseline side. The approximate projection is consistent with a right baseline midrange location inside the arc."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 35.4,
+          "court_y": 10.0,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes project just outside the right lane edge, near the baseline side. The approximate projection is consistent with a right baseline midrange location inside the arc."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 5,
+        "time_ms": 85467,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 11.0,
+          "court_y": 14.0,
+          "position_confidence": 0.7,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The last grounded shooting stance is inside the arc and left of the lane, in the left baseline-side midrange. Coordinates are approximate and use the pre-release shoe sample rather than the airborne release box."
+        },
+        "final": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 10.0,
+          "court_y": 10.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The last visible plant is left of the lane and near its baseline end, inside the arc. The coordinates are an approximate projection of the planted shoes rather than the airborne release box."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "position_consistency"
+        ]
+      },
+      {
+        "number": 6,
+        "time_ms": 111267,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.1,
+          "court_y": 18.5,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes are outside the left lane edge and inside the arc. The approximate projection places them in left-wing midrange."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.1,
+          "court_y": 18.5,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes are outside the left lane edge and inside the arc. The approximate projection places them in left-wing midrange."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 7,
+        "time_ms": 128800,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_center",
+          "court_x": 20.2,
+          "court_y": 21.0,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The grounded plant is near the free-throw circle, inside the arc and approximately aligned with the lane. The pre-release projection supports a center midrange location just beyond the free-throw line."
+        },
+        "final": {
+          "court_zone": "mid_center",
+          "court_x": 20.2,
+          "court_y": 21.0,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The grounded plant is near the free-throw circle, inside the arc and approximately aligned with the lane. The pre-release projection supports a center midrange location just beyond the free-throw line."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 8,
+        "time_ms": 150933,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 37.6,
+          "court_y": 10.0,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is inside the arc, outside the right lane edge and relatively close to the baseline. The approximate projection is consistent with a right baseline midrange location."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 37.6,
+          "court_y": 10.0,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is inside the arc, outside the right lane edge and relatively close to the baseline. The approximate projection is consistent with a right baseline midrange location."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 9,
+        "time_ms": 178000,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 12.5,
+          "court_y": 10.5,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is outside the left lane edge and inside the arc, in the left baseline midrange area. The coordinates approximate the grounded plant rather than the airborne release position."
+        },
+        "final": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 12.5,
+          "court_y": 10.5,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is outside the left lane edge and inside the arc, in the left baseline midrange area. The coordinates approximate the grounded plant rather than the airborne release position."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 10,
+        "time_ms": 198333,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 9.5,
+          "court_y": 22.3,
+          "position_confidence": 0.7,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is left of the lane using the confirmed court orientation, with a shoe touching the arc. The approximate coordinates place it just inside the virtual three-point radius."
+        },
+        "final": {
+          "court_zone": "three_wing_left",
+          "court_x": 9.5,
+          "court_y": 24.0,
+          "position_confidence": 0.72,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is visually outside the arc on the calibrated left wing. The coordinates are an approximate projection consistent with that visible distance."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary"
+        ]
+      },
+      {
+        "number": 11,
+        "time_ms": 216500,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 15.8,
+          "position_confidence": 0.77,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes project just outside the right lane edge at midrange, consistent with the approximate calibrated sample."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 15.8,
+          "position_confidence": 0.77,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes project just outside the right lane edge at midrange, consistent with the approximate calibrated sample."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 12,
+        "time_ms": 243267,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_center",
+          "court_x": 28.5,
+          "court_y": 21.5,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is near the free-throw circle, beyond the lane and inside the three-point arc. The approximate projection places it near the lane's center, just beyond the free-throw line."
+        },
+        "final": {
+          "court_zone": "mid_center",
+          "court_x": 28.5,
+          "court_y": 21.5,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is near the free-throw circle, beyond the lane and inside the three-point arc. The approximate projection places it near the lane's center, just beyond the free-throw line."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 13,
+        "time_ms": 267767,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.5,
+          "court_y": 8.5,
+          "position_confidence": 0.74,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is inside the arc and outside the right lane edge, near the baseline. The approximate projection is consistent with a right baseline midrange location."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.5,
+          "court_y": 8.5,
+          "position_confidence": 0.74,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is inside the arc and outside the right lane edge, near the baseline. The approximate projection is consistent with a right baseline midrange location."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 14,
+        "time_ms": 292633,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 15.0,
+          "court_y": 26.5,
+          "position_confidence": 0.7,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is near the arc and projects left of the lane using the confirmed court orientation. The estimated coordinates place the line-touching shot just inside the virtual three-point radius."
+        },
+        "final": {
+          "court_zone": "three_wing_left",
+          "court_x": 15.0,
+          "court_y": 28.0,
+          "position_confidence": 0.75,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is visually outside the arc and projects left of the lane. The estimated coordinates are approximately 24.9 ft from the hoop, consistent with a left-wing three."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary"
+        ]
+      },
+      {
+        "number": 15,
+        "time_ms": 311333,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.2,
+          "court_y": 18.5,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes are inside the arc and outside the left lane edge. The approximate projection places the shot in the left midrange wing."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.2,
+          "court_y": 18.5,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes are inside the arc and outside the left lane edge. The approximate projection places the shot in the left midrange wing."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 16,
+        "time_ms": 320967,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.6,
+          "court_y": 15.8,
+          "position_confidence": 0.75,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is inside the arc and outside the right lane edge. The approximate projection places it in the right midrange wing."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.6,
+          "court_y": 15.8,
+          "position_confidence": 0.75,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is inside the arc and outside the right lane edge. The approximate projection places it in the right midrange wing."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 17,
+        "time_ms": 337067,
+        "stages": {
+          "primary": false,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "paint_center",
+          "court_x": 20.0,
+          "court_y": 18.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is near the free-throw line, just inside the painted lane, with the projected position within the lane's width. The box projections are approximate and the plant is close to the paint boundary."
+        },
+        "final": {
+          "court_zone": "paint_left",
+          "court_x": 20.5,
+          "court_y": 18.0,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The last visible plant is near the free-throw end of the paint, on the court-left side of the lane. The later release-frame feet are airborne."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "position_consistency"
+        ]
+      },
+      {
+        "number": 18,
+        "time_ms": 356933,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 35.8,
+          "court_y": 10.1,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is inside the arc and outside the right lane edge, near the baseline side. The approximate projection places it about 12 feet from the hoop, consistent with a right baseline midrange location."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 35.8,
+          "court_y": 10.1,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is inside the arc and outside the right lane edge, near the baseline side. The approximate projection places it about 12 feet from the hoop, consistent with a right baseline midrange location."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "outcome_only"
+        ]
+      },
+      {
+        "number": 19,
+        "time_ms": 398333,
+        "stages": {
+          "primary": false,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 9.5,
+          "court_y": 22.5,
+          "position_confidence": 0.68,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is left of the lane in the calibrated overhead orientation and touches the arc. The approximate coordinates place it just inside the virtual three-point radius."
+        },
+        "final": {
+          "court_zone": "three_wing_left",
+          "court_x": 9.0,
+          "court_y": 24.0,
+          "position_confidence": 0.75,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The last visible plant is outside the arc and projects to the court-left wing. The coordinates are an approximate location consistent with the visible three-point position."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary",
+          "outcome_only"
+        ]
+      },
+      {
+        "number": 20,
+        "time_ms": 406100,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.5,
+          "court_y": 18.6,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes are outside the left lane edge and inside the arc; the approximate projection places them in the left midrange wing."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.5,
+          "court_y": 18.6,
+          "position_confidence": 0.78,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes are outside the left lane edge and inside the arc; the approximate projection places them in the left midrange wing."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 21,
+        "time_ms": 428933,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_center",
+          "court_x": 20.2,
+          "court_y": 21.3,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes are near the free-throw circle, inside the three-point arc and just beyond the lane. The approximate projection places them left of the lane center but still within the center sector, beyond the free-throw line."
+        },
+        "final": {
+          "court_zone": "mid_center",
+          "court_x": 20.2,
+          "court_y": 21.3,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The planted shoes are near the free-throw circle, inside the three-point arc and just beyond the lane. The approximate projection places them left of the lane center but still within the center sector, beyond the free-throw line."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 22,
+        "time_ms": 450400,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.2,
+          "court_y": 11.7,
+          "position_confidence": 0.72,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is inside the arc and outside the right lane edge, near the baseline side. The approximate candidate projection is consistent with that midrange location."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.2,
+          "court_y": 11.7,
+          "position_confidence": 0.72,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The shooting plant is inside the arc and outside the right lane edge, near the baseline side. The approximate candidate projection is consistent with that midrange location."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 23,
+        "time_ms": 475600,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": null,
+          "court_x": null,
+          "court_y": null,
+          "position_confidence": null,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": null
+        },
+        "final": {
+          "court_zone": null,
+          "court_x": null,
+          "court_y": null,
+          "position_confidence": null,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": null
+        },
+        "contact_reason": null,
+        "attempts": []
+      },
+      {
+        "number": 24,
+        "time_ms": 478000,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 11.5,
+          "court_y": 12.3,
+          "position_confidence": 0.68,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The last plant is left of the lane and inside the arc, near the baseline side. The earlier projected foot position is a reasonable approximate location, rather than the airborne release box midpoint."
+        },
+        "final": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 11.5,
+          "court_y": 12.3,
+          "position_confidence": 0.68,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The last plant is left of the lane and inside the arc, near the baseline side. The earlier projected foot position is a reasonable approximate location, rather than the airborne release box midpoint."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "outcome_only"
+        ]
+      },
+      {
+        "number": 25,
+        "time_ms": 492533,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 10.0,
+          "court_y": 22.6,
+          "position_confidence": 0.7,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is left of the lane in the calibrated overhead orientation and touches the arc. The approximate coordinates place it just inside the virtual three-point radius."
+        },
+        "final": {
+          "court_zone": "three_wing_left",
+          "court_x": 9.0,
+          "court_y": 24.0,
+          "position_confidence": 0.7,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is visually outside the arc and projects to the left wing. The coordinates are approximate and place the shot about 24.6 feet from the hoop."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary"
+        ]
+      },
+      {
+        "number": 26,
+        "time_ms": 511400,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.1,
+          "court_y": 18.6,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is left of the lane and inside the arc, outside the paint. The approximate projected foot position is consistent with a left-wing midrange shot."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.1,
+          "court_y": 18.6,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is left of the lane and inside the arc, outside the paint. The approximate projected foot position is consistent with a left-wing midrange shot."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 27,
+        "time_ms": 521033,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 16.0,
+          "position_confidence": 0.75,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is inside the arc and outside the right lane edge. The approximate projection places it in the right midrange wing."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 16.0,
+          "position_confidence": 0.75,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The plant is inside the arc and outside the right lane edge. The approximate projection places it in the right midrange wing."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 28,
+        "time_ms": 543267,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_center",
+          "court_x": 28.5,
+          "court_y": 21.5,
+          "position_confidence": 0.8,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is beyond the free-throw line and inside the three-point arc, approximately aligned with the lane. The approximate projection supports a central midrange location."
+        },
+        "final": {
+          "court_zone": "mid_center",
+          "court_x": 28.5,
+          "court_y": 21.5,
+          "position_confidence": 0.8,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant is beyond the free-throw line and inside the three-point arc, approximately aligned with the lane. The approximate projection supports a central midrange location."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 29,
+        "time_ms": 567833,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 39.3,
+          "court_y": 6.2,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final grounded plant is outside the right lane edge and near the baseline, inside the arc. The supporting projection is consistent with a right baseline midrange location."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 39.3,
+          "court_y": 6.2,
+          "position_confidence": 0.76,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final grounded plant is outside the right lane edge and near the baseline, inside the arc. The supporting projection is consistent with a right baseline midrange location."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 30,
+        "time_ms": 592533,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 14.0,
+          "court_y": 24.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant touches the arc, making this a two-point location under the map convention. Projecting the shoes relative to the lane using the confirmed court-left direction places the shooter on the left wing."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 14.0,
+          "court_y": 24.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": null,
+          "zone_confidence": null,
+          "uncertainty_scope": null,
+          "position_reason": "The final plant touches the arc, making this a two-point location under the map convention. Projecting the shoes relative to the lane using the confirmed court-left direction places the shooter on the left wing."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      }
+    ]
+  },
+  "current": {
+    "screen_buckets": {
+      "made": 12,
+      "position_review": 18
+    },
+    "accepted_positions": {
+      "primary": 14,
+      "before_contact": 14,
+      "final": 12
+    },
+    "rows": [
+      {
+        "number": 1,
+        "time_ms": 6000,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.0,
+          "court_y": 20.0,
+          "position_confidence": 0.71,
+          "coordinate_confidence": 0.71,
+          "zone_confidence": 0.83,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and outside the left lane edge. The coordinates are approximate, based on the visible shoes and lane geometry rather than the earlier box midpoint."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.0,
+          "court_y": 20.0,
+          "position_confidence": 0.71,
+          "coordinate_confidence": 0.71,
+          "zone_confidence": 0.83,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and outside the left lane edge. The coordinates are approximate, based on the visible shoes and lane geometry rather than the earlier box midpoint."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 2,
+        "time_ms": 20900,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 15.7,
+          "position_confidence": 0.71,
+          "coordinate_confidence": 0.71,
+          "zone_confidence": 0.76,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The gather and plant are inside the arc and just beyond the far lane edge. The calibrated orientation places the shoes to the right of the lane in overhead coordinates; the XY estimate remains approximate."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 15.7,
+          "position_confidence": 0.71,
+          "coordinate_confidence": 0.71,
+          "zone_confidence": 0.76,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The gather and plant are inside the arc and just beyond the far lane edge. The calibrated orientation places the shoes to the right of the lane in overhead coordinates; the XY estimate remains approximate."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 3,
+        "time_ms": 36933,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "paint_center",
+          "court_x": 19.3,
+          "court_y": 18.5,
+          "position_confidence": 0.52,
+          "coordinate_confidence": 0.52,
+          "zone_confidence": 0.5,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The plant is near the free-throw line and the court-left side of the lane. Its exact contact relative to the paint boundary is uncertain."
+        },
+        "final": {
+          "court_zone": "needs_review",
+          "court_x": null,
+          "court_y": null,
+          "position_confidence": 0,
+          "coordinate_confidence": null,
+          "zone_confidence": 0.6,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요"
+        },
+        "contact_reason": "sole_contact_occluded_or_low_confidence",
+        "attempts": [
+          "shot_review",
+          "position_consistency",
+          "sole_contact_pixels"
+        ]
+      },
+      {
+        "number": 4,
+        "time_ms": 57467,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 35.2,
+          "court_y": 9.4,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.76,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The plant is inside the arc and outside the lane on the calibrated court-right side. The approximate coordinates reflect the visible plant and the supplied projection, not exact measured shoe contact."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 35.2,
+          "court_y": 9.4,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.76,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The plant is inside the arc and outside the lane on the calibrated court-right side. The approximate coordinates reflect the visible plant and the supplied projection, not exact measured shoe contact."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 5,
+        "time_ms": 85467,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 10.0,
+          "court_y": 13.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.74,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and outside the left lane edge, toward the baseline side. Coordinates are approximate because the plant is between sampled frames and the court is not necessarily regulation-sized."
+        },
+        "final": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 10.0,
+          "court_y": 13.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.74,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and outside the left lane edge, toward the baseline side. Coordinates are approximate because the plant is between sampled frames and the court is not necessarily regulation-sized."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 6,
+        "time_ms": 111267,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.3,
+          "court_y": 18.9,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.82,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is inside the arc and outside the near lane edge. The approximate left-wing coordinates are consistent with the visible shoes and lane, but are not an exact shoe measurement."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.3,
+          "court_y": 18.9,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.82,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is inside the arc and outside the near lane edge. The approximate left-wing coordinates are consistent with the visible shoes and lane, but are not an exact shoe measurement."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 7,
+        "time_ms": 128800,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_center",
+          "court_x": 21.0,
+          "court_y": 21.0,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The plant is near the free-throw line, just beyond the paint, and clearly inside the three-point arc. The exact distance from the paint boundary is approximate."
+        },
+        "final": {
+          "court_zone": "needs_review",
+          "court_x": null,
+          "court_y": null,
+          "position_confidence": 0,
+          "coordinate_confidence": null,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요"
+        },
+        "contact_reason": "sole_contact_occluded_or_low_confidence",
+        "attempts": [
+          "shot_review",
+          "sole_contact_pixels"
+        ]
+      },
+      {
+        "number": 8,
+        "time_ms": 150933,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 38.0,
+          "court_y": 16.0,
+          "position_confidence": 0.67,
+          "coordinate_confidence": 0.67,
+          "zone_confidence": 0.72,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is beyond the far lane edge and inside the arc, projecting to the right midrange side. Exact coordinates are approximate."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 38.0,
+          "court_y": 16.0,
+          "position_confidence": 0.67,
+          "coordinate_confidence": 0.67,
+          "zone_confidence": 0.72,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is beyond the far lane edge and inside the arc, projecting to the right midrange side. Exact coordinates are approximate."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 9,
+        "time_ms": 178000,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 11.7,
+          "court_y": 12.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is inside the arc and outside the left lane edge, near the baseline side. Coordinates are approximate rather than measured shoe contacts."
+        },
+        "final": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 11.7,
+          "court_y": 12.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is inside the arc and outside the left lane edge, near the baseline side. Coordinates are approximate rather than measured shoe contacts."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 10,
+        "time_ms": 198333,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 11.0,
+          "court_y": 23.5,
+          "position_confidence": 0.62,
+          "coordinate_confidence": 0.62,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The plant projects left of the lane on the wing. A shoe touches the three-point arc, making the exact two/three boundary and coordinates uncertain."
+        },
+        "final": {
+          "court_zone": "three_wing_left",
+          "court_x": 10.5,
+          "court_y": 25.0,
+          "position_confidence": 0.66,
+          "coordinate_confidence": 0.66,
+          "zone_confidence": 0.79,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is visually beyond the arc and projects left of the lane. The coordinates are approximate and place the shot just beyond the virtual three-point radius."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary"
+        ]
+      },
+      {
+        "number": 11,
+        "time_ms": 206133,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 13.0,
+          "court_y": 19.0,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.82,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and outside the left lane edge, in the left midrange. The precise coordinates are approximate."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 13.0,
+          "court_y": 19.0,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.82,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and outside the left lane edge, in the left midrange. The precise coordinates are approximate."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 12,
+        "time_ms": 216500,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.4,
+          "court_y": 15.7,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The planted shoes are inside the arc and outside the right lane edge. The approximate projection places them in right-wing midrange; exact coordinates are estimated."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.4,
+          "court_y": 15.7,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The planted shoes are inside the arc and outside the right lane edge. The approximate projection places them in right-wing midrange; exact coordinates are estimated."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 13,
+        "time_ms": 243267,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_center",
+          "court_x": 26.1,
+          "court_y": 22.1,
+          "position_confidence": 0.75,
+          "coordinate_confidence": 0.75,
+          "zone_confidence": 0.85,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is beyond the free-throw line and inside the three-point arc, approximately aligned with the lane. Coordinates are approximate and anchored by the visible shoes and lane markings."
+        },
+        "final": {
+          "court_zone": "mid_center",
+          "court_x": 26.1,
+          "court_y": 22.1,
+          "position_confidence": 0.75,
+          "coordinate_confidence": 0.75,
+          "zone_confidence": 0.85,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is beyond the free-throw line and inside the three-point arc, approximately aligned with the lane. Coordinates are approximate and anchored by the visible shoes and lane markings."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 14,
+        "time_ms": 267833,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.5,
+          "court_y": 12.8,
+          "position_confidence": 0.67,
+          "coordinate_confidence": 0.67,
+          "zone_confidence": 0.75,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is inside the arc and outside the far lane edge, on the calibrated court-right side. The coordinates are approximate because the camera is oblique."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.5,
+          "court_y": 12.8,
+          "position_confidence": 0.67,
+          "coordinate_confidence": 0.67,
+          "zone_confidence": 0.75,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is inside the arc and outside the far lane edge, on the calibrated court-right side. The coordinates are approximate because the camera is oblique."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 15,
+        "time_ms": 292633,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 11.5,
+          "court_y": 24.3,
+          "position_confidence": 0.48,
+          "coordinate_confidence": 0.48,
+          "zone_confidence": 0.64,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The plant projects left of the lane near the three-point boundary. The shoe overlap with the arc makes the exact distance and two-versus-three classification uncertain; the coordinates are an approximate inside-edge estimate."
+        },
+        "final": {
+          "court_zone": "three_wing_left",
+          "court_x": 11.5,
+          "court_y": 25.5,
+          "position_confidence": 0.67,
+          "coordinate_confidence": 0.67,
+          "zone_confidence": 0.8,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final grounded plant is visually beyond the arc. The approximate coordinates put it 24.3 feet from the hoop, consistent with a left-wing three."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary",
+          "outcome_only"
+        ]
+      },
+      {
+        "number": 16,
+        "time_ms": 311333,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.3,
+          "court_y": 18.8,
+          "position_confidence": 0.7,
+          "coordinate_confidence": 0.7,
+          "zone_confidence": 0.75,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is outside the left lane edge but inside the arc. The coordinates are approximate, consistent with the visible shoes and the supplied ground-motion reference."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.3,
+          "court_y": 18.8,
+          "position_confidence": 0.7,
+          "coordinate_confidence": 0.7,
+          "zone_confidence": 0.75,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is outside the left lane edge but inside the arc. The coordinates are approximate, consistent with the visible shoes and the supplied ground-motion reference."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 17,
+        "time_ms": 320967,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 15.7,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and just outside the right lane edge. The coordinates are an approximate projection of the grounded shoes, not an exact measurement."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 15.7,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and just outside the right lane edge. The coordinates are an approximate projection of the grounded shoes, not an exact measurement."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 18,
+        "time_ms": 337067,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "needs_review",
+          "court_x": null,
+          "court_y": null,
+          "position_confidence": 0.42,
+          "coordinate_confidence": 0.42,
+          "zone_confidence": 0.4,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The plant is near the free-throw line, with a shoe overlapping the line in the view. The exact contact position relative to the paint boundary is not sufficiently clear to select paint or midrange coordinates reliably."
+        },
+        "final": {
+          "court_zone": "needs_review",
+          "court_x": null,
+          "court_y": null,
+          "position_confidence": 0,
+          "coordinate_confidence": null,
+          "zone_confidence": 0.4,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요"
+        },
+        "contact_reason": "sole_contact_occluded_or_low_confidence",
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary",
+          "sole_contact_pixels"
+        ]
+      },
+      {
+        "number": 19,
+        "time_ms": 356933,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 38.0,
+          "court_y": 14.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.73,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is beyond the far lane edge on the court-right side and inside the arc, in the baseline-side midrange area. The precise coordinates are approximate."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.0,
+          "court_y": 10.0,
+          "position_confidence": 0.67,
+          "coordinate_confidence": 0.67,
+          "zone_confidence": 0.62,
+          "uncertainty_scope": "internal_zone_boundary",
+          "position_reason": "The final planted position projects just outside the right lane edge and closer to the baseline than the virtual 13-foot sector boundary. The exact distance from that boundary is approximate."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "position_consistency",
+          "outcome_only"
+        ]
+      },
+      {
+        "number": 20,
+        "time_ms": 398333,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "needs_review",
+          "court_x": null,
+          "court_y": null,
+          "position_confidence": 0.36,
+          "coordinate_confidence": 0.36,
+          "zone_confidence": 0.42,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The final plant is near the arc on the court-left side of the lane. Shoe contact with the line and the approximate projection do not resolve the precise two-point boundary well enough for reliable coordinates."
+        },
+        "final": {
+          "court_zone": "three_wing_left",
+          "court_x": 10.0,
+          "court_y": 25.0,
+          "position_confidence": 0.62,
+          "coordinate_confidence": 0.62,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The last grounded stance is visually outside the arc and projects left of the lane. The coordinates are approximate and consistent with the visible three-point location."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary",
+          "outcome_only"
+        ]
+      },
+      {
+        "number": 21,
+        "time_ms": 406100,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.9,
+          "court_y": 23.0,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.8,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The planted shoes are inside the arc and outside the left lane edge. The coordinates are approximate, anchored by the calibrated orientation and the visible plant rather than the box midpoint."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.9,
+          "court_y": 23.0,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.8,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The planted shoes are inside the arc and outside the left lane edge. The coordinates are approximate, anchored by the calibrated orientation and the visible plant rather than the box midpoint."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 22,
+        "time_ms": 428933,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_center",
+          "court_x": 20.0,
+          "court_y": 20.8,
+          "position_confidence": 0.72,
+          "coordinate_confidence": 0.72,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The shooting plant is near the free-throw line, on its outside, and within the lane's projected width. The exact distance from the paint boundary is approximate."
+        },
+        "final": {
+          "court_zone": "needs_review",
+          "court_x": null,
+          "court_y": null,
+          "position_confidence": 0,
+          "coordinate_confidence": null,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "접지점과 자유투선 관계를 확정하지 못해 위치 확인 필요"
+        },
+        "contact_reason": "sole_contact_occluded_or_low_confidence",
+        "attempts": [
+          "shot_review",
+          "sole_contact_pixels"
+        ]
+      },
+      {
+        "number": 23,
+        "time_ms": 451300,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.5,
+          "court_y": 12.4,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.77,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The plant is outside the lane on the court-right side and inside the arc. The approximate coordinates reflect the visible plant and lane lines, rather than treating the box midpoint as shoe contact."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 35.5,
+          "court_y": 12.0,
+          "position_confidence": 0.6,
+          "coordinate_confidence": 0.6,
+          "zone_confidence": 0.55,
+          "uncertainty_scope": "internal_zone_boundary",
+          "position_reason": "The last visible plant is right of the lane and inside the arc. Its approximate baseline depth favors the baseline sector, though the virtual y=13 ft sector boundary is close."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "position_consistency"
+        ]
+      },
+      {
+        "number": 24,
+        "time_ms": 478000,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 12.0,
+          "court_y": 12.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.76,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is left of the lane and inside the arc, near the baseline side. Coordinates are approximate, not measured shoe contacts."
+        },
+        "final": {
+          "court_zone": "mid_baseline_left",
+          "court_x": 12.0,
+          "court_y": 12.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.76,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is left of the lane and inside the arc, near the baseline side. Coordinates are approximate, not measured shoe contacts."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 25,
+        "time_ms": 492533,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "three_wing_left",
+          "court_x": 15.0,
+          "court_y": 28.0,
+          "position_confidence": 0.65,
+          "coordinate_confidence": 0.65,
+          "zone_confidence": 0.7,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is beyond the arc and projects left of the lane when the lane edges and calibrated court-left direction are extended toward half court. The coordinates are approximate."
+        },
+        "final": {
+          "court_zone": "three_wing_left",
+          "court_x": 15.0,
+          "court_y": 28.0,
+          "position_confidence": 0.65,
+          "coordinate_confidence": 0.65,
+          "zone_confidence": 0.75,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is visually beyond the arc and projects left of the lane. The estimated coordinates are approximately 24.9 ft from the hoop, consistent with a left-wing three."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review",
+          "visual_arc",
+          "arc_boundary"
+        ]
+      },
+      {
+        "number": 26,
+        "time_ms": 511400,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.2,
+          "court_y": 18.8,
+          "position_confidence": 0.7,
+          "coordinate_confidence": 0.7,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The plant is inside the arc and outside the left lane edge, consistent with a left midrange wing. The coordinates are approximate rather than measured shoe contacts."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 12.2,
+          "court_y": 18.8,
+          "position_confidence": 0.7,
+          "coordinate_confidence": 0.7,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The plant is inside the arc and outside the left lane edge, consistent with a left midrange wing. The coordinates are approximate rather than measured shoe contacts."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 27,
+        "time_ms": 521033,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.2,
+          "court_y": 16.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.76,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and just outside the right side of the lane in the calibrated overhead orientation. The coordinates are approximate, supported by the visible shoes and lane lines rather than the box midpoint alone."
+        },
+        "final": {
+          "court_zone": "mid_wing_right",
+          "court_x": 35.2,
+          "court_y": 16.0,
+          "position_confidence": 0.68,
+          "coordinate_confidence": 0.68,
+          "zone_confidence": 0.76,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The final plant is inside the arc and just outside the right side of the lane in the calibrated overhead orientation. The coordinates are approximate, supported by the visible shoes and lane lines rather than the box midpoint alone."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 28,
+        "time_ms": 543267,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_center",
+          "court_x": 26.0,
+          "court_y": 22.0,
+          "position_confidence": 0.75,
+          "coordinate_confidence": 0.75,
+          "zone_confidence": 0.83,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is near the free-throw circle, beyond the lane and inside the three-point arc. Its projection is approximately aligned with the lane; the exact coordinates are approximate."
+        },
+        "final": {
+          "court_zone": "mid_center",
+          "court_x": 26.0,
+          "court_y": 22.0,
+          "position_confidence": 0.75,
+          "coordinate_confidence": 0.75,
+          "zone_confidence": 0.83,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The shooting plant is near the free-throw circle, beyond the lane and inside the three-point arc. Its projection is approximately aligned with the lane; the exact coordinates are approximate."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 29,
+        "time_ms": 567833,
+        "stages": {
+          "primary": true,
+          "before_contact": true,
+          "final": true
+        },
+        "old_storage_accepts_final": true,
+        "primary": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.5,
+          "court_y": 12.8,
+          "position_confidence": 0.7,
+          "coordinate_confidence": 0.7,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The gather plant is outside the lane on its court-right side and inside the arc, near the baseline-side midrange. The coordinates are approximate rather than measured shoe contacts."
+        },
+        "final": {
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.5,
+          "court_y": 12.8,
+          "position_confidence": 0.7,
+          "coordinate_confidence": 0.7,
+          "zone_confidence": 0.78,
+          "uncertainty_scope": "coordinate",
+          "position_reason": "The gather plant is outside the lane on its court-right side and inside the arc, near the baseline-side midrange. The coordinates are approximate rather than measured shoe contacts."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      },
+      {
+        "number": 30,
+        "time_ms": 592533,
+        "stages": {
+          "primary": false,
+          "before_contact": false,
+          "final": false
+        },
+        "old_storage_accepts_final": false,
+        "primary": {
+          "court_zone": "mid_wing_left",
+          "court_x": 14.0,
+          "court_y": 24.0,
+          "position_confidence": 0.56,
+          "coordinate_confidence": 0.56,
+          "zone_confidence": 0.7,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The plant projects left of the lane and near the three-point boundary. A shoe overlaps the arc, making the distance estimate approximate."
+        },
+        "final": {
+          "court_zone": "mid_wing_left",
+          "court_x": 14.0,
+          "court_y": 24.0,
+          "position_confidence": 0.56,
+          "coordinate_confidence": 0.56,
+          "zone_confidence": 0.7,
+          "uncertainty_scope": "physical_boundary",
+          "position_reason": "The plant projects left of the lane and near the three-point boundary. A shoe overlaps the arc, making the distance estimate approximate."
+        },
+        "contact_reason": null,
+        "attempts": [
+          "shot_review"
+        ]
+      }
+    ]
+  },
+  "controlled_primary_calls": [
+    {
+      "number": 4,
+      "variant": "previous_prompt_schema",
+      "image_fingerprint": "4fa1de953b8c6ea704f48fb9ac678b0d5786d2b11d8c6c887edb256d23c9e8af",
+      "seconds": 12.543,
+      "decision": {
+        "court_zone": "mid_baseline_right",
+        "court_x": 35.2,
+        "court_y": 9.4,
+        "position_confidence": 0.79,
+        "coordinate_confidence": null,
+        "zone_confidence": null,
+        "uncertainty_scope": null,
+        "position_reason": "The shooting plant is inside the arc and beyond the right lane edge, toward the baseline side. The approximate projection is consistent with a right baseline midrange location."
+      },
+      "accepted": true,
+      "usage": {
+        "input_tokens": 28066,
+        "output_tokens": 396,
+        "total_tokens": 28462
+      }
+    },
+    {
+      "number": 4,
+      "variant": "current_prompt_schema",
+      "image_fingerprint": "4fa1de953b8c6ea704f48fb9ac678b0d5786d2b11d8c6c887edb256d23c9e8af",
+      "seconds": 11.55,
+      "decision": {
+        "court_zone": "mid_baseline_right",
+        "court_x": 35.2,
+        "court_y": 9.4,
+        "position_confidence": 0.67,
+        "coordinate_confidence": 0.67,
+        "zone_confidence": 0.75,
+        "uncertainty_scope": "coordinate",
+        "position_reason": "The plant is outside the far lane edge and inside the arc, on the court-right side using the supplied orientation. The approximate coordinates place it in the right baseline midrange; exact shoe projection is uncertain."
+      },
+      "accepted": false,
+      "usage": {
+        "input_tokens": 28180,
+        "output_tokens": 414,
+        "total_tokens": 28594
+      }
+    },
+    {
+      "number": 8,
+      "variant": "previous_prompt_schema",
+      "image_fingerprint": "fd1d431cc268a102d75f5837501c703a82c6b4bf3ab98f263d3ee8d0929c3a89",
+      "seconds": 12.128,
+      "decision": {
+        "court_zone": "mid_wing_right",
+        "court_x": 39.0,
+        "court_y": 16.0,
+        "position_confidence": 0.78,
+        "coordinate_confidence": null,
+        "zone_confidence": null,
+        "uncertainty_scope": null,
+        "position_reason": "The plant is inside the arc and beyond the far lane edge. Projecting from the lane and baseline with the supplied orientation places it on the right side in midrange; exact coordinates are approximate."
+      },
+      "accepted": true,
+      "usage": {
+        "input_tokens": 27919,
+        "output_tokens": 477,
+        "total_tokens": 28396
+      }
+    },
+    {
+      "number": 8,
+      "variant": "current_prompt_schema",
+      "image_fingerprint": "fd1d431cc268a102d75f5837501c703a82c6b4bf3ab98f263d3ee8d0929c3a89",
+      "seconds": 14.152,
+      "decision": {
+        "court_zone": "mid_wing_right",
+        "court_x": 38.0,
+        "court_y": 16.0,
+        "position_confidence": 0.7,
+        "coordinate_confidence": 0.7,
+        "zone_confidence": 0.77,
+        "uncertainty_scope": "coordinate",
+        "position_reason": "The plant is beyond the far lane edge but comfortably inside the arc, projecting to the right midrange wing. The exact distance and lateral coordinate are approximate."
+      },
+      "accepted": true,
+      "usage": {
+        "input_tokens": 28010,
+        "output_tokens": 455,
+        "total_tokens": 28465
+      }
+    }
+  ],
+  "api_usage": {
+    "input_tokens": 112175,
+    "output_tokens": 1742
+  },
+  "scope": "Saved-response ablation and optional controlled prompts, not ground-truth accuracy",
+  "matched_shots": [
+    {
+      "current_number": 1,
+      "current_time_ms": 6000,
+      "previous_time_ms": 6000,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 2,
+      "current_time_ms": 20900,
+      "previous_time_ms": 20900,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 3,
+      "current_time_ms": 36933,
+      "previous_time_ms": 36933,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 4,
+      "current_time_ms": 57467,
+      "previous_time_ms": 57467,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 5,
+      "current_time_ms": 85467,
+      "previous_time_ms": 85467,
+      "previous_stored_position": false,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 6,
+      "current_time_ms": 111267,
+      "previous_time_ms": 111267,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 7,
+      "current_time_ms": 128800,
+      "previous_time_ms": 128800,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 8,
+      "current_time_ms": 150933,
+      "previous_time_ms": 150933,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 9,
+      "current_time_ms": 178000,
+      "previous_time_ms": 178000,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 10,
+      "current_time_ms": 198333,
+      "previous_time_ms": 198333,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 12,
+      "current_time_ms": 216500,
+      "previous_time_ms": 216500,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 13,
+      "current_time_ms": 243267,
+      "previous_time_ms": 243267,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 14,
+      "current_time_ms": 267833,
+      "previous_time_ms": 267767,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 15,
+      "current_time_ms": 292633,
+      "previous_time_ms": 292633,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 16,
+      "current_time_ms": 311333,
+      "previous_time_ms": 311333,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 17,
+      "current_time_ms": 320967,
+      "previous_time_ms": 320967,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 18,
+      "current_time_ms": 337067,
+      "previous_time_ms": 337067,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 19,
+      "current_time_ms": 356933,
+      "previous_time_ms": 356933,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 20,
+      "current_time_ms": 398333,
+      "previous_time_ms": 398333,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 21,
+      "current_time_ms": 406100,
+      "previous_time_ms": 406100,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 22,
+      "current_time_ms": 428933,
+      "previous_time_ms": 428933,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 23,
+      "current_time_ms": 451300,
+      "previous_time_ms": 450400,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 24,
+      "current_time_ms": 478000,
+      "previous_time_ms": 478000,
+      "previous_stored_position": false,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 25,
+      "current_time_ms": 492533,
+      "previous_time_ms": 492533,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 26,
+      "current_time_ms": 511400,
+      "previous_time_ms": 511400,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 27,
+      "current_time_ms": 521033,
+      "previous_time_ms": 521033,
+      "previous_stored_position": true,
+      "current_stored_position": false
+    },
+    {
+      "current_number": 28,
+      "current_time_ms": 543267,
+      "previous_time_ms": 543267,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 29,
+      "current_time_ms": 567833,
+      "previous_time_ms": 567833,
+      "previous_stored_position": true,
+      "current_stored_position": true
+    },
+    {
+      "current_number": 30,
+      "current_time_ms": 592533,
+      "previous_time_ms": 592533,
+      "previous_stored_position": false,
+      "current_stored_position": false
+    }
+  ],
+  "controlled_seconds": 26.696,
+  "api_usage_complete": true
+}

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 from time import perf_counter
+from threading import Lock
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -195,12 +196,16 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
                 reporter.stage = STAGES[4] + f" · 슛 여부 확인 {done}/{total}"
                 if monitor.cancelled():
                     raise Phase7Canceled("사용자가 분석을 취소했습니다.")
+            def candidate_activity(label, done, total):
+                count = f'{done}/{total}' if total is not None else str(done)
+                reporter.stage = f'후보 판단 · {label} {count}'
             enriched = reuse.load_stage('enriched_candidates')
             if enriched is None:
                 result = enrich_candidates(video_path, model_path, pose_model_path,
                                            hoop_point, result, review_settings, cancelled=monitor.cancelled,
                                            inference_device=inference_device,prefetch_frames=True,
-                                           model_reuse=models,gate_workers=2,gate_client=review_client,gate_progress=gate_progress)
+                                           model_reuse=models,gate_workers=2,gate_client=review_client,
+                                           gate_progress=gate_progress,activity_progress=candidate_activity)
                 reuse.save_stage('enriched_candidates', result)
             else:
                 result = enriched
@@ -228,8 +233,32 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         reporter.stage = STAGES[4] + " · 상세 AI 판정"
         with AsyncProgressTrial(reporter) as monitor:
             monitor.progress(duration_ms)
+            detail_lock = Lock()
+            detail_counts = {'done': 0, 'total': min(len(result['candidates']), review_settings.openai_max_candidate_reviews)}
+            active_detail = {}
+            activity_labels = {
+                'prepare_images': '장면 준비', 'prepare_shoes': '장면 준비',
+                'prepare_outcome_images': '장면 준비', 'shot_review': '기본 판정',
+                'camera_context': '위치 재검토', 'visual_arc': '위치 재검토',
+                'position_review': '위치 재검토', 'sole_contact_pixels': '위치 재검토',
+                'outcome_review': '득점 재검토',
+            }
+            def publish_detail_status():
+                labels = list(dict.fromkeys(active_detail.values()))
+                reporter.stage = f"심층 분석 {detail_counts['done']}/{detail_counts['total']}"
+                if labels:
+                    reporter.stage += ' · ' + '·'.join(labels)
+            def detail_activity(candidate_key, task):
+                with detail_lock:
+                    if task is None:
+                        active_detail.pop(candidate_key, None)
+                    else:
+                        active_detail[candidate_key] = activity_labels.get(task, '기본 판정')
+                    publish_detail_status()
             def detail_progress(done,total):
-                reporter.stage = STAGES[4] + f" · 상세 AI 판정 {done}/{total}"
+                with detail_lock:
+                    detail_counts.update(done=done, total=total)
+                    publish_detail_status()
                 if monitor.cancelled():
                     raise Phase7Canceled("사용자가 분석을 취소했습니다.")
             result = review_candidates_with_openai(
@@ -237,6 +266,7 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
                 camera_view_calibrations=view_calibrations,detail_workers=2,
                 fast_image_sampling=True,require_outcome_evidence=True,scoring_rim_evidence=True,
                 review_progress=detail_progress,
+                review_activity=detail_activity,
             )
         result["timing_seconds"] = {
             "local_candidates":round(local_seconds,2),

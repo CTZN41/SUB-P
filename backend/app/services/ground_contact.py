@@ -43,9 +43,11 @@ def plant_sample(candidate: dict) -> dict | None:
 
 
 def refresh_retimed_foot_tracks(video, model, pose, hoop, result, *, cancelled=None,
-                               inference_device='cpu', prefetch_frames=False, model_reuse=None):
+                               inference_device='cpu', prefetch_frames=False, model_reuse=None,
+                               activity_progress=None):
     from app.analysis.phase7_pipeline import analyze_video, Phase7Canceled
     reports = []
+    targets = []
     for candidate in result.get('candidates', []):
         gate = candidate.get('shot_gate') or {}
         if gate.get('verdict') != 'shot':
@@ -53,6 +55,10 @@ def refresh_retimed_foot_tracks(video, model, pose, hoop, result, *, cancelled=N
         original = gate.get('detector_candidate_time_ms', gate.get('original_time_ms', candidate['time_ms']))
         if abs(int(original) - candidate['time_ms']) < 200:
             continue
+        targets.append(candidate)
+    for candidate_index, candidate in enumerate(targets):
+        if activity_progress:
+            activity_progress('발 추적 보정', candidate_index, len(targets))
         if cancelled and cancelled():
             raise Phase7Canceled('사용자가 분석을 취소했습니다.')
         start, end = rescan_window(candidate['time_ms'], 0, result['duration_ms'], purpose='plant_refresh')
@@ -76,5 +82,7 @@ def refresh_retimed_foot_tracks(video, model, pose, hoop, result, *, cancelled=N
             report = {'status': 'failed', 'release_ms': candidate['time_ms'], 'window_ms': [start, end]}
         candidate['foot_track_refresh'] = report
         reports.append(report)
+        if activity_progress:
+            activity_progress('발 추적 보정', candidate_index + 1, len(targets))
     result['foot_track_refresh_summary'] = {'refreshed': sum(r['status'] == 'complete' for r in reports), 'items': reports}
     return result

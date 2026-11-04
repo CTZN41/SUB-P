@@ -34,7 +34,10 @@ def test_retimed_release_refreshes_tracks_without_relabelling_old_pixels(monkeyp
         kw['foot_track_targets'][0]['foot_track'] = [sample(4200,100,500),sample(4333,100,500)]
         return {'performance':{'total_seconds':1}}
     monkeypatch.setattr('app.analysis.phase7_pipeline.analyze_video',scan)
-    result=refresh_retimed_foot_tracks(None,None,None,None,{'duration_ms':10000,'candidates':[original]})
+    activity = []
+    result=refresh_retimed_foot_tracks(None,None,None,None,{'duration_ms':10000,'candidates':[original]},
+                                     activity_progress=lambda *event: activity.append(event))
+    assert activity == [('발 추적 보정', 0, 1), ('발 추적 보정', 1, 1)]
     assert seen[0]['start_ms'] == 3600 and seen[0]['end_ms'] == 5150
     assert original['foot_point_time_ms'] == 4100
     assert plant_sample(original)['time_ms'] == 4333

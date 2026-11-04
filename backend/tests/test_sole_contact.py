@@ -128,6 +128,52 @@ def test_contact_trigger_requires_the_correct_area_shot_style_and_validated_evid
     assert not needs_contact_verification(d.model_dump(), c, (18.6,20.3))
 
 
+@pytest.mark.parametrize('reason', ['observed_free_throw_line_missing',
+                                   'sole_contact_occluded_or_low_confidence', 'contact_verification_failed'])
+def test_inconclusive_extra_measurement_keeps_independently_supported_visual_position(reason):
+    d, candidate, shoes = evidence()
+    d.court_x, d.court_y, d.court_zone = 25, 22, 'mid_center'
+    d.uncertainty_scope = 'coordinate'
+    before = d.model_dump()
+    result = {'status': 'needs_review', 'reason': reason,
+              'diagnostic_frames': [{'side': 'outside'}],
+              'wider_error_check': {'diagnostic_sides': ['outside']}}
+    apply_contact_evidence(before, result, candidate, shoes)
+    assert before == d.model_dump()
+    assert result['application'] == 'preserved_visual_position'
+
+
+@pytest.mark.parametrize('weakness', ['physical_scope', 'view_scope', 'low_confidence', 'straddling',
+                                    'opposite_side', 'unverified_view', 'missing_shoes', 'clipped',
+                                    'near_boundary', 'physical_error', 'unknown_reason', 'missing_diagnostics',
+                                    'wider_straddling', 'wider_missing'])
+def test_extra_contact_cannot_preserve_unsupported_or_conflicting_position(weakness):
+    d, candidate, shoes = evidence()
+    d.court_x, d.court_y, d.court_zone = 25, 22, 'mid_center'
+    d.uncertainty_scope = 'coordinate'
+    result = {'status': 'needs_review', 'reason': 'sole_contact_occluded_or_low_confidence',
+              'diagnostic_frames': [{'side': 'outside'}],
+              'wider_error_check': {'diagnostic_sides': ['outside']}}
+    if weakness == 'physical_scope': d.uncertainty_scope = 'physical_boundary'
+    if weakness == 'view_scope': d.uncertainty_scope = 'view'
+    if weakness == 'low_confidence': d.coordinate_confidence = .64
+    if weakness == 'straddling': result['diagnostic_frames'].append({'side': 'straddling'})
+    if weakness == 'opposite_side': result['diagnostic_frames'][0]['side'] = 'inside'
+    if weakness == 'unverified_view': candidate['calibration_view_valid'] = False
+    if weakness == 'missing_shoes': shoes['status'] = 'unavailable'
+    if weakness == 'clipped': shoes['image_edge_offsets_ms'] = shoes['offsets_ms']
+    if weakness == 'near_boundary': d.court_y = 19.5
+    if weakness == 'physical_error': result['reason'] = 'pixel_error_sensitivity_crosses_boundary'
+    if weakness == 'unknown_reason': result['reason'] = 'unknown'
+    if weakness == 'missing_diagnostics': result['diagnostic_frames'] = []
+    if weakness == 'wider_straddling': result['wider_error_check']['diagnostic_sides'].append('straddling')
+    if weakness == 'wider_missing': result['wider_error_check'] = {}
+    value = d.model_dump()
+    apply_contact_evidence(value, result, candidate, shoes)
+    assert value['court_x'] is None and value['position_confidence'] == 0
+    assert result['application'] == 'held_for_review'
+
+
 def test_pipeline_accounts_for_contact_usage_and_keeps_type_and_outcome(tmp_path, monkeypatch):
     from app.core.config import Settings
     from app.services import openai_shot_review as review
@@ -158,6 +204,30 @@ def test_no_paid_request_when_the_actual_line_is_not_observed(monkeypatch):
     monkeypatch.setattr(module, 'locate_soles_once', forbidden)
     result, usage = review_contact_pixels(object(), 'test', Path('unused'), {})
     assert result['status']=='needs_review' and not result['api_called'] and usage=={}
+
+
+def test_invalid_measured_contact_is_held_instead_of_treated_as_optional_request_failure(tmp_path, monkeypatch):
+    from app.core.config import Settings
+    from app.services import openai_shot_review as review
+    from test_openai_shot_review import camera_context
+    d, candidate, shoes = evidence()
+    d.court_x, d.court_y, d.court_zone = 25, 21, 'mid_center'
+    d.uncertainty_scope = 'coordinate'
+    video = tmp_path / 'native.mp4'
+    video.write_bytes(b'test')
+    monkeypatch.setattr(review, '_build_shared_camera_contexts', lambda *a: ({0: camera_context()}, [], 0))
+    monkeypatch.setattr(review, 'candidate_frame_inputs', lambda *a: [])
+    monkeypatch.setattr('app.services.review_frame_trial.dense_shoe_inputs', lambda *a: ([], shoes))
+    monkeypatch.setattr(review, '_review_once', lambda *a, **k: (d, {}))
+    invalid = {'status': 'resolved', 'confidence': .69, 'court_x': 25, 'court_y': 21, 'court_zone': 'mid_center'}
+    monkeypatch.setattr('app.services.sole_contact.review_contact_pixels', lambda *a: (invalid, {}))
+    result = review.review_candidates_with_openai(video, {'candidates': [candidate]},
+        Settings(_env_file=None, openai_api_key='test', openai_vision_fallback_model=None),
+        client=object(), calibration_transform=candidate['validated_court_transform'])
+    ai = result['candidates'][0]['ai_review']
+    assert ai['court_x'] is None
+    assert ai['sole_contact']['reason'] == 'contact_measurement_invalid'
+    assert ai['outcome'] == 'made' and ai['shot_type'] == 'set_shot'
 
 
 def test_wider_pixel_error_sensitivity_can_veto_an_initially_resolved_point(monkeypatch):

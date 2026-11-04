@@ -104,7 +104,8 @@ def test_position_retry_can_correct_wrong_zone_name_for_same_coordinates(tmp_pat
 
 @pytest.mark.parametrize("retry_confidence, expected_zone", [
     (.72, "mid_wing_right"),
-    (.68, "needs_review"),
+    (.65, "mid_wing_right"),
+    (.64, "needs_review"),
 ])
 def test_calibrated_foot_conflict_gets_position_retry(
     tmp_path, monkeypatch, retry_confidence, expected_zone,
@@ -135,7 +136,7 @@ def test_calibrated_foot_conflict_gets_position_retry(
     ]
     assert "(35.0, 21.0)" in responses.calls[0]["input"][0]["content"][0]["text"]
     assert review["court_zone"] == expected_zone
-    assert review["court_x"] == (35 if retry_confidence >= .70 else None)
+    assert review["court_x"] == (35 if retry_confidence >= .65 else None)
     assert review["outcome"] == "made"
     assert review["shot_type"] == "set_shot"
 
@@ -496,12 +497,13 @@ def test_unclear_terra_position_is_not_sent_to_sol(tmp_path, monkeypatch) -> Non
     assert result["ai_review"]["escalated"] == 0
 
 
-def test_low_confidence_terra_position_is_kept_for_review_without_sol(tmp_path, monkeypatch) -> None:
+@pytest.mark.parametrize('position_confidence, review_required', [(.64, True), (.65, False), (.68, False)])
+def test_position_confidence_uses_relaxed_acceptance_without_sol(tmp_path, monkeypatch, position_confidence, review_required) -> None:
     primary = decision(.9, False, outcome="made")
     primary.court_zone = "three_wing_left"
     primary.court_x = 16
     primary.court_y = 29
-    primary.position_confidence = .68
+    primary.position_confidence = position_confidence
     responses = FakeResponses([primary])
     client = SimpleNamespace(responses=responses)
     monkeypatch.setattr(
@@ -520,7 +522,7 @@ def test_low_confidence_terra_position_is_kept_for_review_without_sol(tmp_path, 
     assert [call["model"] for call in responses.calls] == ["gpt-6.1-terra"]
     assert review["court_zone"] == "three_wing_left"
     assert (review["court_x"], review["court_y"]) == (16, 29)
-    assert review["review_required"] is True
+    assert review["review_required"] is review_required
 
 
 def test_fixed_scene_reuses_one_camera_view_for_all_positions(tmp_path, monkeypatch) -> None:
