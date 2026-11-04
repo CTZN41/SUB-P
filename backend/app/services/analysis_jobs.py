@@ -22,6 +22,8 @@ from app.analysis.model_reuse_trial import ModelReuseTrial
 from app.services.async_progress_trial import AsyncProgressTrial
 from app.services.view_alignment_trial import group_camera_views
 from app.services.non_shot_recovery import separate_recovery_motion
+from app.services.analysis_reuse import AnalysisReuse
+from app.services.non_shot_policy import exclude_confirmed_non_shots
 
 
 STAGES = [
@@ -154,17 +156,27 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         model_path, pose_model_path, inference_device = candidate_models(settings)
         models = ModelReuseTrial()
         review_settings = settings.model_copy(update={"openai_vision_fallback_model":None})
+        reuse = AnalysisReuse.for_job(settings.work_path / analysis_id, video_path,
+                                     [model_path, pose_model_path], calibration_payload, review_settings)
         if settings.openai_api_key and settings.openai_shot_review_enabled:
             from openai import OpenAI
             api_client = OpenAI(api_key=settings.openai_api_key,
                                 timeout=settings.openai_timeout_seconds,max_retries=0)
+        review_client = reuse.client(api_client) if api_client is not None else None
         started = perf_counter()
         with AsyncProgressTrial(reporter) as monitor:
-            result = analyze_video(video_path, model_path, hoop_point,
-                                   pose_model_path=pose_model_path,
-                                   progress=monitor.progress, cancelled=monitor.cancelled,
-                                   collect_motion_hints=True, inference_device=inference_device,
-                                   prefetch_frames=True, model_reuse=models)
+            result = reuse.load_stage('local_candidates')
+            if result is None:
+                result = analyze_video(video_path, model_path, hoop_point,
+                                       pose_model_path=pose_model_path,
+                                       progress=monitor.progress, cancelled=monitor.cancelled,
+                                       collect_motion_hints=True, inference_device=inference_device,
+                                       prefetch_frames=True, model_reuse=models)
+                reuse.save_stage('local_candidates', result)
+            # Preserve completed local evidence before a later DB/API failure.
+            # This is not published as a completed Phase 7/8 result.
+            save_result(settings.work_path, analysis_id, {'job_id':job_id,'stage':'local_candidates','result':result},
+                        filename=f'local-candidates-{job_id}.json')
         local_seconds = perf_counter() - started
         reporter.stage = STAGES[4] + " · 슛 여부 확인·추가 재탐지"
         with session_factory() as session:
@@ -183,10 +195,15 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
                 reporter.stage = STAGES[4] + f" · 슛 여부 확인 {done}/{total}"
                 if monitor.cancelled():
                     raise Phase7Canceled("사용자가 분석을 취소했습니다.")
-            result = enrich_candidates(video_path, model_path, pose_model_path,
-                                       hoop_point, result, review_settings, cancelled=monitor.cancelled,
-                                       inference_device=inference_device,prefetch_frames=True,
-                                       model_reuse=models,gate_workers=2,gate_client=api_client,gate_progress=gate_progress)
+            enriched = reuse.load_stage('enriched_candidates')
+            if enriched is None:
+                result = enrich_candidates(video_path, model_path, pose_model_path,
+                                           hoop_point, result, review_settings, cancelled=monitor.cancelled,
+                                           inference_device=inference_device,prefetch_frames=True,
+                                           model_reuse=models,gate_workers=2,gate_client=review_client,gate_progress=gate_progress)
+                reuse.save_stage('enriched_candidates', result)
+            else:
+                result = enriched
         enrichment_seconds = perf_counter() - started
         started = perf_counter()
         view_calibrations = None
@@ -194,7 +211,15 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         if settings.openai_shot_review_enabled and settings.openai_api_key:
             with AsyncProgressTrial(reporter) as monitor:
                 monitor.progress(duration_ms)
-                view_calibrations,view_reports = group_camera_views(video_path,result["candidates"],calibration_payload)
+                camera_stage = reuse.load_stage('camera_views')
+                if camera_stage is None:
+                    view_calibrations,view_reports = group_camera_views(video_path,result["candidates"],calibration_payload)
+                    reuse.save_stage('camera_views', {'transforms': view_calibrations,
+                        'reports': view_reports, 'candidates': result['candidates']})
+                else:
+                    view_calibrations = {int(k): v for k, v in camera_stage['transforms'].items()}
+                    view_reports = camera_stage['reports']
+                    result['candidates'] = camera_stage['candidates']
                 result["camera_view_validation"] = view_reports
                 if monitor.cancelled():
                     raise Phase7Canceled("사용자가 분석을 취소했습니다.")
@@ -208,7 +233,7 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
                 if monitor.cancelled():
                     raise Phase7Canceled("사용자가 분석을 취소했습니다.")
             result = review_candidates_with_openai(
-                video_path,result,review_settings,client=api_client,calibration_transform=calibration_transform,
+                video_path,result,review_settings,client=review_client,calibration_transform=calibration_transform,
                 camera_view_calibrations=view_calibrations,detail_workers=2,
                 fast_image_sampling=True,require_outcome_evidence=True,scoring_rim_evidence=True,
                 review_progress=detail_progress,
@@ -222,14 +247,17 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
         result["runtime_options"] = {"gate_workers":2,"detail_workers":2,"prefetch":True,
                                      "model_reuse":True,"async_status":True,"scoring_rim_evidence":True,
                                      "camera_view_guard":True}
+        result['reuse'] = {**reuse.stats, 'inference': dict(models.cache_stats),
+                           'inference_cache_bytes': models.prediction_bytes}
         result["status_io"] = dict(reporter.stats)
-        gate_usage = result.get("shot_gate_summary", {}).get("usage", {})
-        detail_usage = result.get("ai_review", {}).get("usage", {})
         result["api_usage"] = {
-            key: int(gate_usage.get(key, 0) or 0) + int(detail_usage.get(key, 0) or 0)
+            key: int(reuse.stats[key])
             for key in ("input_tokens", "output_tokens")
         }
+        result['api_usage_scope'] = 'new_calls_in_this_run; reused responses are not billed again; timeout usage may be unavailable'
+        result['api_usage_complete'] = reuse.stats['api_errors'] == 0
         result = separate_recovery_motion(result)
+        result = exclude_confirmed_non_shots(result)
         with session_factory() as session:
             job = session.get(AnalysisJob, job_id)
             if job is None or job.cancel_requested:
@@ -262,7 +290,26 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
             analysis.completed_at = job.finished_at
             analysis.processed_ms = analysis.duration_ms
             session.commit()
+        if ai_state not in ('partial', 'not_configured'):
+            try:
+                reuse.save_stage('completed', {'job_id': job_id})
+            except OSError:
+                pass  # A checkpoint failure cannot undo an already committed result.
     except Exception as error:
+        # Preserve safe exception types/locations without SQL, tokens, or raw
+        # request bodies. Earlier generic errors discarded this evidence.
+        import traceback
+        failure = {'job_id':job_id,'stage':reporter.stage,'exception_chain':[]}
+        cause = error
+        while cause is not None:
+            failure['exception_chain'].append({'type':type(cause).__name__,
+                'locations':[{'file':Path(f.filename).name,'function':f.name,'line':f.lineno}
+                             for f in traceback.extract_tb(cause.__traceback__)[-8:]]})
+            cause = cause.__cause__
+        try:
+            save_result(settings.work_path,analysis_id,failure,filename=f'failure-{job_id}.json')
+        except OSError:
+            pass
         result_path.unlink(missing_ok=True)
         with session_factory() as session:
             job = session.get(AnalysisJob, job_id)
@@ -273,7 +320,7 @@ def run_phase7_job(session_factory, settings: Settings, analysis_id: str, job_id
             job.status = JobStatus.CANCELED if canceled else JobStatus.FAILED
             job.stage = analysis.current_stage = "취소됨" if canceled else "분석 실패"
             job.error_code = None if canceled else "PHASE7_ANALYSIS_FAILED"
-            job.error_message = None if canceled else str(error) if isinstance(error, Phase7Error) else "영상 분석 중 문제가 생겼습니다. 원본 영상과 모델 파일을 확인해 주세요."
+            job.error_message = None if canceled else str(error) if isinstance(error, Phase7Error) else "분석 처리 중 오류가 발생했습니다. 원본 영상과 설정은 보존되어 있습니다."
             job.finished_at = utc_now()
             analysis.status = AnalysisStatus.CANCELED if canceled else AnalysisStatus.FAILED
             analysis.failure_code = job.error_code

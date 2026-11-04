@@ -2,6 +2,31 @@
 
 Never merge two accepted shots or discard an uncertain release/hoop candidate.
 """
+from math import dist, hypot
+
+
+def _same_player_motion(first: dict, second: dict) -> bool:
+    if first.get('player_track_id') is not None and second.get('player_track_id') is not None:
+        if first['player_track_id'] != second['player_track_id']:
+            return False
+    a, b, size = first.get('foot_point_px'), second.get('foot_point_px'), first.get('frame_size_px')
+    if not a or not b or not size:
+        return False
+    diagonal = hypot(*size)
+    if dist(a,b) <= diagonal * .15:
+        return True
+    # A dribbler can move substantially before release. Require a temporal
+    # bridge rather than increasing the static distance threshold for everyone.
+    tail = sorted((s for s in first.get('foot_track',[]) if not s.get('foot_point_clipped')),key=lambda s:s['time_ms'])[-3:]
+    head = sorted((s for s in second.get('foot_track',[]) if not s.get('foot_point_clipped')),key=lambda s:s['time_ms'])[:3]
+    if len(tail)<2 or len(head)<2:
+        return False
+    left,right=tail[-1],head[0]
+    gap=right['time_ms']-left['time_ms']
+    if not 0<gap<=600:
+        return False
+    movement=dist(left['foot_point_px'],right['foot_point_px'])
+    return movement <= diagonal*.05 and movement/(gap/1000) <= diagonal*.25
 
 
 def separate_recovery_motion(result: dict) -> dict:
@@ -23,6 +48,19 @@ def separate_recovery_motion(result: dict) -> dict:
         previous = next((other for other in reversed(kept)
                          if int(other.get("scene_id", 0)) == int(candidate.get("scene_id", 0))
                          and 0 < candidate["time_ms"] - other["time_ms"] <= 6000), None)
+        following = next((other for other in candidates
+                          if int(other.get('scene_id', 0)) == int(candidate.get('scene_id', 0))
+                          and 800 <= other['time_ms'] - candidate['time_ms'] <= 3200
+                          and (other.get('shot_gate') or {}).get('verdict') == 'shot'
+                          and (other.get('shot_gate') or {}).get('confidence', 0) >= .9
+                          and (other.get('ai_review') or {}).get('is_shot') is True
+                          and (other.get('ai_review') or {}).get('outcome') in {'made', 'missed'}), None)
+        if rejected_retrieval and following is not None:
+            if _same_player_motion(candidate, following):
+                candidate['exclusion'] = {'reason': 'high_confidence_pre_shot_dribble',
+                                          'related_shot_time_ms': following['time_ms']}
+                excluded.append(candidate)
+                continue
         if rejected_retrieval and previous is not None:
             previous_gate = previous.get("shot_gate") or {}
             previous_review = previous.get("ai_review") or {}

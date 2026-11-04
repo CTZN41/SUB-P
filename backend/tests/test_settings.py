@@ -8,7 +8,7 @@ def test_default_video_limits_and_optional_secret() -> None:
     settings = Settings(_env_file=None)
 
     assert settings.database_url is None
-    assert settings.max_video_minutes == 10
+    assert settings.max_video_minutes == 40
     assert settings.max_video_bytes == 5 * 1024 * 1024 * 1024
     assert settings.openai_api_key is None
     assert settings.openai_vision_model == "gpt-6.1-terra"

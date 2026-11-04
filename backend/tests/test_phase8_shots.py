@@ -221,25 +221,19 @@ def test_unknown_outcome_keeps_agreed_shot_type_for_partial_automation(tmp_path)
     engine.dispose()
 
 
-def test_non_shot_gate_candidate_is_preserved_with_clear_review_reason(tmp_path) -> None:
+def test_confident_non_shot_is_excluded_from_materialized_results(tmp_path) -> None:
     engine = create_engine(f"sqlite:///{(tmp_path / 'phase8.db').as_posix()}")
     Base.metadata.create_all(engine)
     with Session(engine) as session:
         analysis, calibration = analysis_setup(session)
-        shot = materialize_shots_from_candidates(
-            session, analysis, calibration,
-            {"candidates": [{
-                "time_ms": 5000,
-                "shot_gate": {"verdict": "not_shot", "confidence": .97},
-                "ai_review": {"is_shot": False, "shot_type": "needs_review"},
-            }]},
-        )[0]
+        result = {"candidates": [{"time_ms": 5000,
+            "shot_gate": {"verdict": "not_shot", "confidence": .97},
+            "ai_review": {"is_shot": False, "shot_type": "needs_review"}}]}
+        shots = materialize_shots_from_candidates(session, analysis, calibration, result)
         session.commit()
-
-        assert shot.status is ShotStatus.NEEDS_REVIEW
-        assert shot.result is ShotResult.NEEDS_REVIEW
-        assert "리바운드·패스" in shot.review_reason
-        assert shot.confidence_data["shot_gate"]["verdict"] == "not_shot"
+        assert shots == []
+        assert len(result['excluded_non_shot_candidates']) == 1
+        assert result['excluded_non_shot_candidates'][0]['time_ms'] == 5000
         assert analysis.status is AnalysisStatus.REVIEW_REQUIRED
     engine.dispose()
 

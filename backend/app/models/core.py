@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, BigInteger, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -104,6 +104,16 @@ def enum_column(enum_type: type[StringEnum], *, default: StringEnum | None = Non
     )
 
 
+class UserProfile(Base):
+    __tablename__ = 'user_profiles'
+    __table_args__ = (CheckConstraint('length(nickname) BETWEEN 2 AND 20', name='ck_user_profiles_nickname_length'),)
+
+    user_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    nickname: Mapped[str] = mapped_column(String(20), nullable=False)
+    nickname_key: Mapped[str] = mapped_column(String(160), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
 class Analysis(Base):
     __tablename__ = "analyses"
     __table_args__ = (
@@ -120,7 +130,7 @@ class Analysis(Base):
     recorded_date: Mapped[date | None] = mapped_column(Date)
     original_name: Mapped[str] = mapped_column(String(255), nullable=False)
     stored_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    file_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    file_size: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     width: Mapped[int | None] = mapped_column(Integer)
     height: Mapped[int | None] = mapped_column(Integer)

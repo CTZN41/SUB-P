@@ -1,0 +1,31 @@
+{
+  "analysis_id": "925da2e2-e335-46a7-8d27-c2823741809f",
+  "failed_job_id": "a7797e9e-79ff-43b6-8f9a-5eef1901791c",
+  "original_job_seconds": 1219.520331,
+  "source_reported_duration_ms": 1983767,
+  "source_last_decodable_frame": 59400,
+  "source_last_decodable_time_ms": 1980000,
+  "reproduced_error_chain": [
+    "RuntimeError: Frame prefetch failed",
+    "RuntimeError: Could not skip source frame"
+  ],
+  "fixed_tail_test": {
+    "range_start_ms": 1950000,
+    "decoded_end_ms": 1979967,
+    "sampled_frames": 248,
+    "candidates": 5,
+    "decode_warning": {
+      "first_unread_frame": 59401,
+      "last_sampled_frame": 59398,
+      "reported_end_frame": 59513,
+      "reason": "short_unreadable_video_tail",
+      "decoded_end_ms": 1979967,
+      "reported_duration_ms": 1983767,
+      "frames_fabricated": false
+    },
+    "seconds": 41.08
+  },
+  "new_paid_api_calls": 0,
+  "full_analysis_restarted": false,
+  "existing_records_modified": false
+}

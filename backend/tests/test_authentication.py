@@ -61,7 +61,24 @@ def test_cookie_exchange_requires_same_origin_and_sets_http_only_cookie(monkeypa
     assert 'HttpOnly' in result.headers['set-cookie']
     assert 'SameSite=lax' in result.headers['set-cookie']
     assert 'Path=/api' in result.headers['set-cookie']
+    assert 'Max-Age' not in result.headers['set-cookie']
+    assert 'expires=' not in result.headers['set-cookie'].lower()
     assert client.delete('/api/auth/session', headers=ORIGIN).status_code == 204
+
+
+@pytest.mark.parametrize('remember', [False, True])
+def test_cookie_lifetime_follows_remember_choice_without_changing_verification(monkeypatch, remember):
+    async def verified(settings, token):
+        assert token == 'valid-token'
+        return {'id': USER_A, 'email': None}
+    monkeypatch.setattr('app.api.auth.verify_token', verified)
+    client = client_for(auth_settings())
+    response = client.post('/api/auth/session', headers=ORIGIN,
+                           json={'access_token': 'valid-token', 'remember': remember})
+    assert response.status_code == 200
+    cookie = response.headers['set-cookie']
+    assert ('Max-Age=3600' in cookie) is remember
+    assert 'HttpOnly' in cookie and 'SameSite=lax' in cookie and 'Path=/api' in cookie
 
 
 def test_owner_isolation_covers_list_details_video_monthly_and_delete(tmp_path, monkeypatch):

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AnalysisBackLink } from '../components/AnalysisBackLink'
 import { ANALYSIS_STAGES as STAGES, analysisStageIndex, analysisStageLabel } from '../utils/analysisStages'
+import { readAnalysisResponse, startAnalysisPolling } from '../utils/analysisPolling'
 
 const API_BASE = '/api'
 type Analysis = { id: string; title: string; duration_ms: number; play_type: string }
@@ -17,6 +18,7 @@ export function AnalysisProgressPage() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [job, setJob] = useState<Job | null>(null)
   const [error, setError] = useState('')
+  const [statusError, setStatusError] = useState('')
   const [busy, setBusy] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const completedRealJobId = job && !job.is_simulation && job.status === 'succeeded' ? job.id : null
@@ -28,40 +30,43 @@ export function AnalysisProgressPage() {
     return () => window.clearInterval(timer)
   }, [ticking])
 
-  const loadJob = useCallback(async () => {
-    const response = await fetch(`${API_BASE}/analyses/${analysisId}/jobs/current`)
-    if (response.status === 404) { setJob(null); return }
-    const payload = await response.json()
-    if (!response.ok) throw new Error(payload.detail?.message ?? '작업 상태를 불러오지 못했습니다.')
-    setJob(payload)
+  const loadJob = useCallback(async (signal: AbortSignal) => {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/jobs/current`, { signal })
+    if (response.status === 404) return null
+    const payload = await readAnalysisResponse<Job>(response, '작업 상태를 불러오지 못했습니다.')
+    if (typeof payload.id !== 'string' || typeof payload.status !== 'string' || typeof payload.processed_ms !== 'number') {
+      throw new Error('작업 상태를 불러오지 못했습니다.')
+    }
+    return payload
   }, [analysisId])
 
   useEffect(() => {
-    fetch(`${API_BASE}/analyses/${analysisId}`).then(async response => {
-      if (!response.ok) throw new Error('분석 기록을 불러오지 못했습니다.')
-      setAnalysis(await response.json())
-    }).catch(caught => setError(caught.message))
-    fetch(`${API_BASE}/analyses/${analysisId}/jobs/current`).then(async response => {
-      if (response.status === 404) return null
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.detail?.message ?? '작업 상태를 불러오지 못했습니다.')
-      return payload
-    }).then(payload => { if (payload) setJob(payload) }).catch(caught => setError(caught.message))
+    const controller = new AbortController()
+    setError('')
+    fetch(`${API_BASE}/analyses/${analysisId}`, { signal: controller.signal })
+      .then(response => readAnalysisResponse<Analysis>(response, '분석 기록을 불러오지 못했습니다.'))
+      .then(payload => { if (!controller.signal.aborted) setAnalysis(payload) })
+      .catch(() => { if (!controller.signal.aborted) setError('분석 기록을 불러오지 못했습니다.') })
+    return () => controller.abort()
   }, [analysisId])
 
   useEffect(() => {
-    if (!job || !['queued', 'running', 'cancel_requested'].includes(job.status)) return
-    const timer = window.setInterval(() => loadJob().catch(caught => setError(caught.message)), 1000)
-    return () => window.clearInterval(timer)
-  }, [job, loadJob])
+    const controller = new AbortController()
+    const stop = startAnalysisPolling({
+      request: () => loadJob(controller.signal),
+      success: payload => { setJob(payload); setStatusError('') },
+      failure: () => setStatusError('작업 상태를 잠시 불러오지 못했습니다. 자동으로 다시 확인하고 있습니다.'),
+      keepPolling: payload => payload !== null && ['queued', 'running', 'cancel_requested'].includes(payload.status),
+    })
+    return () => { stop(); controller.abort() }
+  }, [loadJob, job?.id])
 
 
   async function start() {
     setBusy(true); setError('')
     try {
       const response = await fetch(`${API_BASE}/analyses/${analysisId}/jobs/start-real`, { method: 'POST' })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.detail?.message ?? '분석을 시작하지 못했습니다.')
+      const payload = await readAnalysisResponse<Job>(response, '분석을 시작하지 못했습니다.')
       setJob(payload)
     } catch (caught) { setError(caught instanceof Error ? caught.message : '분석을 시작하지 못했습니다.') }
     finally { setBusy(false) }
@@ -72,8 +77,7 @@ export function AnalysisProgressPage() {
     setBusy(true); setError('')
     try {
       const response = await fetch(`${API_BASE}/analyses/${analysisId}/jobs/${job.id}/cancel`, { method: 'POST' })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.detail?.message ?? '취소하지 못했습니다. 다시 시도해 주세요.')
+      const payload = await readAnalysisResponse<Job>(response, '취소하지 못했습니다. 다시 시도해 주세요.')
       setJob(payload)
     } catch (caught) { setError(caught instanceof Error ? caught.message : '취소하지 못했습니다. 다시 시도해 주세요.') }
     finally { setBusy(false) }
@@ -99,6 +103,7 @@ export function AnalysisProgressPage() {
       {analysis && analysis.play_type !== 'solo' && <p className="inline-warning">실제 슛 후보 분석은 현재 개인 연습 영상만 지원합니다. 여러 선수의 첫 위치 지정과 개발용 흐름은 확인할 수 있습니다.</p>}
       {analysis && analysis.play_type !== 'solo' && <p className="helper-text">여러 선수의 슛은 원본 영상을 보면서 직접 추가하고 슈터를 지정할 수 있습니다. 자동 선수 추적은 아직 연결 중입니다.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
+      {statusError && <p className="inline-warning" role="status">{statusError}</p>}
       {terminal && !completedRealJobId && <p className="helper-text">분석에는 OpenAI를 사용합니다.</p>}
       <div className="actions">{job?.status === 'succeeded' && !simulation && <Link className="button primary" to={`/results/${analysisId}`}>결과 확인</Link>}{analysis && analysis.play_type !== 'solo' && terminal && !completedRealJobId && <Link className="button primary" to={`/results/${analysisId}`}>수동으로 슛 기록하기</Link>}{terminal && !completedRealJobId && <button className="button primary" onClick={start} disabled={busy || analysis?.play_type !== 'solo'}>{busy ? '시작 중…' : '분석 시작'}</button>}
         {job && !terminal && <button className="button secondary" onClick={cancel} disabled={busy}>{busy ? '취소 요청 중…' : '분석 취소'}</button>}<Link className="button secondary" to="/">화면 나가기</Link></div>

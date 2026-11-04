@@ -25,7 +25,7 @@ def test_monthly_results_use_recording_date_and_exclude_non_shot(tmp_path):
         session.add_all([
             Shot(analysis_id=recorded.id, player_id=first.id, candidate_time_ms=100, sequence_start_ms=0, sequence_end_ms=500, result=ShotResult.MADE, shot_type=ShotType.SET_SHOT, status=ShotStatus.AUTO, source=ShotSource.AUTO, zone_code="three_center"),
             Shot(analysis_id=registered.id, player_id=second.id, candidate_time_ms=100, sequence_start_ms=0, sequence_end_ms=500, result=ShotResult.MISSED, shot_type=ShotType.SET_SHOT, status=ShotStatus.AUTO, source=ShotSource.AUTO, zone_code="three_center"),
-            Shot(analysis_id=registered.id, player_id=second.id, candidate_time_ms=600, sequence_start_ms=500, sequence_end_ms=900, result=ShotResult.NEEDS_REVIEW, shot_type=ShotType.NEEDS_REVIEW, status=ShotStatus.NEEDS_REVIEW, source=ShotSource.AUTO, confidence_data={"shot_gate": {"verdict": "not_shot"}}),
+            Shot(analysis_id=registered.id, player_id=second.id, candidate_time_ms=600, sequence_start_ms=500, sequence_end_ms=900, result=ShotResult.NEEDS_REVIEW, shot_type=ShotType.NEEDS_REVIEW, status=ShotStatus.NEEDS_REVIEW, source=ShotSource.AUTO, confidence_data={"shot_gate": {"verdict": "not_shot", "confidence": .97}}),
         ])
         session.commit()
     app = FastAPI(); app.state.settings = Settings(_env_file=None, app_env='test'); app.state.session_factory = factory; app.include_router(router)

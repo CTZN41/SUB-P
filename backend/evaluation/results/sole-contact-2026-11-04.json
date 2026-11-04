@@ -1,0 +1,710 @@
+{
+  "date": "2026-11-04",
+  "kind": "native_sole_and_observed_free_throw_line_verification",
+  "source_analysis_id": "a4dccc34-508a-46e3-804c-7ed529e82709",
+  "source_sha256": "646baa3ff52245e83e72829c2deea9fdb5dbd0014757744d8688d954d17f8282",
+  "source_unchanged": true,
+  "live_records_modified": false,
+  "paid_api_calls": 2,
+  "model": "gpt-6.1-terra",
+  "api_usage": {
+    "input_tokens": 14644,
+    "output_tokens": 1744
+  },
+  "total_tokens": 16388,
+  "fresh_trial_seconds": 34.3889,
+  "api_seconds": 32.372299999999996,
+  "cached_recheck_seconds": 5.1062,
+  "comparison": {
+    "frame_offset": 18004,
+    "repeat_offset_ms": 300066.6666666667,
+    "full_frame_pixel_mae": 0.0,
+    "measurements": [
+      {
+        "shot_number": 3,
+        "frame_index": 2190,
+        "frame_time_ms": 36500.0,
+        "sole_mean_pixel": [
+          1068.0,
+          725.5
+        ],
+        "xy_from_own_transform": [
+          19.67367004959884,
+          19.62090477846657
+        ],
+        "y_error_interval_ft": [
+          18.216257684584054,
+          20.696301845748657
+        ],
+        "minimum_sole_confidence": 0.65
+      },
+      {
+        "shot_number": 18,
+        "frame_index": 20194,
+        "frame_time_ms": 336566.6666666667,
+        "sole_mean_pixel": [
+          1068.0,
+          725.5
+        ],
+        "xy_from_own_transform": [
+          19.734693336519776,
+          19.51779559640509
+        ],
+        "y_error_interval_ft": [
+          18.129169930134633,
+          20.578344545970328
+        ],
+        "minimum_sole_confidence": 0.61
+      }
+    ],
+    "center_distance_cm": 3.651924407965738,
+    "same_pixel_different_transform": true
+  },
+  "production_replay": {
+    "kind": "original_video_cached_responses_production_pipeline_replay",
+    "new_paid_api_calls": 0,
+    "live_records_modified": false,
+    "source_analysis_id": "a4dccc34-508a-46e3-804c-7ed529e82709",
+    "source_sha256": "646baa3ff52245e83e72829c2deea9fdb5dbd0014757744d8688d954d17f8282",
+    "rows": [
+      {
+        "shot_number": 3,
+        "time_ms": 36933,
+        "saved_result": "made",
+        "saved_type": "dribble_pull_up",
+        "saved_zone": null,
+        "saved_xy": [
+          null,
+          null
+        ],
+        "status": "needs_review",
+        "contact_reason": "sole_contact_occluded_or_low_confidence",
+        "diagnostic_frames": 4
+      },
+      {
+        "shot_number": 18,
+        "time_ms": 337067,
+        "saved_result": "made",
+        "saved_type": "dribble_pull_up",
+        "saved_zone": null,
+        "saved_xy": [
+          null,
+          null
+        ],
+        "status": "needs_review",
+        "contact_reason": "sole_contact_occluded_or_low_confidence",
+        "diagnostic_frames": 4
+      }
+    ]
+  },
+  "tests": {
+    "backend_passed": 491,
+    "frontend_passed": 40,
+    "frontend_build": "passed",
+    "chrome_directly_tested": false
+  },
+  "rows": [
+    {
+      "shot_number": 3,
+      "source_fps": 60.0,
+      "decoded_frames": 36,
+      "sent_native_crops": 19,
+      "roi_px": [
+        753,
+        518,
+        1367,
+        842
+      ],
+      "anchor_time_ms": 36533,
+      "verified_frames": 19,
+      "observed_line_frames": 8,
+      "verified_line_borrows": 11,
+      "takeoff_frame_index": 2196,
+      "evaluations": [
+        {
+          "status": "needs_review",
+          "reason": "sole_contact_occluded_or_low_confidence",
+          "extra_pixel_error_px": 2.0,
+          "confidence_threshold": 0.7
+        },
+        {
+          "status": "needs_review",
+          "reason": "sole_contact_occluded_or_low_confidence",
+          "extra_pixel_error_px": 4.0,
+          "confidence_threshold": 0.7
+        }
+      ],
+      "diagnostic_frames": [
+        {
+          "frame_index": 2186,
+          "time_ms": 36433.33333333333,
+          "contacts": [
+            {
+              "foot_id": "foot_1",
+              "pixel": [
+                1085.0,
+                719.0
+              ],
+              "xy_ft": [
+                20.35204705819207,
+                19.405972754289536
+              ],
+              "error_px": 11.317137653588414,
+              "confidence": 0.65,
+              "xy_bounds_ft": [
+                [
+                  19.306780451628715,
+                  21.4750765452884
+                ],
+                [
+                  18.18172709948988,
+                  20.532164446048903
+                ]
+              ]
+            },
+            {
+              "foot_id": "foot_2",
+              "pixel": [
+                1051.0,
+                732.0
+              ],
+              "xy_ft": [
+                18.99529304100561,
+                19.835836802643605
+              ],
+              "error_px": 9.317137653588414,
+              "confidence": 0.85,
+              "xy_bounds_ft": [
+                [
+                  18.19612467914876,
+                  19.841360713858787
+                ],
+                [
+                  18.886103048100786,
+                  20.724607647110055
+                ]
+              ]
+            }
+          ],
+          "center_xy_ft": [
+            19.67367004959884,
+            19.62090477846657
+          ],
+          "y_interval_ft": [
+            18.18172709948988,
+            20.724607647110055
+          ],
+          "line_y_interval_ft": [
+            19.0,
+            19.447931583634023
+          ],
+          "side": "straddling",
+          "line_reference_frame_index": 2180,
+          "accepted_contact_confidence": false
+        },
+        {
+          "frame_index": 2188,
+          "time_ms": 36466.66666666667,
+          "contacts": [
+            {
+              "foot_id": "foot_1",
+              "pixel": [
+                1085.0,
+                719.0
+              ],
+              "xy_ft": [
+                20.35204705819207,
+                19.405972754289536
+              ],
+              "error_px": 11.31292724492833,
+              "confidence": 0.65,
+              "xy_bounds_ft": [
+                [
+                  19.307155871930256,
+                  21.474643199762543
+                ],
+                [
+                  18.182202386071804,
+                  20.531762232631838
+                ]
+              ]
+            },
+            {
+              "foot_id": "foot_2",
+              "pixel": [
+                1051.0,
+                732.0
+              ],
+              "xy_ft": [
+                18.99529304100561,
+                19.835836802643605
+              ],
+              "error_px": 9.31292724492833,
+              "confidence": 0.85,
+              "xy_bounds_ft": [
+                [
+                  18.196475817751036,
+                  19.840967162862388
+                ],
+                [
+                  18.88654694468855,
+                  20.72421889685404
+                ]
+              ]
+            }
+          ],
+          "center_xy_ft": [
+            19.67367004959884,
+            19.62090477846657
+          ],
+          "y_interval_ft": [
+            18.182202386071804,
+            20.72421889685404
+          ],
+          "line_y_interval_ft": [
+            19.0,
+            19.447931583634023
+          ],
+          "side": "straddling",
+          "line_reference_frame_index": 2180,
+          "accepted_contact_confidence": false
+        },
+        {
+          "frame_index": 2190,
+          "time_ms": 36500.0,
+          "contacts": [
+            {
+              "foot_id": "foot_1",
+              "pixel": [
+                1085.0,
+                719.0
+              ],
+              "xy_ft": [
+                20.35204705819207,
+                19.405972754289536
+              ],
+              "error_px": 11.010887074337887,
+              "confidence": 0.65,
+              "xy_bounds_ft": [
+                [
+                  19.334112482859226,
+                  21.44358774923717
+                ],
+                [
+                  18.216257684584054,
+                  20.50287752951519
+                ]
+              ]
+            },
+            {
+              "foot_id": "foot_2",
+              "pixel": [
+                1051.0,
+                732.0
+              ],
+              "xy_ft": [
+                18.99529304100561,
+                19.835836802643605
+              ],
+              "error_px": 9.010887074337887,
+              "confidence": 0.85,
+              "xy_bounds_ft": [
+                [
+                  18.221688256841635,
+                  19.81276237698469
+                ],
+                [
+                  18.918354695318094,
+                  20.696301845748657
+                ]
+              ]
+            }
+          ],
+          "center_xy_ft": [
+            19.67367004959884,
+            19.62090477846657
+          ],
+          "y_interval_ft": [
+            18.216257684584054,
+            20.696301845748657
+          ],
+          "line_y_interval_ft": [
+            19.0,
+            19.49612722269562
+          ],
+          "side": "straddling",
+          "line_reference_frame_index": 2198,
+          "accepted_contact_confidence": false
+        },
+        {
+          "frame_index": 2192,
+          "time_ms": 36533.33333333333,
+          "contacts": [
+            {
+              "foot_id": "foot_1",
+              "pixel": [
+                1085.0,
+                718.0
+              ],
+              "xy_ft": [
+                20.440332064551875,
+                19.32121852380239
+              ],
+              "error_px": 11.013825676015117,
+              "confidence": 0.6,
+              "xy_bounds_ft": [
+                [
+                  19.415764186425054,
+                  21.539270324514117
+                ],
+                [
+                  18.123306234593983,
+                  20.425348175545675
+                ]
+              ]
+            },
+            {
+              "foot_id": "foot_2",
+              "pixel": [
+                1051.0,
+                732.0
+              ],
+              "xy_ft": [
+                18.99529304100561,
+                19.835836802643605
+              ],
+              "error_px": 9.013825676015117,
+              "confidence": 0.85,
+              "xy_bounds_ft": [
+                [
+                  18.221442742160303,
+                  19.813036528045348
+                ],
+                [
+                  18.918045572480665,
+                  20.696573735760808
+                ]
+              ]
+            }
+          ],
+          "center_xy_ft": [
+            19.717812552778742,
+            19.578527663223
+          ],
+          "y_interval_ft": [
+            18.123306234593983,
+            20.696573735760808
+          ],
+          "line_y_interval_ft": [
+            19.0,
+            19.49612722269562
+          ],
+          "side": "straddling",
+          "line_reference_frame_index": 2198,
+          "accepted_contact_confidence": false
+        }
+      ]
+    },
+    {
+      "shot_number": 18,
+      "source_fps": 60.0,
+      "decoded_frames": 36,
+      "sent_native_crops": 19,
+      "roi_px": [
+        745,
+        522,
+        1360,
+        846
+      ],
+      "anchor_time_ms": 336533,
+      "verified_frames": 19,
+      "observed_line_frames": 12,
+      "verified_line_borrows": 7,
+      "takeoff_frame_index": 20200,
+      "evaluations": [
+        {
+          "status": "needs_review",
+          "reason": "sole_contact_occluded_or_low_confidence",
+          "extra_pixel_error_px": 2.0,
+          "confidence_threshold": 0.7
+        },
+        {
+          "status": "needs_review",
+          "reason": "sole_contact_occluded_or_low_confidence",
+          "extra_pixel_error_px": 4.0,
+          "confidence_threshold": 0.7
+        }
+      ],
+      "diagnostic_frames": [
+        {
+          "frame_index": 20190,
+          "time_ms": 336500.0,
+          "contacts": [
+            {
+              "foot_id": "foot_1",
+              "pixel": [
+                1086.0,
+                719.0
+              ],
+              "xy_ft": [
+                20.422347381597653,
+                19.319504406183977
+              ],
+              "error_px": 11.008302359042347,
+              "confidence": 0.6,
+              "xy_bounds_ft": [
+                [
+                  19.402581264857435,
+                  21.515912987678586
+                ],
+                [
+                  18.12893601736234,
+                  20.41721123035319
+                ]
+              ]
+            },
+            {
+              "foot_id": "foot_2",
+              "pixel": [
+                1050.0,
+                732.0
+              ],
+              "xy_ft": [
+                19.047039291441898,
+                19.716086786626203
+              ],
+              "error_px": 9.008302359042347,
+              "confidence": 0.85,
+              "xy_bounds_ft": [
+                [
+                  18.272218200775598,
+                  19.865846781811356
+                ],
+                [
+                  18.796476046788513,
+                  20.578537038662333
+                ]
+              ]
+            }
+          ],
+          "center_xy_ft": [
+            19.734693336519776,
+            19.51779559640509
+          ],
+          "y_interval_ft": [
+            18.12893601736234,
+            20.578537038662333
+          ],
+          "line_y_interval_ft": [
+            19.0,
+            19.418400984867578
+          ],
+          "side": "straddling",
+          "line_reference_frame_index": 20190,
+          "accepted_contact_confidence": false
+        },
+        {
+          "frame_index": 20192,
+          "time_ms": 336533.3333333334,
+          "contacts": [
+            {
+              "foot_id": "foot_1",
+              "pixel": [
+                1086.0,
+                719.0
+              ],
+              "xy_ft": [
+                20.422347381597653,
+                19.319504406183977
+              ],
+              "error_px": 11.010701554368637,
+              "confidence": 0.61,
+              "xy_bounds_ft": [
+                [
+                  19.4023665137189,
+                  21.516159949957213
+                ],
+                [
+                  18.12866556205738,
+                  20.41744113716728
+                ]
+              ]
+            },
+            {
+              "foot_id": "foot_2",
+              "pixel": [
+                1050.0,
+                732.0
+              ],
+              "xy_ft": [
+                19.047039291441898,
+                19.716086786626203
+              ],
+              "error_px": 9.010701554368637,
+              "confidence": 0.86,
+              "xy_bounds_ft": [
+                [
+                  18.272017385712267,
+                  19.86607104780401
+                ],
+                [
+                  18.796223006872637,
+                  20.578759595860106
+                ]
+              ]
+            }
+          ],
+          "center_xy_ft": [
+            19.734693336519776,
+            19.51779559640509
+          ],
+          "y_interval_ft": [
+            18.12866556205738,
+            20.578759595860106
+          ],
+          "line_y_interval_ft": [
+            19.0,
+            19.419062622899016
+          ],
+          "side": "straddling",
+          "line_reference_frame_index": 20192,
+          "accepted_contact_confidence": false
+        },
+        {
+          "frame_index": 20194,
+          "time_ms": 336566.6666666667,
+          "contacts": [
+            {
+              "foot_id": "foot_1",
+              "pixel": [
+                1086.0,
+                719.0
+              ],
+              "xy_ft": [
+                20.422347381597653,
+                19.319504406183977
+              ],
+              "error_px": 11.006227295000732,
+              "confidence": 0.61,
+              "xy_bounds_ft": [
+                [
+                  19.402767005664813,
+                  21.515699393144768
+                ],
+                [
+                  18.129169930134633,
+                  20.41701238079739
+                ]
+              ]
+            },
+            {
+              "foot_id": "foot_2",
+              "pixel": [
+                1050.0,
+                732.0
+              ],
+              "xy_ft": [
+                19.047039291441898,
+                19.716086786626203
+              ],
+              "error_px": 9.006227295000732,
+              "confidence": 0.86,
+              "xy_bounds_ft": [
+                [
+                  18.27239188804132,
+                  19.865652816888538
+                ],
+                [
+                  18.796694897410024,
+                  20.578344545970328
+                ]
+              ]
+            }
+          ],
+          "center_xy_ft": [
+            19.734693336519776,
+            19.51779559640509
+          ],
+          "y_interval_ft": [
+            18.129169930134633,
+            20.578344545970328
+          ],
+          "line_y_interval_ft": [
+            19.0,
+            19.4196905925113
+          ],
+          "side": "straddling",
+          "line_reference_frame_index": 20194,
+          "accepted_contact_confidence": false
+        },
+        {
+          "frame_index": 20196,
+          "time_ms": 336600.0,
+          "contacts": [
+            {
+              "foot_id": "foot_1",
+              "pixel": [
+                1086.0,
+                719.0
+              ],
+              "xy_ft": [
+                20.422347381597653,
+                19.319504406183977
+              ],
+              "error_px": 11.022101388331526,
+              "confidence": 0.58,
+              "xy_bounds_ft": [
+                [
+                  19.40134616170657,
+                  21.517333450356755
+                ],
+                [
+                  18.12738041906915,
+                  20.41853349149175
+                ]
+              ]
+            },
+            {
+              "foot_id": "foot_2",
+              "pixel": [
+                1050.0,
+                732.0
+              ],
+              "xy_ft": [
+                19.047039291441898,
+                19.716086786626203
+              ],
+              "error_px": 9.022101388331526,
+              "confidence": 0.84,
+              "xy_bounds_ft": [
+                [
+                  18.27106324739456,
+                  19.86713669936564
+                ],
+                [
+                  18.7950206206263,
+                  20.579817031366115
+                ]
+              ]
+            }
+          ],
+          "center_xy_ft": [
+            19.734693336519776,
+            19.51779559640509
+          ],
+          "y_interval_ft": [
+            18.12738041906915,
+            20.579817031366115
+          ],
+          "line_y_interval_ft": [
+            19.0,
+            19.4196905925113
+          ],
+          "side": "straddling",
+          "line_reference_frame_index": 20196,
+          "accepted_contact_confidence": false
+        }
+      ]
+    }
+  ]
+}

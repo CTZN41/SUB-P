@@ -8,6 +8,7 @@ from time import perf_counter
 from typing import Any
 
 from .phase7_pipeline import analyze_video
+from .candidate_windows import rescan_window
 
 
 def select_rescan_windows(
@@ -30,7 +31,9 @@ def select_rescan_windows(
             for candidate in candidates
         ):
             continue
-        proposed = (max(start, time_ms - 1800), min(end, time_ms + 1800))
+        # A pose hint may precede release. Keep enough POST-release flight for
+        # the trajectory/rim rules; a symmetric short crop can hide a real shot.
+        proposed = rescan_window(time_ms, start, end, purpose='pose_hint')
         if proposed[1] <= proposed[0]:
             continue
         if windows and proposed[0] <= windows[-1][1]:
@@ -59,6 +62,7 @@ def add_focused_candidates(
             source, model_path, hoop_point, pose_model_path=pose_model_path,
             sample_fps=rescan_fps, start_ms=start_ms, end_ms=end_ms,
             cancelled=cancelled,
+            collect_motion_hints=True,
             inference_device=inference_device,
             prefetch_frames=prefetch_frames, model_reuse=model_reuse,
         )
@@ -72,7 +76,9 @@ def add_focused_candidates(
             candidate["rescan_source"] = "unrepresented_pose_hint"
             result["candidates"].append(candidate)
             added += 1
-        reports.append({"window_ms": [start_ms, end_ms], "candidate_count": len(high["candidates"])})
+        reports.append({"window_ms": [start_ms, end_ms], "candidate_count": len(high["candidates"]),
+                        'decoder_context_start_ms': high.get('context_start_ms'),
+                        'rule_trace': high.get('candidate_rule_trace')})
     result["candidates"].sort(key=lambda item: item["time_ms"])
     result["focused_rescan"] = {"windows": reports, "added_candidates": added}
     return result
@@ -127,7 +133,7 @@ def rescan_rejected_times(
     end = int(trial["base"]["range_end_ms"])
     windows: list[tuple[int, int]] = []
     for time_ms in sorted(rejected_times_ms):
-        proposed = (max(start, time_ms - 2000), min(end, time_ms + 2000))
+        proposed = rescan_window(time_ms, start, end)
         if proposed[1] <= proposed[0]:
             continue
         if windows and proposed[0] <= windows[-1][1]:

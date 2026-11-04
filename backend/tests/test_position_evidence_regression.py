@@ -120,7 +120,7 @@ def test_retimed_release_does_not_reuse_old_frame_pixels_as_release_feet():
                  'foot_point_time_ms': 1000, 'foot_track': [
                      {'time_ms': 1100, 'foot_point_px': [24, 28]}]}
     assert review._projected_foot_position(np.eye(3), candidate) is None
-    assert review._projected_plant_position(np.eye(3), candidate) == ((24, 28), 1100)
+    assert review._projected_plant_position(np.eye(3), candidate) == (None, None)
     legacy = {'time_ms': 1500, 'foot_point_px': [25, 30],
               'shot_gate': {'detector_candidate_time_ms': 1000}}
     assert review._projected_foot_position(np.eye(3), legacy) is None
@@ -160,3 +160,31 @@ def test_independent_visual_gate_cannot_be_overridden_by_old_numbers(
     a = result['candidates'][0]['ai_review']
     assert a['court_zone'] == expected, a
     assert a['outcome'] == 'made' and a['shot_type'] == 'set_shot'
+
+
+@pytest.mark.parametrize('visual_relation,expected', [('outside','three_wing_left'),('unclear','needs_review')])
+def test_coordinate_missing_primary_actually_enters_image_only_review(monkeypatch,visual_relation,expected):
+    from app.core.config import Settings
+    from app.services import review_frame_trial as frames
+    monkeypatch.setattr(review,'_build_shared_camera_contexts',lambda *a:({0:camera_context()},[],0))
+    monkeypatch.setattr(review,'candidate_frame_inputs',lambda *a:[])
+    monkeypatch.setattr(frames,'dense_shoe_inputs',lambda *a:(
+        [{'type':'input_image','image_url':'visible-shoes'}],{'offsets_ms':[-700,-550]}))
+    monkeypatch.setattr(review,'_review_once',lambda *a,**kw:(
+        decision(court_zone='needs_review',court_x=None,court_y=None,position_confidence=.38),{}))
+    calls=[]
+    def visual(*a):
+        calls.append('visual')
+        return review.VisualArcDecision(visual_arc_relation=visual_relation,confidence=.9,
+            grounded_frame_offsets_ms=[-700,-550],arc_evidence='Two grounded frames show shoes beyond arc'),{}
+    def coordinate(*a,**kw):
+        calls.append('position')
+        p=position_decision(.85,zone='three_wing_left',court_x=11,court_y=26)
+        p.visual_arc_relation='outside';p.grounded_frame_offsets_ms=[-700,-550];p.arc_evidence='Grounded shoes beyond arc'
+        return p,{}
+    monkeypatch.setattr(review,'_review_visual_arc_once',visual)
+    monkeypatch.setattr(review,'_review_position_once',coordinate)
+    result=review.review_candidates_with_openai(Path('unused'),{'candidates':[{'time_ms':2000}]},
+        Settings(_env_file=None,openai_api_key='test',openai_vision_fallback_model=None),client=object())
+    assert result['candidates'][0]['ai_review']['court_zone']==expected
+    assert calls == (['visual','position'] if visual_relation=='outside' else ['visual'])

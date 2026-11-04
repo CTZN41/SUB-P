@@ -45,15 +45,11 @@ def validate_title(raw_title: str) -> str:
 
 
 def validate_confirmations(
-    *, contains_others: bool, consent_confirmed: bool, ai_notice_confirmed: bool
+    *, contains_others: bool, consent_confirmed: bool
 ) -> None:
     if contains_others and not consent_confirmed:
         raise RegistrationError(
             "CONSENT_REQUIRED", "다른 사람이 포함된 영상은 촬영·분석 동의 확인이 필요합니다."
-        )
-    if not ai_notice_confirmed:
-        raise RegistrationError(
-            "AI_NOTICE_REQUIRED", "OpenAI가 슛 후보 장면을 처리할 수 있다는 안내를 확인해 주세요."
         )
 
 
@@ -126,7 +122,7 @@ def probe_video(path: Path, max_duration_ms: int) -> VideoMetadata:
             minutes = duration_ms / 60_000
             raise RegistrationError(
                 "FILE_LIMIT",
-                f"영상 길이는 최대 10분입니다. 선택한 영상은 약 {minutes:.1f}분입니다.",
+                f"영상 길이는 최대 {max_duration_ms / 60_000:g}분입니다. 선택한 영상은 약 {minutes:.1f}분입니다.",
                 413,
             )
 
@@ -167,7 +163,7 @@ async def save_upload(upload: UploadFile, destination: Path, max_bytes: int) -> 
                 written += len(chunk)
                 if written > max_bytes:
                     raise RegistrationError(
-                        "FILE_LIMIT", "영상 파일은 최대 5GB까지 등록할 수 있습니다.", 413
+                        "FILE_LIMIT", f"영상 파일은 최대 {max_bytes / 1024**3:g}GB까지 등록할 수 있습니다.", 413
                     )
                 output.write(chunk)
     except OSError as error:
@@ -183,6 +179,47 @@ async def save_upload(upload: UploadFile, destination: Path, max_bytes: int) -> 
     if not has_mp4_signature(destination):
         raise RegistrationError("FILE_INVALID", "확장자만 MP4인 파일은 사용할 수 없습니다.")
     return written
+
+
+def build_registered_analysis(
+    settings: Settings,
+    *,
+    analysis_id: str,
+    owner_id: str | None,
+    title: str,
+    play_type: PlayType,
+    recorded_date,
+    player_name: str | None,
+    contains_others: bool,
+    consent_confirmed: bool,
+    ai_notice_confirmed: bool,
+    original_name: str,
+    stored_file: Path,
+    file_size: int,
+    metadata: VideoMetadata,
+) -> Analysis:
+    """Build the same registration for multipart and directly received files."""
+    playback_file = ensure_browser_playback(stored_file)
+    warnings = list(metadata.warnings)
+    if playback_file is not None:
+        warnings.append("브라우저 재생을 위해 H.264 호환 영상이 자동으로 준비됐습니다. 업로드 원본은 그대로 보존됩니다.")
+    analysis = Analysis(
+        id=analysis_id, owner_id=owner_id, title=title, play_type=play_type,
+        recorded_date=recorded_date, original_name=original_name,
+        stored_path=str(stored_file.relative_to(settings.upload_path.parent)),
+        file_size=file_size, duration_ms=metadata.duration_ms,
+        width=metadata.width, height=metadata.height, fps=metadata.fps,
+        status=AnalysisStatus.SETUP_REQUIRED, warnings=warnings,
+        contains_others=contains_others, consent_confirmed=consent_confirmed,
+        ai_notice_confirmed=ai_notice_confirmed,
+    )
+    clean_player_name = (player_name or "").strip()
+    if play_type is PlayType.SOLO or clean_player_name:
+        analysis.players.append(Player(
+            display_name=clean_player_name or "선수 A",
+            is_temporary_name=not bool(clean_player_name),
+        ))
+    return analysis
 
 
 async def register_video(
@@ -202,51 +239,31 @@ async def register_video(
     validate_confirmations(
         contains_others=contains_others,
         consent_confirmed=consent_confirmed,
-        ai_notice_confirmed=ai_notice_confirmed,
     )
     analysis_id = new_id()
     analysis_dir = settings.upload_path / analysis_id
     stored_file = analysis_dir / "original.mp4"
+    commit_attempted = False
     try:
         file_size = await save_upload(upload, stored_file, settings.max_video_bytes)
         metadata = probe_video(stored_file, settings.max_video_minutes * 60_000)
-        playback_file = ensure_browser_playback(stored_file)
-        if playback_file is not None:
-            metadata.warnings.append(
-                "브라우저 재생을 위해 H.264 호환 영상이 자동으로 준비됐습니다. 업로드 원본은 그대로 보존됩니다."
-            )
-        analysis = Analysis(
-            id=analysis_id,
+        analysis = build_registered_analysis(
+            settings, analysis_id=analysis_id,
             owner_id=session.info.get('auth_user_id'),
-            title=clean_title,
-            play_type=play_type,
-            recorded_date=recorded_date,
-            original_name=Path(upload.filename or "video.mp4").name,
-            stored_path=str(stored_file.relative_to(settings.upload_path.parent)),
-            file_size=file_size,
-            duration_ms=metadata.duration_ms,
-            width=metadata.width,
-            height=metadata.height,
-            fps=metadata.fps,
-            status=AnalysisStatus.SETUP_REQUIRED,
-            warnings=metadata.warnings,
-            contains_others=contains_others,
-            consent_confirmed=consent_confirmed,
+            title=clean_title, play_type=play_type, recorded_date=recorded_date,
+            player_name=player_name, original_name=Path(upload.filename or "video.mp4").name,
+            stored_file=stored_file, file_size=file_size, metadata=metadata,
+            contains_others=contains_others, consent_confirmed=consent_confirmed,
             ai_notice_confirmed=ai_notice_confirmed,
         )
-        clean_player_name = (player_name or "").strip()
-        if play_type is PlayType.SOLO or clean_player_name:
-            analysis.players.append(
-                Player(
-                    display_name=clean_player_name or "선수 A",
-                    is_temporary_name=not bool(clean_player_name),
-                )
-            )
         session.add(analysis)
+        commit_attempted = True
         session.commit()
         session.refresh(analysis)
         return analysis
     except Exception:
         session.rollback()
-        shutil.rmtree(analysis_dir, ignore_errors=True)
+        # A lost commit response or a failed refresh can follow a successful commit.
+        if not commit_attempted:
+            shutil.rmtree(analysis_dir, ignore_errors=True)
         raise

@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import type { FormEvent, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnalysisBackLink } from '../components/AnalysisBackLink'
+import { registerVideo } from '../utils/videoUpload'
+import type { VideoUploadAttempt } from '../utils/videoUpload'
 
 const API_BASE = '/api'
 const MAX_FILE_BYTES = 5 * 1024 * 1024 * 1024
@@ -34,13 +36,13 @@ function formatDuration(milliseconds: number) {
 export function NewAnalysisPage() {
   const navigate = useNavigate()
   const recordedDateRef = useRef<HTMLInputElement>(null)
+  const uploadAttemptRef = useRef<VideoUploadAttempt | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [recordedDate, setRecordedDate] = useState('')
   const [playType, setPlayType] = useState('solo')
   const [containsOthers, setContainsOthers] = useState(false)
   const [consentConfirmed, setConsentConfirmed] = useState(false)
-  const [aiNoticeConfirmed, setAiNoticeConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<RegistrationResult | null>(null)
@@ -60,7 +62,7 @@ export function NewAnalysisPage() {
       setError('분석 이름과 촬영 날짜를 입력해 주세요.')
       return
     }
-    if (!aiNoticeConfirmed || (containsOthers && !consentConfirmed)) {
+    if (containsOthers && !consentConfirmed) {
       setError('필요한 동의 항목을 확인해 주세요.')
       return
     }
@@ -82,14 +84,9 @@ export function NewAnalysisPage() {
     form.set('video', file)
     form.set('contains_others', String(containsOthers))
     form.set('consent_confirmed', String(consentConfirmed))
-    form.set('ai_notice_confirmed', String(aiNoticeConfirmed))
     setSubmitting(true)
     try {
-      const response = await fetch(`${API_BASE}/analyses`, { method: 'POST', body: form })
-      const payload = await response.json()
-      if (!response.ok) {
-        throw new Error(payload.detail?.message ?? '영상을 등록하지 못했습니다.')
-      }
+      const payload = await registerVideo<RegistrationResult>(form, file, uploadAttemptRef)
       setResult(payload)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '영상을 등록하지 못했습니다.')
@@ -158,7 +155,7 @@ export function NewAnalysisPage() {
             <li>반코트, 골대와 림이 계속 보이게 촬영</li>
             <li>카메라를 고정하고 선수의 전신과 발 포함</li>
             <li>1080p 이상, 가능하면 60fps</li>
-            <li>MP4 한 개, 최대 10분·5GB</li>
+            <li>MP4 한 개, 최대 40분·5GB</li>
           </ul>
         </div>
       </header>
@@ -174,23 +171,22 @@ export function NewAnalysisPage() {
           </div>
           <label className="file-picker">
             <span>{file ? file.name : 'MP4 파일을 선택하세요 (필수)'}</span>
-            <small>{file ? formatBytes(file.size) : '한 번에 한 파일 · 최대 10분 · 최대 5GB'}</small>
+            <small>{file ? formatBytes(file.size) : '한 번에 한 파일 · 최대 40분 · 최대 5GB'}</small>
             <input type="file" accept="video/mp4,.mp4" onChange={(event) => setFile(event.target.files?.[0] ?? null)} required />
           </label>
         </section>
 
         <section className="form-section">
-          <div className="section-heading"><span>02</span><div><h2>촬영 동의와 AI 안내</h2></div></div>
+          <div className="section-heading"><span>02</span><div><h2>촬영 동의</h2></div></div>
           <fieldset>
             <legend>영상에 다른 사람이 포함되어 있나요?</legend>
             <label className="choice"><input type="radio" name="others_choice" checked={!containsOthers} onChange={() => { setContainsOthers(false); setConsentConfirmed(false) }} />아니요</label>
             <label className="choice"><input type="radio" name="others_choice" checked={containsOthers} onChange={() => setContainsOthers(true)} />예</label>
           </fieldset>
           {containsOthers && <label className="check-row"><input type="checkbox" checked={consentConfirmed} onChange={(event) => setConsentConfirmed(event.target.checked)} /><span>영상에 포함된 사람에게 촬영과 분석 동의를 받았습니다.</span></label>}
-          <label className="check-row"><input type="checkbox" checked={aiNoticeConfirmed} onChange={(event) => setAiNoticeConfirmed(event.target.checked)} required /><span>전체 영상이 아닌 슛 후보 장면이 OpenAI로 처리될 수 있습니다.<br />이 안내를 확인했습니다.</span></label>
           <div className="consent-submit-actions">
             {error && <p className="form-error" role="alert">{error}</p>}
-            <button className="button primary submit-button" type="submit" disabled={submitting || !title.trim() || !recordedDate || !file || (containsOthers && !consentConfirmed) || !aiNoticeConfirmed}>
+            <button className="button primary submit-button" type="submit" disabled={submitting || !title.trim() || !recordedDate || !file || (containsOthers && !consentConfirmed)}>
               {submitting ? '영상 정보를 확인하는 중…' : '영상 등록하고 검사하기'}
             </button>
           </div>

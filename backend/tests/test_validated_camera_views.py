@@ -66,7 +66,9 @@ def test_group_applies_transform_and_chooses_manual_profile(monkeypatch):
 
 @pytest.mark.parametrize('candidate,expected_reason',[
     ({'calibration_view_valid':False},'기준점'),
-    ({'validated_three_point_line':[[5,25],[15,29],[25,30],[35,29],[45,25]],'foot_point_px':[25,30]},'3점선'),
+    ({'validated_three_point_line':[[5,25],[15,29],[25,30],[35,29],[45,25]],'foot_point_px':[25,30],
+      'foot_track':[{'time_ms':t,'foot_point_px':[25,30], 'ankle_points_px':[[25,28]],
+                     'person_box_px':[10,-100,40,30]} for t in (600,700)]},'3점선'),
 ])
 def test_no_confidence_bypass_of_missing_view_or_arc(monkeypatch,candidate,expected_reason):
     context=review.CameraContextDecision(camera_view='right_sideline',confidence=.9,court_left_direction_on_screen='left',toward_half_court_direction_on_screen='down',orientation_summary='fixed',visible_landmarks=['paint'],reason='test')

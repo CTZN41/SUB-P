@@ -13,6 +13,7 @@ from app.models.core import (
     ShotSource,
     ShotStatus,
     ShotType,
+    UserProfile,
     new_id,
 )
 
@@ -30,5 +31,6 @@ __all__ = [
     "ShotSource",
     "ShotStatus",
     "ShotType",
+    "UserProfile",
     "new_id",
 ]

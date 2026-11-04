@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/authContext'
-import { authMessage, safeAuthNext } from '../auth/authPolicy'
+import { authMessage, safeAuthNext, socialLoginOptions } from '../auth/authPolicy'
 import type { Provider } from '@supabase/supabase-js'
+import { normalizeNickname, NICKNAME_HELP, checkSignup, AccountUpdateError, accountUpdateMessage } from '../auth/accountProfile'
 import './AuthPage.css'
 
 export function AuthPage({ signup = false }: { signup?: boolean }) {
@@ -11,41 +12,50 @@ export function AuthPage({ signup = false }: { signup?: boolean }) {
   const [params] = useSearchParams()
   const next = safeAuthNext(params.get('next'))
   const [email, setEmail] = useState('')
+  const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [rememberChoice, setRememberChoice] = useState<boolean | null>(null)
+  const remember = rememberChoice ?? auth.remember
   const ready = !!auth.client && !!auth.config?.configured
   useEffect(() => { if (auth.ready) navigate(next, { replace: true }) }, [auth.ready, navigate, next])
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (!auth.client || busy) return
     setError(''); setNotice('')
+    if (signup && !normalizeNickname(nickname)) { setError(NICKNAME_HELP); return }
     if (signup && password !== confirmation) { setError('비밀번호가 서로 다릅니다.'); return }
     setBusy(true)
     try {
+      auth.setRemember(remember)
+      if (signup) await checkSignup(nickname, email)
       const response = signup
         ? await auth.client.auth.signUp({ email: email.trim(), password,
-            options: { emailRedirectTo: `${window.location.origin}/auth/callback` } })
+            options: { emailRedirectTo: `${window.location.origin}/auth/callback`, data: { shotlog_nickname: normalizeNickname(nickname) } } })
         : await auth.client.auth.signInWithPassword({ email: email.trim(), password })
       if (response.error) { setError(authMessage(response.error.code)); return }
       if (signup && !response.data.session) {
-        setNotice('인증 메일을 보냈습니다. 받은 메일에서 가입을 완료해 주세요.')
+        // A confirmed existing account can receive a successful, sanitized
+        // response without sending mail. Do not promise delivery or reveal it.
+        setNotice('가입 요청을 처리했습니다. 인증 메일이 도착하면 링크를 열어 주세요. 이미 가입했다면 기존 방법으로 로그인해 주세요.')
         setPassword(''); setConfirmation('')
       }
-    } catch { setError('연결하지 못했습니다. 잠시 후 다시 시도해 주세요.') }
+    } catch (failure) { setError(failure instanceof AccountUpdateError ? accountUpdateMessage(failure) : '연결하지 못했습니다. 잠시 후 다시 시도해 주세요.') }
     finally { setBusy(false) }
   }
   async function social(provider: 'naver' | 'google' | 'kakao') {
     if (!auth.client || !auth.config?.providers[provider] || busy) return
     setBusy(true); setError('')
     try {
+      auth.setRemember(remember)
       sessionStorage.setItem('shotlog_auth_next', next)
       const { error: failure } = await auth.client.auth.signInWithOAuth({
         provider: (provider === 'naver' ? 'custom:naver' : provider) as Provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: socialLoginOptions(provider, window.location.origin),
       })
       if (failure) { setError(authMessage(failure.code)); setBusy(false) }
     } catch { setError('간편 로그인에 연결하지 못했습니다.'); setBusy(false) }
@@ -61,9 +71,12 @@ export function AuthPage({ signup = false }: { signup?: boolean }) {
       {!auth.loading && !ready && <p className="auth-notice" role="status">로그인 연결을 준비하고 있습니다.</p>}
       {auth.error && <p className="form-error" role="alert">{auth.error}</p>}
       <form className="auth-form" onSubmit={submit}>
+        {signup && <label>닉네임<input name="nickname" type="text" autoComplete="nickname" required minLength={2} maxLength={20} placeholder="닉네임을 입력해 주세요" value={nickname} onChange={e => setNickname(e.target.value)} disabled={busy} aria-describedby="signup-nickname-help" /><span id="signup-nickname-help" className="auth-signup-help">{NICKNAME_HELP}</span></label>}
         <label>이메일<input name="email" type="email" autoComplete="email" required maxLength={254} placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} disabled={busy} /></label>
         <label>비밀번호<span className="auth-password"><input name="password" type={showPassword ? 'text' : 'password'} autoComplete={signup ? 'new-password' : 'current-password'} required minLength={signup ? 8 : undefined} maxLength={128} placeholder={signup ? '8자 이상 입력해 주세요' : '비밀번호를 입력해 주세요'} value={password} onChange={e => setPassword(e.target.value)} disabled={busy} /><button type="button" aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? '숨기기' : '보기'}</button></span></label>
         {signup && <label>비밀번호 확인<input name="password_confirmation" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} placeholder="비밀번호를 한 번 더 입력해 주세요" value={confirmation} onChange={e => setConfirmation(e.target.value)} disabled={busy} /></label>}
+        {signup && <p className="auth-signup-help">간편로그인으로 가입했다면 기존 방법으로 로그인해 주세요. 내 프로필에서 비밀번호를 등록하면 같은 이메일로도 로그인할 수 있습니다.</p>}
+        <label className="auth-remember"><input type="checkbox" name="remember" checked={remember} onChange={event => setRememberChoice(event.target.checked)} disabled={busy || !ready} /><span>로그인 상태 유지</span></label>
         {error && <p className="form-error" role="alert">{error}</p>}
         {notice && <p className="success-note" role="status">{notice}</p>}
         <button className="button primary auth-submit" type="submit" disabled={!ready || busy}>{busy ? '연결 중…' : signup ? '이메일로 가입하기' : '로그인'}</button>

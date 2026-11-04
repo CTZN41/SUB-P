@@ -8,9 +8,10 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Analysis, Shot, ShotStatus
+from app.models import Analysis, Shot
 from app.services.court_zones import ZONE_LABELS, ZoneCode
 from app.services.shot_statistics import calculate_statistics
+from app.services.non_shot_policy import visible_shot
 
 
 KOREA = ZoneInfo("Asia/Seoul")
@@ -26,8 +27,7 @@ def _month(analysis: Analysis) -> str:
 
 
 def _is_shot(shot: Shot) -> bool:
-    gate = (shot.confidence_data or {}).get("shot_gate") or {}
-    return gate.get("verdict") != "not_shot" or shot.status == ShotStatus.USER_CONFIRMED
+    return visible_shot(shot)
 
 
 def monthly_statistics(session: Session, requested_month: str | None = None) -> dict:

@@ -30,4 +30,4 @@ def test_valid_and_legacy_proxy_projections_still_work():
     assert not foot_proxy_is_clipped([25,30],[1920,1080])
     assert _projected_foot_position(np.eye(3),{'foot_point_px':[25,30]}) == (25,30)
     c={'time_ms':5000,'frame_size_px':[1920,1080],'foot_track':[{'time_ms':4600,'foot_point_px':[25,30]}]}
-    assert _projected_plant_position(np.eye(3),c) == ((25,30),4600)
+    assert _projected_plant_position(np.eye(3),c) == (None,None)

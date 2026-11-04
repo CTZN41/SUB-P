@@ -1,0 +1,961 @@
+{
+  "kind": "isolated_synthetic_boundary_test",
+  "live_database_modified": false,
+  "paid_api_calls": 0,
+  "boundary_pieces": 49,
+  "adjacent_pairs": 29,
+  "virtual_pairs": 10,
+  "physical_pairs": 19,
+  "seconds": 7.2451,
+  "date": "2026-11-04",
+  "default_tolerance_cm": 15,
+  "backend_tests_passed": 462,
+  "frontend_tests_passed": 40,
+  "frontend_build": "passed",
+  "chrome_direct_verification": false,
+  "adjacent_boundary_pairs": [
+    {
+      "zones": [
+        "mid_baseline_left",
+        "mid_wing_left"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "mid_baseline_left",
+        "paint_left"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_baseline_left",
+        "three_corner_left"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_baseline_right",
+        "mid_wing_right"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "mid_baseline_right",
+        "paint_right"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_baseline_right",
+        "three_corner_right"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_center",
+        "mid_wing_left"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "mid_center",
+        "mid_wing_right"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "mid_center",
+        "paint_center"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_center",
+        "paint_left"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_center",
+        "paint_right"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_center",
+        "three_center"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_wing_left",
+        "paint_left"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_wing_left",
+        "three_center"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_wing_left",
+        "three_corner_left"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_wing_left",
+        "three_wing_left"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_wing_right",
+        "paint_right"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_wing_right",
+        "three_center"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_wing_right",
+        "three_corner_right"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "mid_wing_right",
+        "three_wing_right"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "paint_center",
+        "paint_left"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "paint_center",
+        "paint_right"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "paint_center",
+        "restricted"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "paint_left",
+        "restricted"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "paint_right",
+        "restricted"
+      ],
+      "kind": "physical"
+    },
+    {
+      "zones": [
+        "three_center",
+        "three_wing_left"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "three_center",
+        "three_wing_right"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "three_corner_left",
+        "three_wing_left"
+      ],
+      "kind": "virtual_internal"
+    },
+    {
+      "zones": [
+        "three_corner_right",
+        "three_wing_right"
+      ],
+      "kind": "virtual_internal"
+    }
+  ],
+  "dummy_trials": [
+    {
+      "tolerance_cm": 15,
+      "cases": 2709,
+      "normalized": 262,
+      "saved_positions": 276,
+      "review_positions": 2433,
+      "physical_conflict_cases": 1815,
+      "physical_conflicts_auto_renamed": 0,
+      "all_14_zones_aggregated": true,
+      "normalized_virtual_pairs": [
+        [
+          "mid_baseline_left",
+          "mid_wing_left"
+        ],
+        [
+          "mid_baseline_right",
+          "mid_wing_right"
+        ],
+        [
+          "mid_center",
+          "mid_wing_left"
+        ],
+        [
+          "mid_center",
+          "mid_wing_right"
+        ],
+        [
+          "paint_center",
+          "paint_left"
+        ],
+        [
+          "paint_center",
+          "paint_right"
+        ],
+        [
+          "three_center",
+          "three_wing_left"
+        ],
+        [
+          "three_center",
+          "three_wing_right"
+        ],
+        [
+          "three_corner_left",
+          "three_wing_left"
+        ],
+        [
+          "three_corner_right",
+          "three_wing_right"
+        ]
+      ],
+      "reasons": {
+        "physical_boundary_no_exception": 1940,
+        "physical_boundary_nearby": 86,
+        "outside_tolerance": 421,
+        "adjacent_virtual_label_only": 262
+      }
+    },
+    {
+      "tolerance_cm": 30,
+      "cases": 2709,
+      "normalized": 412,
+      "saved_positions": 426,
+      "review_positions": 2283,
+      "physical_conflict_cases": 1815,
+      "physical_conflicts_auto_renamed": 0,
+      "all_14_zones_aggregated": true,
+      "normalized_virtual_pairs": [
+        [
+          "mid_baseline_left",
+          "mid_wing_left"
+        ],
+        [
+          "mid_baseline_right",
+          "mid_wing_right"
+        ],
+        [
+          "mid_center",
+          "mid_wing_left"
+        ],
+        [
+          "mid_center",
+          "mid_wing_right"
+        ],
+        [
+          "paint_center",
+          "paint_left"
+        ],
+        [
+          "paint_center",
+          "paint_right"
+        ],
+        [
+          "three_center",
+          "three_wing_left"
+        ],
+        [
+          "three_center",
+          "three_wing_right"
+        ],
+        [
+          "three_corner_left",
+          "three_wing_left"
+        ],
+        [
+          "three_corner_right",
+          "three_wing_right"
+        ]
+      ],
+      "reasons": {
+        "physical_boundary_no_exception": 1940,
+        "physical_boundary_nearby": 214,
+        "outside_tolerance": 143,
+        "adjacent_virtual_label_only": 412
+      }
+    }
+  ],
+  "real_primary_replay": {
+    "source_analysis_id": "a4dccc34-508a-46e3-804c-7ed529e82709",
+    "source_sha256": "646baa3ff52245e83e72829c2deea9fdb5dbd0014757744d8688d954d17f8282",
+    "new_api_calls": 0,
+    "kind": "frozen_first_response_replay_not_new_video_inference",
+    "trials": [
+      {
+        "tolerance_cm": 15,
+        "rows": [
+          {
+            "shot_number": 3,
+            "time_ms": 36933,
+            "original_primary_zone": "mid_center",
+            "original_final_zone": "mid_center",
+            "original_final_confidence": 0.76,
+            "original_primary_confidence": 0.76,
+            "policy_zone": "mid_center",
+            "xy": [
+              19.0,
+              20.2
+            ],
+            "audit": {
+              "original_zone": "mid_center",
+              "coordinate_zone": "mid_center",
+              "original_xy": [
+                19.0,
+                20.2
+              ],
+              "coordinate_confidence": 0.76,
+              "zone_confidence": null,
+              "tolerance_cm": 15,
+              "near_boundary": true,
+              "normalized": false,
+              "coordinates_moved": false,
+              "reason": "already_consistent",
+              "boundary_zones": [
+                "mid_center",
+                "mid_wing_left"
+              ],
+              "boundary_kind": "line",
+              "boundary_class": "virtual_internal",
+              "distance_cm": 0.0,
+              "physical_clearance_cm": 36.576,
+              "boundary_x_ft": 19.0,
+              "grounded_offsets_ms": [
+                -1000,
+                -850,
+                -700,
+                -550,
+                -400
+              ],
+              "plant_sample_time_ms": 36533
+            },
+            "saved_xy": [
+              19.0,
+              20.2
+            ],
+            "saved_zone": "mid_center",
+            "saved_status": "auto"
+          },
+          {
+            "shot_number": 18,
+            "time_ms": 337067,
+            "original_primary_zone": "mid_center",
+            "original_final_zone": "needs_review",
+            "original_final_confidence": 0.53,
+            "original_primary_confidence": 0.75,
+            "policy_zone": "mid_wing_left",
+            "xy": [
+              18.6,
+              20.3
+            ],
+            "audit": {
+              "original_zone": "mid_center",
+              "coordinate_zone": "mid_wing_left",
+              "original_xy": [
+                18.6,
+                20.3
+              ],
+              "coordinate_confidence": 0.75,
+              "zone_confidence": null,
+              "tolerance_cm": 15,
+              "near_boundary": true,
+              "normalized": true,
+              "coordinates_moved": false,
+              "reason": "adjacent_virtual_label_only",
+              "boundary_zones": [
+                "mid_center",
+                "mid_wing_left"
+              ],
+              "boundary_kind": "line",
+              "boundary_class": "virtual_internal",
+              "distance_cm": 12.192,
+              "physical_clearance_cm": 39.624,
+              "boundary_x_ft": 19.0,
+              "grounded_offsets_ms": [
+                -700,
+                -550,
+                -534
+              ],
+              "plant_sample_time_ms": 336533
+            },
+            "saved_xy": [
+              18.6,
+              20.3
+            ],
+            "saved_zone": "mid_wing_left",
+            "saved_status": "auto"
+          },
+          {
+            "shot_number": 15,
+            "time_ms": 292633,
+            "original_primary_zone": "mid_wing_left",
+            "original_final_zone": "three_wing_left",
+            "original_final_confidence": 0.74,
+            "original_primary_confidence": 0.65,
+            "policy_zone": "mid_wing_left",
+            "xy": [
+              10.0,
+              23.0
+            ],
+            "audit": {
+              "original_zone": "mid_wing_left",
+              "coordinate_zone": "mid_wing_left",
+              "original_xy": [
+                10.0,
+                23.0
+              ],
+              "coordinate_confidence": 0.65,
+              "zone_confidence": null,
+              "tolerance_cm": 15,
+              "near_boundary": false,
+              "normalized": false,
+              "coordinates_moved": false,
+              "reason": "physical_boundary_no_exception",
+              "boundary_zones": [
+                "mid_wing_left",
+                "three_wing_left"
+              ],
+              "boundary_kind": "arc",
+              "boundary_class": "physical",
+              "distance_cm": 15.56782,
+              "physical_clearance_cm": 15.56782
+            },
+            "saved_xy": [
+              null,
+              null
+            ],
+            "saved_zone": null,
+            "saved_status": "needs_review"
+          },
+          {
+            "shot_number": 30,
+            "time_ms": 592533,
+            "original_primary_zone": "mid_wing_left",
+            "original_final_zone": "three_wing_left",
+            "original_final_confidence": 0.75,
+            "original_primary_confidence": 0.69,
+            "policy_zone": "mid_wing_left",
+            "xy": [
+              12.0,
+              24.0
+            ],
+            "audit": {
+              "original_zone": "mid_wing_left",
+              "coordinate_zone": "mid_wing_left",
+              "original_xy": [
+                12.0,
+                24.0
+              ],
+              "coordinate_confidence": 0.69,
+              "zone_confidence": null,
+              "tolerance_cm": 15,
+              "near_boundary": false,
+              "normalized": false,
+              "coordinates_moved": false,
+              "reason": "physical_boundary_no_exception",
+              "boundary_zones": [
+                "mid_wing_left",
+                "three_wing_left"
+              ],
+              "boundary_kind": "arc",
+              "boundary_class": "physical",
+              "distance_cm": 28.47323,
+              "physical_clearance_cm": 28.47323
+            },
+            "saved_xy": [
+              null,
+              null
+            ],
+            "saved_zone": null,
+            "saved_status": "needs_review"
+          }
+        ]
+      },
+      {
+        "tolerance_cm": 30,
+        "rows": [
+          {
+            "shot_number": 3,
+            "time_ms": 36933,
+            "original_primary_zone": "mid_center",
+            "original_final_zone": "mid_center",
+            "original_final_confidence": 0.76,
+            "original_primary_confidence": 0.76,
+            "policy_zone": "mid_center",
+            "xy": [
+              19.0,
+              20.2
+            ],
+            "audit": {
+              "original_zone": "mid_center",
+              "coordinate_zone": "mid_center",
+              "original_xy": [
+                19.0,
+                20.2
+              ],
+              "coordinate_confidence": 0.76,
+              "zone_confidence": null,
+              "tolerance_cm": 30,
+              "near_boundary": true,
+              "normalized": false,
+              "coordinates_moved": false,
+              "reason": "already_consistent",
+              "boundary_zones": [
+                "mid_center",
+                "mid_wing_left"
+              ],
+              "boundary_kind": "line",
+              "boundary_class": "virtual_internal",
+              "distance_cm": 0.0,
+              "physical_clearance_cm": 36.576,
+              "boundary_x_ft": 19.0,
+              "grounded_offsets_ms": [
+                -1000,
+                -850,
+                -700,
+                -550,
+                -400
+              ],
+              "plant_sample_time_ms": 36533
+            },
+            "saved_xy": [
+              19.0,
+              20.2
+            ],
+            "saved_zone": "mid_center",
+            "saved_status": "auto"
+          },
+          {
+            "shot_number": 18,
+            "time_ms": 337067,
+            "original_primary_zone": "mid_center",
+            "original_final_zone": "needs_review",
+            "original_final_confidence": 0.53,
+            "original_primary_confidence": 0.75,
+            "policy_zone": "mid_wing_left",
+            "xy": [
+              18.6,
+              20.3
+            ],
+            "audit": {
+              "original_zone": "mid_center",
+              "coordinate_zone": "mid_wing_left",
+              "original_xy": [
+                18.6,
+                20.3
+              ],
+              "coordinate_confidence": 0.75,
+              "zone_confidence": null,
+              "tolerance_cm": 30,
+              "near_boundary": true,
+              "normalized": true,
+              "coordinates_moved": false,
+              "reason": "adjacent_virtual_label_only",
+              "boundary_zones": [
+                "mid_center",
+                "mid_wing_left"
+              ],
+              "boundary_kind": "line",
+              "boundary_class": "virtual_internal",
+              "distance_cm": 12.192,
+              "physical_clearance_cm": 39.624,
+              "boundary_x_ft": 19.0,
+              "grounded_offsets_ms": [
+                -700,
+                -550,
+                -534
+              ],
+              "plant_sample_time_ms": 336533
+            },
+            "saved_xy": [
+              18.6,
+              20.3
+            ],
+            "saved_zone": "mid_wing_left",
+            "saved_status": "auto"
+          },
+          {
+            "shot_number": 15,
+            "time_ms": 292633,
+            "original_primary_zone": "mid_wing_left",
+            "original_final_zone": "three_wing_left",
+            "original_final_confidence": 0.74,
+            "original_primary_confidence": 0.65,
+            "policy_zone": "mid_wing_left",
+            "xy": [
+              10.0,
+              23.0
+            ],
+            "audit": {
+              "original_zone": "mid_wing_left",
+              "coordinate_zone": "mid_wing_left",
+              "original_xy": [
+                10.0,
+                23.0
+              ],
+              "coordinate_confidence": 0.65,
+              "zone_confidence": null,
+              "tolerance_cm": 30,
+              "near_boundary": true,
+              "normalized": false,
+              "coordinates_moved": false,
+              "reason": "physical_boundary_no_exception",
+              "boundary_zones": [
+                "mid_wing_left",
+                "three_wing_left"
+              ],
+              "boundary_kind": "arc",
+              "boundary_class": "physical",
+              "distance_cm": 15.56782,
+              "physical_clearance_cm": 15.56782
+            },
+            "saved_xy": [
+              null,
+              null
+            ],
+            "saved_zone": null,
+            "saved_status": "needs_review"
+          },
+          {
+            "shot_number": 30,
+            "time_ms": 592533,
+            "original_primary_zone": "mid_wing_left",
+            "original_final_zone": "three_wing_left",
+            "original_final_confidence": 0.75,
+            "original_primary_confidence": 0.69,
+            "policy_zone": "mid_wing_left",
+            "xy": [
+              12.0,
+              24.0
+            ],
+            "audit": {
+              "original_zone": "mid_wing_left",
+              "coordinate_zone": "mid_wing_left",
+              "original_xy": [
+                12.0,
+                24.0
+              ],
+              "coordinate_confidence": 0.69,
+              "zone_confidence": null,
+              "tolerance_cm": 30,
+              "near_boundary": true,
+              "normalized": false,
+              "coordinates_moved": false,
+              "reason": "physical_boundary_no_exception",
+              "boundary_zones": [
+                "mid_wing_left",
+                "three_wing_left"
+              ],
+              "boundary_kind": "arc",
+              "boundary_class": "physical",
+              "distance_cm": 28.47323,
+              "physical_clearance_cm": 28.47323
+            },
+            "saved_xy": [
+              null,
+              null
+            ],
+            "saved_zone": null,
+            "saved_status": "needs_review"
+          }
+        ]
+      }
+    ]
+  },
+  "fresh_video_position_test": {
+    "kind": "fresh_original_video_position_only",
+    "model": "gpt-6.1-terra",
+    "source_analysis_id": "a4dccc34-508a-46e3-804c-7ed529e82709",
+    "source_sha256": "646baa3ff52245e83e72829c2deea9fdb5dbd0014757744d8688d954d17f8282",
+    "live_database_modified": false,
+    "requested_shots": [
+      3,
+      18
+    ],
+    "rows": [
+      {
+        "shot_number": 3,
+        "time_ms": 36933,
+        "status": "complete",
+        "image_count": 10,
+        "shoe_evidence": {
+          "status": "available",
+          "offsets_ms": [
+            -1000,
+            -850,
+            -700,
+            -550,
+            -400,
+            -250,
+            -100
+          ],
+          "image_edge_offsets_ms": [],
+          "source": "original_shoe_pixels",
+          "numeric_proxy_replaced": false
+        },
+        "usage": {
+          "input_tokens": 6865,
+          "output_tokens": 433,
+          "total_tokens": 7298
+        },
+        "api_seconds": 9.1212,
+        "raw_decision": {
+          "visual_arc_relation": "inside",
+          "grounded_frame_offsets_ms": [
+            -1000,
+            -850,
+            -700,
+            -550,
+            -400
+          ],
+          "arc_evidence": "The planted shoes are well inside the outer three-point arc. At -550 ms and -400 ms, the shoes overlap the straight free-throw line, not the three-point arc. The feet are airborne by -250 ms.",
+          "court_zone": "needs_review",
+          "court_x": null,
+          "court_y": null,
+          "confidence": 0.4,
+          "reason": "The final plant overlaps the free-throw line, so the images do not reliably resolve the physical paint-versus-midrange boundary.",
+          "camera_view": "right_sideline",
+          "overhead_lateral_relation": "aligned_with_lane",
+          "distance_band": "unclear",
+          "projection_evidence": [
+            "The final planted shoes are near the free-throw line and within the lane's lateral extent.",
+            "The approximate pre-release box projection is not a shoe-contact measurement and does not resolve the boundary."
+          ],
+          "coordinate_confidence": 0.4,
+          "zone_confidence": 0.35,
+          "uncertainty_scope": "physical_boundary"
+        },
+        "policy_decision": {
+          "visual_arc_relation": "inside",
+          "grounded_frame_offsets_ms": [
+            -1000,
+            -850,
+            -700,
+            -550,
+            -400
+          ],
+          "arc_evidence": "The planted shoes are well inside the outer three-point arc. At -550 ms and -400 ms, the shoes overlap the straight free-throw line, not the three-point arc. The feet are airborne by -250 ms.",
+          "court_zone": "needs_review",
+          "court_x": null,
+          "court_y": null,
+          "confidence": 0.4,
+          "reason": "The final plant overlaps the free-throw line, so the images do not reliably resolve the physical paint-versus-midrange boundary.",
+          "camera_view": "right_sideline",
+          "overhead_lateral_relation": "aligned_with_lane",
+          "distance_band": "unclear",
+          "projection_evidence": [
+            "The final planted shoes are near the free-throw line and within the lane's lateral extent.",
+            "The approximate pre-release box projection is not a shoe-contact measurement and does not resolve the boundary."
+          ],
+          "coordinate_confidence": 0.4,
+          "zone_confidence": 0.35,
+          "uncertainty_scope": "physical_boundary"
+        },
+        "audit": {
+          "original_zone": "needs_review",
+          "coordinate_zone": null,
+          "original_xy": [
+            null,
+            null
+          ],
+          "coordinate_confidence": 0.4,
+          "zone_confidence": 0.35,
+          "tolerance_cm": 15.0,
+          "near_boundary": false,
+          "normalized": false,
+          "coordinates_moved": false,
+          "reason": "missing_coordinates"
+        },
+        "location_resolved": false,
+        "applied_zone": "needs_review",
+        "applied_xy": [
+          null,
+          null
+        ],
+        "applied_confidence": 0.4,
+        "seconds": 9.9015
+      },
+      {
+        "shot_number": 18,
+        "time_ms": 337067,
+        "status": "complete",
+        "image_count": 11,
+        "shoe_evidence": {
+          "status": "available",
+          "offsets_ms": [
+            -1000,
+            -850,
+            -700,
+            -550,
+            -534,
+            -400,
+            -250,
+            -100
+          ],
+          "image_edge_offsets_ms": [],
+          "source": "original_shoe_pixels",
+          "numeric_proxy_replaced": false
+        },
+        "usage": {
+          "input_tokens": 7216,
+          "output_tokens": 703,
+          "total_tokens": 7919
+        },
+        "api_seconds": 10.9182,
+        "raw_decision": {
+          "visual_arc_relation": "inside",
+          "grounded_frame_offsets_ms": [
+            -700,
+            -600,
+            -550,
+            -534
+          ],
+          "arc_evidence": "The planted shoes are well inside the outer three-point arc. At -550 and -534 ms, the shoes are near the free-throw line and circle, not the three-point arc; the shooter is airborne at release.",
+          "court_zone": "mid_wing_left",
+          "court_x": 18.5,
+          "court_y": 19.5,
+          "confidence": 0.52,
+          "reason": "The plant is best estimated just left of the virtual x=19 mid-sector boundary, favoring mid_wing_left over mid_center. The shoes are close to the free-throw line, so their exact position relative to the paint boundary is less certain.",
+          "camera_view": "right_sideline",
+          "overhead_lateral_relation": "aligned_with_lane",
+          "distance_band": "midrange",
+          "projection_evidence": [
+            "The final grounded shoes are near the free-throw line and circle.",
+            "The approximate ground-motion reference supports a position near the left edge of the center sector, but is not a shoe-contact measurement.",
+            "The confirmed court-left orientation is used rather than reversing left and right from the image."
+          ],
+          "coordinate_confidence": 0.52,
+          "zone_confidence": 0.48,
+          "uncertainty_scope": "physical_boundary"
+        },
+        "policy_decision": {
+          "visual_arc_relation": "inside",
+          "grounded_frame_offsets_ms": [
+            -700,
+            -600,
+            -550,
+            -534
+          ],
+          "arc_evidence": "The planted shoes are well inside the outer three-point arc. At -550 and -534 ms, the shoes are near the free-throw line and circle, not the three-point arc; the shooter is airborne at release.",
+          "court_zone": "mid_wing_left",
+          "court_x": 18.5,
+          "court_y": 19.5,
+          "confidence": 0.52,
+          "reason": "The plant is best estimated just left of the virtual x=19 mid-sector boundary, favoring mid_wing_left over mid_center. The shoes are close to the free-throw line, so their exact position relative to the paint boundary is less certain.",
+          "camera_view": "right_sideline",
+          "overhead_lateral_relation": "aligned_with_lane",
+          "distance_band": "midrange",
+          "projection_evidence": [
+            "The final grounded shoes are near the free-throw line and circle.",
+            "The approximate ground-motion reference supports a position near the left edge of the center sector, but is not a shoe-contact measurement.",
+            "The confirmed court-left orientation is used rather than reversing left and right from the image."
+          ],
+          "coordinate_confidence": 0.52,
+          "zone_confidence": 0.48,
+          "uncertainty_scope": "physical_boundary"
+        },
+        "audit": {
+          "original_zone": "mid_wing_left",
+          "coordinate_zone": "mid_wing_left",
+          "original_xy": [
+            18.5,
+            19.5
+          ],
+          "coordinate_confidence": 0.52,
+          "zone_confidence": 0.48,
+          "tolerance_cm": 15.0,
+          "near_boundary": false,
+          "normalized": false,
+          "coordinates_moved": false,
+          "reason": "outside_tolerance",
+          "boundary_zones": [
+            "mid_center",
+            "mid_wing_left"
+          ],
+          "boundary_kind": "line",
+          "boundary_class": "virtual_internal",
+          "distance_cm": 15.24,
+          "physical_clearance_cm": 15.24,
+          "boundary_x_ft": 19.0
+        },
+        "location_resolved": false,
+        "applied_zone": "mid_wing_left",
+        "applied_xy": [
+          18.5,
+          19.5
+        ],
+        "applied_confidence": 0.52,
+        "seconds": 11.6934
+      }
+    ],
+    "seconds": 21.5983,
+    "usage": {
+      "input_tokens": 14081,
+      "output_tokens": 1136
+    },
+    "source_unchanged": true
+  },
+  "dummy_evidence": "backend/work/verification-2026-11-04/all-zone-boundaries-final/report.json",
+  "dummy_database": "backend/work/verification-2026-11-04/all-zone-boundaries-final/synthetic-test.sqlite",
+  "note": "Synthetic guards and frozen-response replay do not measure real-world localization accuracy. Fresh two-shot video position review remained uncertain about the free-throw line. Existing user records unchanged."
+}

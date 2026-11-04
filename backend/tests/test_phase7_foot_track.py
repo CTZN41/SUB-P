@@ -14,7 +14,8 @@ def test_pre_release_foot_track_keeps_same_scene_and_near_player() -> None:
 
     attach_candidate_foot_tracks([candidate], records, 1920, 1080)
 
-    assert candidate["foot_track"] == [
+    assert [{key: sample[key] for key in ('time_ms', 'foot_point_px', 'foot_point_clipped')}
+            for sample in candidate['foot_track']] == [
         {"time_ms": 4600, "foot_point_px": [1200.0, 740], "foot_point_clipped": False},
         {"time_ms": 4900, "foot_point_px": [1100.0, 750], "foot_point_clipped": False},
     ]

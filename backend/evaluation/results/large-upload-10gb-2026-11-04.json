@@ -1,0 +1,174 @@
+{
+  "fixture": {
+    "source_name": "10m 30S P.mp4",
+    "fixture_name": "one-hour-1080p60-10GB-padded.mp4",
+    "bytes": 10000000000,
+    "remux_bytes": 6594567103,
+    "free_box_bytes": 3405432897,
+    "sparse": false,
+    "repetitions": 6,
+    "metadata": {
+      "fps": 59.99806315976333,
+      "frames": 215994,
+      "duration_s": 3600.0162109375,
+      "width": 1920,
+      "height": 1080
+    },
+    "sha256": "4799b43eb9701f5fe9a20bd8a57905a2f6a2cfffca14084f5b19a79cac13d89e",
+    "prepare_seconds": 71.43572449998464,
+    "available_ram_after": 3455078400,
+    "limitation": "H264 repeated media plus free-box padding, not iPhone HEVC"
+  },
+  "cases": [
+    {
+      "mode": "current-limits",
+      "ai_calls": 0,
+      "server_baseline_rss_bytes": 103157760,
+      "http_status": 413,
+      "upload_and_registration_seconds": 69.8132903999649,
+      "effective_MB_per_second": 143.23920191570042,
+      "error_code": "FILE_LIMIT",
+      "partial_upload_cleaned": true,
+      "peak_server_rss_bytes": 106590208,
+      "peak_client_rss_bytes": 41226240,
+      "peak_combined_rss_bytes": 147779584,
+      "peak_spool_bytes": 10000000000,
+      "peak_upload_bytes": 5210374144,
+      "peak_spool_plus_upload_bytes": 15210374144,
+      "spool_remaining_bytes": 0,
+      "health_samples": 134,
+      "health_timeouts": 0,
+      "max_health_seconds": 0.27826599997933954,
+      "server_timings": {
+        "copy_from_multipart_seconds": 12.269461899995804
+      },
+      "peak_disk_including_fixture_bytes": 25210374144
+    },
+    {
+      "mode": "expanded-test-only",
+      "ai_calls": 0,
+      "server_baseline_rss_bytes": 103391232,
+      "http_status": 201,
+      "upload_and_registration_seconds": 81.65551810001489,
+      "effective_MB_per_second": 122.4656977591105,
+      "analysis_id": "045b5655-b72a-45fa-824c-6cc46db47ddc",
+      "saved_bytes": 10000000000,
+      "duration_ms": 3600016,
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.99806315976333,
+      "saved_sha256": "4799b43eb9701f5fe9a20bd8a57905a2f6a2cfffca14084f5b19a79cac13d89e",
+      "hash_match": true,
+      "range_checks": [
+        {
+          "offset": 0,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 0-65535/10000000000",
+          "seconds": 0.0065667000017128885
+        },
+        {
+          "offset": 5000000000,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 5000000000-5000065535/10000000000",
+          "seconds": 0.00255869998363778
+        },
+        {
+          "offset": 9999934464,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 9999934464-9999999999/10000000000",
+          "seconds": 0.0021832999773323536
+        }
+      ],
+      "decode_bursts": [
+        {
+          "time_s": 0,
+          "frames_read": 30,
+          "seconds": 0.16634910000720993
+        },
+        {
+          "time_s": 900,
+          "frames_read": 30,
+          "seconds": 0.2761962999938987
+        },
+        {
+          "time_s": 1800,
+          "frames_read": 30,
+          "seconds": 0.40539470000658184
+        },
+        {
+          "time_s": 2700,
+          "frames_read": 30,
+          "seconds": 0.4468862999929115
+        },
+        {
+          "time_s": 3598,
+          "frames_read": 30,
+          "seconds": 0.35711479996098205
+        }
+      ],
+      "metadata": {
+        "fps": 59.99806315976333,
+        "frames": 215994,
+        "duration_s": 3600.0162109375,
+        "width": 1920,
+        "height": 1080
+      },
+      "peak_server_rss_bytes": 254197760,
+      "peak_client_rss_bytes": 223490048,
+      "peak_combined_rss_bytes": 339775488,
+      "peak_spool_bytes": 10000000000,
+      "peak_upload_bytes": 10000000000,
+      "peak_spool_plus_upload_bytes": 19946791936,
+      "spool_remaining_bytes": 0,
+      "health_samples": 182,
+      "health_timeouts": 0,
+      "max_health_seconds": 0.38708080002106726,
+      "server_timings": {
+        "copy_from_multipart_seconds": 23.002148400002625,
+        "probe_video_seconds": 0.4693637000164017,
+        "ensure_browser_playback_seconds": 0.035261299984995276
+      },
+      "peak_disk_including_fixture_bytes": 29946791936
+    }
+  ],
+  "production_settings_changed": false,
+  "full_yolo_or_ai_tested": false,
+  "verification": {
+    "isolated_db_counts": {
+      "current-limits": {
+        "Analysis": 0,
+        "AnalysisJob": 0,
+        "Shot": 0
+      },
+      "expanded-test-only": {
+        "Analysis": 1,
+        "AnalysisJob": 0,
+        "Shot": 0
+      }
+    },
+    "production_health": {
+      "8000": 200,
+      "5173": 200
+    },
+    "test_port_closed": true,
+    "free_disk_bytes_after": 313308237824
+  },
+  "duration_limit_check": {
+    "status": 413,
+    "code": "FILE_LIMIT",
+    "duration_limit_minutes": 40,
+    "seconds": 0.042050400050356984
+  },
+  "rename_feasibility": {
+    "bytes": 10000000000,
+    "forward_seconds": 0.0006135999574325979,
+    "restore_seconds": 0.000443900004029274,
+    "file_identity_preserved": true,
+    "sample_bytes_unchanged": true,
+    "original_test_path_restored": true,
+    "production_files_touched": false
+  }
+}

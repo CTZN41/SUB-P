@@ -1,0 +1,449 @@
+{
+  "fixture": {
+    "source_name": "10m 30S P.mp4",
+    "fixture_name": "one-hour-1080p60-10GB-padded.mp4",
+    "bytes": 10000000000,
+    "remux_bytes": 6594567103,
+    "free_box_bytes": 3405432897,
+    "sparse": false,
+    "repetitions": 6,
+    "metadata": {
+      "fps": 59.99806315976333,
+      "frames": 215994,
+      "duration_s": 3600.0162109375,
+      "width": 1920,
+      "height": 1080
+    },
+    "sha256": "4799b43eb9701f5fe9a20bd8a57905a2f6a2cfffca14084f5b19a79cac13d89e",
+    "prepare_seconds": 71.43572449998464,
+    "available_ram_after": 3455078400,
+    "limitation": "H264 repeated media plus free-box padding, not iPhone HEVC"
+  },
+  "original_baseline": {
+    "mode": "expanded-test-only",
+    "ai_calls": 0,
+    "server_baseline_rss_bytes": 103391232,
+    "http_status": 201,
+    "upload_and_registration_seconds": 81.65551810001489,
+    "effective_MB_per_second": 122.4656977591105,
+    "analysis_id": "045b5655-b72a-45fa-824c-6cc46db47ddc",
+    "saved_bytes": 10000000000,
+    "duration_ms": 3600016,
+    "width": 1920,
+    "height": 1080,
+    "fps": 59.99806315976333,
+    "saved_sha256": "4799b43eb9701f5fe9a20bd8a57905a2f6a2cfffca14084f5b19a79cac13d89e",
+    "hash_match": true,
+    "range_checks": [
+      {
+        "offset": 0,
+        "status": 206,
+        "matches": true,
+        "content_range": "bytes 0-65535/10000000000",
+        "seconds": 0.0065667000017128885
+      },
+      {
+        "offset": 5000000000,
+        "status": 206,
+        "matches": true,
+        "content_range": "bytes 5000000000-5000065535/10000000000",
+        "seconds": 0.00255869998363778
+      },
+      {
+        "offset": 9999934464,
+        "status": 206,
+        "matches": true,
+        "content_range": "bytes 9999934464-9999999999/10000000000",
+        "seconds": 0.0021832999773323536
+      }
+    ],
+    "decode_bursts": [
+      {
+        "time_s": 0,
+        "frames_read": 30,
+        "seconds": 0.16634910000720993
+      },
+      {
+        "time_s": 900,
+        "frames_read": 30,
+        "seconds": 0.2761962999938987
+      },
+      {
+        "time_s": 1800,
+        "frames_read": 30,
+        "seconds": 0.40539470000658184
+      },
+      {
+        "time_s": 2700,
+        "frames_read": 30,
+        "seconds": 0.4468862999929115
+      },
+      {
+        "time_s": 3598,
+        "frames_read": 30,
+        "seconds": 0.35711479996098205
+      }
+    ],
+    "metadata": {
+      "fps": 59.99806315976333,
+      "frames": 215994,
+      "duration_s": 3600.0162109375,
+      "width": 1920,
+      "height": 1080
+    },
+    "peak_server_rss_bytes": 254197760,
+    "peak_client_rss_bytes": 223490048,
+    "peak_combined_rss_bytes": 339775488,
+    "peak_spool_bytes": 10000000000,
+    "peak_upload_bytes": 10000000000,
+    "peak_spool_plus_upload_bytes": 19946791936,
+    "spool_remaining_bytes": 0,
+    "health_samples": 182,
+    "health_timeouts": 0,
+    "max_health_seconds": 0.38708080002106726,
+    "server_timings": {
+      "copy_from_multipart_seconds": 23.002148400002625,
+      "probe_video_seconds": 0.4693637000164017,
+      "ensure_browser_playback_seconds": 0.035261299984995276
+    },
+    "peak_disk_including_fixture_bytes": 29946791936
+  },
+  "cases": [
+    {
+      "mode": "streaming-current-limits",
+      "ai_calls": 0,
+      "server_baseline_rss_bytes": 102830080,
+      "phase_seconds": {
+        "prepare": 0.0041108999866992235
+      },
+      "http_status": 413,
+      "upload_and_registration_seconds": 0.014409800001885742,
+      "effective_MB_per_second": null,
+      "error_code": "FILE_LIMIT",
+      "partial_upload_cleaned": true,
+      "peak_server_rss_bytes": 102830080,
+      "peak_client_rss_bytes": 40984576,
+      "peak_combined_rss_bytes": 143814656,
+      "peak_spool_bytes": 0,
+      "peak_upload_bytes": 0,
+      "peak_spool_plus_upload_bytes": 0,
+      "spool_remaining_bytes": 0,
+      "health_samples": 1,
+      "health_timeouts": 0,
+      "max_health_seconds": 0.0024208000395447016,
+      "server_timings": {},
+      "peak_disk_including_fixture_bytes": 10000000000,
+      "bytes_transferred": 0
+    },
+    {
+      "mode": "legacy-repeat-1",
+      "ai_calls": 0,
+      "server_baseline_rss_bytes": 103075840,
+      "http_status": 201,
+      "upload_and_registration_seconds": 47.98316599999089,
+      "effective_MB_per_second": 208.40642320271027,
+      "analysis_id": "77a440b1-7605-4f3b-a96f-ec3206f49d9d",
+      "saved_bytes": 10000000000,
+      "duration_ms": 3600016,
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.99806315976333,
+      "saved_sha256": "4799b43eb9701f5fe9a20bd8a57905a2f6a2cfffca14084f5b19a79cac13d89e",
+      "hash_match": true,
+      "range_checks": [
+        {
+          "offset": 0,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 0-65535/10000000000",
+          "seconds": 0.01021559996297583
+        },
+        {
+          "offset": 5000000000,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 5000000000-5000065535/10000000000",
+          "seconds": 0.004757199960295111
+        },
+        {
+          "offset": 9999934464,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 9999934464-9999999999/10000000000",
+          "seconds": 0.004428700020071119
+        }
+      ],
+      "decode_bursts": [
+        {
+          "time_s": 0,
+          "frames_read": 30,
+          "seconds": 0.26116679998813197
+        },
+        {
+          "time_s": 900,
+          "frames_read": 30,
+          "seconds": 0.3559553000377491
+        },
+        {
+          "time_s": 1800,
+          "frames_read": 30,
+          "seconds": 0.3566114000277594
+        },
+        {
+          "time_s": 2700,
+          "frames_read": 30,
+          "seconds": 0.3533911000122316
+        },
+        {
+          "time_s": 3598,
+          "frames_read": 30,
+          "seconds": 0.2945939999772236
+        }
+      ],
+      "metadata": {
+        "fps": 59.99806315976333,
+        "frames": 215994,
+        "duration_s": 3600.0162109375,
+        "width": 1920,
+        "height": 1080
+      },
+      "peak_server_rss_bytes": 267882496,
+      "peak_client_rss_bytes": 229306368,
+      "peak_combined_rss_bytes": 345440256,
+      "peak_spool_bytes": 10000000000,
+      "peak_upload_bytes": 10000000000,
+      "peak_spool_plus_upload_bytes": 19876537344,
+      "spool_remaining_bytes": 0,
+      "health_samples": 118,
+      "health_timeouts": 0,
+      "max_health_seconds": 0.2962052999646403,
+      "server_timings": {
+        "copy_from_multipart_seconds": 14.624407100025564,
+        "probe_video_seconds": 0.38489829999161884,
+        "ensure_browser_playback_seconds": 0.02620970003772527
+      },
+      "peak_disk_including_fixture_bytes": 29876537344,
+      "bytes_transferred": 10000000000
+    },
+    {
+      "mode": "streaming-expanded-1",
+      "ai_calls": 0,
+      "server_baseline_rss_bytes": 102817792,
+      "phase_seconds": {
+        "prepare": 0.012943500012625009,
+        "receive": 37.04654129996197,
+        "finalize": 0.7464834999991581
+      },
+      "http_status": 200,
+      "upload_and_registration_seconds": 37.82037889998173,
+      "effective_MB_per_second": 264.4077159154223,
+      "analysis_id": "134951f7-b10a-4ee3-bbab-ae28068a0a6a",
+      "saved_bytes": 10000000000,
+      "duration_ms": 3600016,
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.99806315976333,
+      "saved_sha256": "4799b43eb9701f5fe9a20bd8a57905a2f6a2cfffca14084f5b19a79cac13d89e",
+      "hash_match": true,
+      "range_checks": [
+        {
+          "offset": 0,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 0-65535/10000000000",
+          "seconds": 0.018106100033037364
+        },
+        {
+          "offset": 5000000000,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 5000000000-5000065535/10000000000",
+          "seconds": 0.0026112000341527164
+        },
+        {
+          "offset": 9999934464,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 9999934464-9999999999/10000000000",
+          "seconds": 0.0021527999779209495
+        }
+      ],
+      "decode_bursts": [
+        {
+          "time_s": 0,
+          "frames_read": 30,
+          "seconds": 0.19000400003278628
+        },
+        {
+          "time_s": 900,
+          "frames_read": 30,
+          "seconds": 0.33487200003582984
+        },
+        {
+          "time_s": 1800,
+          "frames_read": 30,
+          "seconds": 0.3259766999981366
+        },
+        {
+          "time_s": 2700,
+          "frames_read": 30,
+          "seconds": 0.3084913999773562
+        },
+        {
+          "time_s": 3598,
+          "frames_read": 30,
+          "seconds": 0.2692380000371486
+        }
+      ],
+      "metadata": {
+        "fps": 59.99806315976333,
+        "frames": 215994,
+        "duration_s": 3600.0162109375,
+        "width": 1920,
+        "height": 1080
+      },
+      "peak_server_rss_bytes": 268996608,
+      "peak_client_rss_bytes": 227672064,
+      "peak_combined_rss_bytes": 344055808,
+      "peak_spool_bytes": 0,
+      "peak_upload_bytes": 10000000412,
+      "peak_spool_plus_upload_bytes": 10000000412,
+      "spool_remaining_bytes": 0,
+      "health_samples": 98,
+      "health_timeouts": 0,
+      "max_health_seconds": 0.020951699989382178,
+      "server_timings": {
+        "probe_video_seconds": 0.6443056000280194,
+        "ensure_browser_playback_seconds": 0.04873560002306476
+      },
+      "peak_disk_including_fixture_bytes": 20000000412,
+      "bytes_transferred": 10000000000
+    },
+    {
+      "mode": "streaming-expanded-2",
+      "ai_calls": 0,
+      "server_baseline_rss_bytes": 103038976,
+      "phase_seconds": {
+        "prepare": 0.01690200000302866,
+        "receive": 36.712925700005144,
+        "finalize": 0.6709749000146985
+      },
+      "http_status": 200,
+      "upload_and_registration_seconds": 37.41015070001595,
+      "effective_MB_per_second": 267.30712955924383,
+      "analysis_id": "c8226144-5a14-4a42-9cce-6877d608dc83",
+      "saved_bytes": 10000000000,
+      "duration_ms": 3600016,
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.99806315976333,
+      "saved_sha256": "4799b43eb9701f5fe9a20bd8a57905a2f6a2cfffca14084f5b19a79cac13d89e",
+      "hash_match": true,
+      "range_checks": [
+        {
+          "offset": 0,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 0-65535/10000000000",
+          "seconds": 0.01545020000776276
+        },
+        {
+          "offset": 5000000000,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 5000000000-5000065535/10000000000",
+          "seconds": 0.004653200041502714
+        },
+        {
+          "offset": 9999934464,
+          "status": 206,
+          "matches": true,
+          "content_range": "bytes 9999934464-9999999999/10000000000",
+          "seconds": 0.004968900000676513
+        }
+      ],
+      "decode_bursts": [
+        {
+          "time_s": 0,
+          "frames_read": 30,
+          "seconds": 0.33317220001481473
+        },
+        {
+          "time_s": 900,
+          "frames_read": 30,
+          "seconds": 0.4046793999732472
+        },
+        {
+          "time_s": 1800,
+          "frames_read": 30,
+          "seconds": 0.37615719996392727
+        },
+        {
+          "time_s": 2700,
+          "frames_read": 30,
+          "seconds": 0.3247376999934204
+        },
+        {
+          "time_s": 3598,
+          "frames_read": 30,
+          "seconds": 0.2963412000099197
+        }
+      ],
+      "metadata": {
+        "fps": 59.99806315976333,
+        "frames": 215994,
+        "duration_s": 3600.0162109375,
+        "width": 1920,
+        "height": 1080
+      },
+      "peak_server_rss_bytes": 263716864,
+      "peak_client_rss_bytes": 230150144,
+      "peak_combined_rss_bytes": 346910720,
+      "peak_spool_bytes": 0,
+      "peak_upload_bytes": 10000000412,
+      "peak_spool_plus_upload_bytes": 10000000412,
+      "spool_remaining_bytes": 0,
+      "health_samples": 99,
+      "health_timeouts": 0,
+      "max_health_seconds": 0.008273700019344687,
+      "server_timings": {
+        "probe_video_seconds": 0.5686999000026844,
+        "ensure_browser_playback_seconds": 0.04772219998994842
+      },
+      "peak_disk_including_fixture_bytes": 20000000412,
+      "bytes_transferred": 10000000000
+    }
+  ],
+  "comparison": {
+    "legacy_repeat_seconds": 47.98316599999089,
+    "streaming_mean_seconds": 37.61526479999884,
+    "seconds_saved_vs_repeat": 10.367901199992048,
+    "percent_time_reduction_vs_repeat": 21.60737205209431,
+    "percent_time_reduction_vs_original": 53.93420349874434,
+    "legacy_peak_disk_bytes": 19876537344,
+    "streaming_peak_disk_bytes": 10000000412,
+    "percent_disk_reduction": 49.68942407356162
+  },
+  "cleanup": {
+    "removed_generated_copies": [
+      {
+        "case": "expanded-test-only",
+        "bytes_removed": 10000000000,
+        "file": "original.mp4"
+      },
+      {
+        "case": "legacy-repeat-1",
+        "bytes_removed": 10000000000,
+        "file": "original.mp4"
+      },
+      {
+        "case": "streaming-expanded-2",
+        "bytes_removed": 10000000000,
+        "file": "original.mp4"
+      }
+    ],
+    "kept_fixture_bytes": 10000000000,
+    "kept_registered_case": "streaming-expanded-1",
+    "production_files_touched": false
+  }
+}

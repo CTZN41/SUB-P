@@ -9,6 +9,8 @@ from app.analysis.adaptive_trial import add_focused_candidates
 from app.analysis.phase7_pipeline import Phase7Canceled, analyze_video
 from app.analysis.shot_gate_trial import review_prior_shot_existence, review_shot_existence
 from app.core.config import Settings
+from app.analysis.candidate_windows import (rescan_window, RESCAN_BEFORE_MS, RESCAN_AFTER_MS,
+    GATE_BEFORE_MS, GATE_AFTER_MS, PRIOR_BEFORE_MS, window_policy)
 
 
 def enrich_candidates(
@@ -18,6 +20,7 @@ def enrich_candidates(
     model_reuse=None, gate_workers: int = 1, gate_client=None, gate_progress=None,
 ) -> dict:
     """Improve candidates while keeping uncertain or rejected ones reviewable."""
+    result['candidate_window_policy'] = window_policy()
     if result.get("motion_hints"):
         try:
             add_focused_candidates(
@@ -51,7 +54,7 @@ def enrich_candidates(
         if (
             gate.get("verdict") != "shot" or gate.get("confidence", 0) < .9
             or not isinstance(offset, int) or isinstance(offset, bool)
-            or not -1400 <= offset <= 900 or abs(offset) < 200
+            or not -GATE_BEFORE_MS <= offset <= GATE_AFTER_MS or abs(offset) < 200
         ):
             return
         release_time = reference_time + offset
@@ -134,12 +137,13 @@ def enrich_candidates(
             candidate["shot_gate"]["resolution"] = "needs_review"
             continue
         rescans += 1
+        rescan_start, rescan_end = rescan_window(time_ms, 0, int(result['duration_ms']))
         try:
             high = analyze_video(
                 video_path, model_path, hoop_point,
                 pose_model_path=pose_model_path, sample_fps=30,
-                start_ms=max(0, time_ms - 2000),
-                end_ms=min(int(result["duration_ms"]), time_ms + 3500),
+                start_ms=rescan_start,
+                end_ms=rescan_end,
                 cancelled=cancelled,
                 inference_device=inference_device,
                 prefetch_frames=prefetch_frames, model_reuse=model_reuse,
@@ -151,7 +155,7 @@ def enrich_candidates(
             continue
         alternatives = sorted(
             (item for item in high["candidates"]
-             if -2000 <= int(item["time_ms"]) - time_ms <= 3500),
+             if -RESCAN_BEFORE_MS <= int(item["time_ms"]) - time_ms <= RESCAN_AFTER_MS),
             key=lambda item: abs(int(item["time_ms"]) - time_ms),
         )
         for alternative in alternatives[:3]:
@@ -183,7 +187,7 @@ def enrich_candidates(
             break
         else:
             candidate["shot_gate"]["resolution"] = "needs_review"
-            if calls >= max_calls or time_ms < 3200:
+            if calls >= max_calls or time_ms < PRIOR_BEFORE_MS:
                 continue
             calls += 1
             try:
@@ -196,7 +200,7 @@ def enrich_candidates(
                 prior_gate.get("verdict") != "shot"
                 or prior_gate.get("confidence", 0) < .9
                 or not isinstance(offset, int)
-                or not -3200 <= offset <= -500
+                or not -PRIOR_BEFORE_MS <= offset <= -500
             ):
                 continue
             release_time = time_ms + offset
@@ -217,6 +221,10 @@ def enrich_candidates(
                 "original_time_ms": time_ms,
             }
 
+    from app.services.ground_contact import refresh_retimed_foot_tracks
+    refresh_retimed_foot_tracks(video_path, model_path, pose_model_path, hoop_point, result,
+                               cancelled=cancelled, inference_device=inference_device,
+                               prefetch_frames=prefetch_frames, model_reuse=model_reuse)
     result["candidates"].sort(key=lambda item: item["time_ms"])
     result["shot_gate_summary"] = {
         "calls": calls, "rescans": rescans, "call_limit": max_calls,

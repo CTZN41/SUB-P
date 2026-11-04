@@ -47,6 +47,44 @@ def test_prefetch_propagates_decode_failure():
         reader.close()
 
 
+@pytest.mark.parametrize('available', [94, 96])
+def test_short_physical_tail_ends_cleanly_without_fabricating_frames(available):
+    class Short(Capture):
+        def grab(self):
+            if self.position >= available: return False
+            return super().grab()
+        def read(self):
+            if self.position >= available: return False, None
+            return super().read()
+    reader=FramePrefetchTrial(Short(),0,100,4,end_tolerance_frames=10)
+    frames=[]
+    try:
+        while True:
+            item=reader.next()
+            if item is None:break
+            frames.append(item)
+    finally:reader.close()
+    assert all(item[1] and item[0] < available for item in frames)
+    assert reader.early_end['first_unread_frame']==available
+    assert reader.early_end['last_sampled_frame']==frames[-1][0]
+
+
+def test_tail_tolerance_does_not_hide_a_damaged_middle():
+    class Middle(Capture):
+        def grab(self):
+            if self.position >= 50:return False
+            return super().grab()
+        def read(self):
+            if self.position >= 50:return False,None
+            return super().read()
+    reader=FramePrefetchTrial(Middle(),0,100,4,end_tolerance_frames=10)
+    try:
+        with pytest.raises(RuntimeError,match='prefetch failed'):
+            while reader.next() is not None:pass
+    finally:reader.close()
+    assert reader.early_end is None
+
+
 def test_status_writes_do_not_block_detector_and_latest_value_is_kept():
     entered, release = Event(), Event()
     class Sink:

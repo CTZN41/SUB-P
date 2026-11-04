@@ -56,6 +56,7 @@ from app.analysis.phase7_pipeline import Phase7Error
 from app.services.court_zones import ZONE_LABELS, ZoneCode, classify_zone
 from app.services.shot_statistics import calculate_statistics
 from app.services.monthly_statistics import monthly_statistics
+from app.services.non_shot_policy import visible_shot
 from app.services.authentication import require_analysis_user
 
 
@@ -166,14 +167,19 @@ def delete_analysis(
         raise HTTPException(status_code=409, detail={"code": "ANALYSIS_ACTIVE", "message": "분석 중에는 삭제할 수 없습니다. 먼저 취소해 주세요."})
     settings = request.app.state.settings
     # A failed file removal leaves the database record visible for retry.
-    for folder in (settings.upload_path / analysis_id, settings.work_path / analysis_id):
+    folders = (
+        (settings.upload_path / analysis_id, "원본 영상 폴더"),
+        (settings.work_path / analysis_id, "분석 작업 폴더"),
+        (settings.upload_path / ".incoming" / analysis_id, "업로드 정보 폴더"),
+    )
+    for folder, label in folders:
         try:
             if folder.exists():
                 shutil.rmtree(folder)
         except OSError as error:
             raise HTTPException(status_code=500, detail={
                 "code": "PARTIAL_DELETE", "message": "일부 파일을 삭제하지 못했습니다. 기록은 남아 있습니다. 저장 폴더의 권한을 확인한 뒤 다시 삭제해 주세요.",
-                "remaining": "원본 영상 폴더" if folder.parent == settings.upload_path else "분석 작업 폴더",
+                "remaining": label,
             }) from error
     try:
         session.delete(analysis)
@@ -192,8 +198,8 @@ async def create_analysis(
     play_type: Annotated[PlayType, Form()],
     contains_others: Annotated[bool, Form()],
     consent_confirmed: Annotated[bool, Form()],
-    ai_notice_confirmed: Annotated[bool, Form()],
     video: Annotated[UploadFile, File()],
+    ai_notice_confirmed: Annotated[bool, Form()] = False,
     recorded_date: Annotated[date | None, Form()] = None,
     player_name: Annotated[str | None, Form()] = None,
 ) -> Analysis:
@@ -425,7 +431,6 @@ def ensure_analysis_ready(request: Request, session: Session, analysis: Analysis
     missing: list[str] = []
     video_path = request.app.state.settings.upload_path / analysis.id / "original.mp4"
     if not video_path.is_file(): missing.append("원본 영상")
-    if not analysis.ai_notice_confirmed: missing.append("OpenAI 처리 안내 확인")
     if analysis.contains_others and not analysis.consent_confirmed: missing.append("촬영·분석 동의")
     if analysis.warnings and not analysis.warnings_accepted: missing.append("촬영 조건 경고 확인")
     calibration = session.scalar(select(CourtCalibration).where(CourtCalibration.analysis_id == analysis.id))
@@ -554,12 +559,12 @@ def _validate_shot_values(analysis: Analysis, values: dict) -> None:
 
 
 def _refresh_analysis_review_status(session: Session, analysis: Analysis) -> None:
-    has_review = session.scalar(
-        select(Shot.id).where(
+    has_review = any(visible_shot(shot) for shot in session.scalars(
+        select(Shot).where(
             Shot.analysis_id == analysis.id,
             Shot.status == ShotStatus.NEEDS_REVIEW,
-        ).limit(1)
-    ) is not None
+        )
+    ))
     analysis.status = AnalysisStatus.REVIEW_REQUIRED if has_review else AnalysisStatus.COMPLETED
 
 
@@ -627,6 +632,7 @@ def list_shots(
             statement.order_by(Shot.candidate_time_ms, Shot.created_at)
         )
     )
+    shots = [shot for shot in shots if visible_shot(shot)]
     return ShotListResponse(
         analysis_id=analysis.id,
         analysis_status=analysis.status,

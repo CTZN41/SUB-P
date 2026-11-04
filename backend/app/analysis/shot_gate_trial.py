@@ -11,10 +11,13 @@ from pydantic import BaseModel, Field
 
 from app.core.config import Settings
 from app.services.openai_shot_review import _encode_frame
+from app.analysis.candidate_windows import GATE_BEFORE_MS, GATE_AFTER_MS, PRIOR_BEFORE_MS, PRIOR_AFTER_MS
 
 
-OFFSETS_MS = (-1400, -1000, -700, -400, -200, 0, 200, 500, 900)
-PRIOR_OFFSETS_MS = (-3200, -2800, -2400, -2000, -1700, -1400, -1100, -800, -500, -200, 100)
+OFFSETS_MS = tuple(sorted(set(t for t in (-GATE_BEFORE_MS, -1000, -700, -400, -200, 0, 200, 500, GATE_AFTER_MS)
+                               if -GATE_BEFORE_MS <= t <= GATE_AFTER_MS)))
+PRIOR_OFFSETS_MS = tuple(sorted(set(t for t in (-PRIOR_BEFORE_MS, -2800, -2400, -2000, -1700, -1400, -1100, -800, -500, -200, PRIOR_AFTER_MS)
+                                     if -PRIOR_BEFORE_MS <= t <= PRIOR_AFTER_MS)))
 
 
 class ShotExistenceDecision(BaseModel):
@@ -33,7 +36,9 @@ def shot_gate_frames(
     content: list[dict] = []
     try:
         for offset in offsets_ms:
-            capture.set(cv2.CAP_PROP_POS_MSEC, max(0, time_ms + offset))
+            if time_ms + offset < 0:
+                continue  # Do not count repeated frame zero as distinct evidence.
+            capture.set(cv2.CAP_PROP_POS_MSEC, time_ms + offset)
             ok, frame = capture.read()
             if not ok:
                 continue
@@ -58,14 +63,25 @@ def review_shot_existence(
     video_path: Path, time_ms: int, settings: Settings, *, client=None,
 ) -> dict:
     """Return an isolated decision; never change stored shots in this trial."""
-    return _review_shot_gate(video_path, time_ms, settings, client=client)
+    return _cached_gate(video_path, time_ms, settings, client, False)
 
 
 def review_prior_shot_existence(
     video_path: Path, time_ms: int, settings: Settings, *, client=None,
 ) -> dict:
     """Rescue a real release shortly before a late rebound or falling-ball cue."""
-    return _review_shot_gate(video_path, time_ms, settings, client=client, prior_window=True)
+    return _cached_gate(video_path, time_ms, settings, client, True)
+
+
+def _cached_gate(video_path, time_ms, settings, client, prior_window):
+    compute = lambda: _review_shot_gate(video_path, time_ms, settings, client=client, prior_window=prior_window)
+    if client is None or not hasattr(client, 'cached_review'):
+        return compute()
+    stat = video_path.stat()
+    return client.cached_review({'task': 'prior_shot_gate' if prior_window else 'shot_gate',
+        'source': [str(video_path.resolve()), stat.st_size, stat.st_mtime_ns],
+        'anchor_ms': time_ms, 'model': settings.openai_vision_model,
+        'offsets_ms': PRIOR_OFFSETS_MS if prior_window else OFFSETS_MS}, compute)
 
 
 def _review_shot_gate(
@@ -85,7 +101,7 @@ def _review_shot_gate(
     prompt = (
         "These are chronological basketball frames relative to a late local candidate at t=0. "
         "Check whether the same player makes a real shot attempt anywhere in the earlier "
-        "-3200..0ms window, even if the local candidate at 0 is only a rebound or falling ball. "
+        f"-{PRIOR_BEFORE_MS}..0ms window, even if the local candidate at 0 is only a rebound or falling ball. "
         "A dunk attempt counts even if it misses. Return shot only if there is a visible intentional "
         "release or downward force toward the hoop. If shot, return release_offset_ms relative to "
         "t=0 as the earliest clear throw or dunk motion. Otherwise return not_shot, or unclear "
@@ -115,6 +131,8 @@ def _review_shot_gate(
     if decision is None:
         raise ValueError("AI가 슛 여부 판정 형식에 맞는 결과를 반환하지 않았습니다.")
     usage = response.usage
+    offsets = PRIOR_OFFSETS_MS if prior_window else OFFSETS_MS
+    used_offsets = [int(item['text'][2:-2]) for item in frames if item['type'] == 'input_text']
     return {
         "status": "complete",
         "model": settings.openai_vision_model,
@@ -124,6 +142,9 @@ def _review_shot_gate(
             "output_tokens": int(getattr(usage, "output_tokens", 0) or 0),
         },
         "seconds": round(perf_counter() - started, 2),
+        'window': {'anchor_ms': time_ms, 'purpose': 'prior_shot_gate' if prior_window else 'shot_gate',
+                   'requested_offsets_ms': [min(offsets), max(offsets)], 'used_offsets_ms': used_offsets,
+                   'edge_truncated': len(used_offsets) < len(offsets)},
     }
 
 

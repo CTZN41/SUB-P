@@ -1,0 +1,273 @@
+{
+  "analysis_id": "cb49b783-591d-4999-a131-286d6ee80b54",
+  "comparison_id": "dc3ec7ee-325d-4637-9b5b-94387183ad05",
+  "mode": "read_only_no_paid_ai",
+  "counts": {
+    "total": 30,
+    "made": 22,
+    "missed": 4,
+    "position_review": 3,
+    "outcome_review": 1
+  },
+  "position_reviews": [
+    {
+      "number": 3,
+      "time_ms": 36933,
+      "position_confidence": 0.69,
+      "reason": "The plant is near the free-throw line, just inside the lane and toward its court-left side. The approximate coordinates reflect the visible shoes and lane boundary rather than the airborne release box.",
+      "attempt_tasks": [
+        "shot_review"
+      ]
+    },
+    {
+      "number": 14,
+      "time_ms": 292633,
+      "position_confidence": 0.38,
+      "reason": "The plant is near the arc, but the overlapping shoes obscure the precise line contact and do not support a reliable two- versus three-point location.",
+      "attempt_tasks": [
+        "shot_review"
+      ]
+    },
+    {
+      "number": 17,
+      "time_ms": 337067,
+      "position_confidence": 0.69,
+      "reason": "The grounded plant is near the free-throw line at the left side of the lane; the exact side of the line and shoe coordinates are approximate.",
+      "attempt_tasks": [
+        "shot_review"
+      ]
+    }
+  ],
+  "display_offsets": [
+    {
+      "number": 16,
+      "stored": [
+        35.5,
+        15.7
+      ],
+      "offset_ft": [
+        -2.0646,
+        1.8914
+      ],
+      "distance_ft": 2.8
+    },
+    {
+      "number": 26,
+      "stored": [
+        11.3,
+        19.5
+      ],
+      "offset_ft": [
+        -2.0646,
+        1.8914
+      ],
+      "distance_ft": 2.8
+    }
+  ],
+  "selected": [
+    {
+      "number": 4,
+      "time_ms": 57467,
+      "saved": [
+        35.2,
+        9.9
+      ],
+      "zone": "mid_baseline_right",
+      "result": "missed",
+      "position_confidence": 0.76,
+      "plant_projection": [
+        35.2479,
+        9.9047
+      ],
+      "plant_sample_time_ms": 57067,
+      "gate_verdict": "shot",
+      "decisions": {
+        "primary": {
+          "visual_arc_relation": "inside",
+          "confidence": 0.76,
+          "court_zone": "mid_baseline_right",
+          "court_x": 35.2,
+          "court_y": 9.9,
+          "position_confidence": 0.76
+        }
+      }
+    },
+    {
+      "number": 13,
+      "time_ms": 267833,
+      "saved": [
+        36.0,
+        13.0
+      ],
+      "zone": "mid_baseline_right",
+      "result": "made",
+      "position_confidence": 0.73,
+      "plant_projection": null,
+      "plant_sample_time_ms": null,
+      "gate_verdict": "shot",
+      "decisions": {
+        "primary": {
+          "visual_arc_relation": "inside",
+          "confidence": 0.73,
+          "court_zone": "mid_baseline_right",
+          "court_x": 36.0,
+          "court_y": 13.0,
+          "position_confidence": 0.73
+        }
+      }
+    },
+    {
+      "number": 18,
+      "time_ms": 357833,
+      "saved": [
+        39.0,
+        9.0
+      ],
+      "zone": "mid_baseline_right",
+      "result": "missed",
+      "position_confidence": 0.72,
+      "plant_projection": null,
+      "plant_sample_time_ms": null,
+      "gate_verdict": "shot",
+      "decisions": {
+        "primary": {
+          "visual_arc_relation": "inside",
+          "confidence": 0.72,
+          "court_zone": "mid_baseline_right",
+          "court_x": 39.0,
+          "court_y": 15.0,
+          "position_confidence": 0.72
+        },
+        "position_consistency": {
+          "visual_arc_relation": "inside",
+          "court_zone": "mid_baseline_right",
+          "court_x": 39.0,
+          "court_y": 9.0,
+          "confidence": 0.72
+        }
+      }
+    },
+    {
+      "number": 23,
+      "time_ms": 475600,
+      "saved": [
+        null,
+        null
+      ],
+      "zone": null,
+      "result": "needs_review",
+      "position_confidence": null,
+      "plant_projection": null,
+      "plant_sample_time_ms": null,
+      "gate_verdict": "not_shot",
+      "decisions": {}
+    },
+    {
+      "number": 26,
+      "time_ms": 511400,
+      "saved": [
+        11.3,
+        19.5
+      ],
+      "zone": "mid_wing_left",
+      "result": "made",
+      "position_confidence": 0.8,
+      "plant_projection": [
+        11.2816,
+        19.4631
+      ],
+      "plant_sample_time_ms": 510933,
+      "gate_verdict": "shot",
+      "decisions": {
+        "primary": {
+          "visual_arc_relation": "inside",
+          "confidence": 0.8,
+          "court_zone": "mid_wing_left",
+          "court_x": 11.3,
+          "court_y": 19.5,
+          "position_confidence": 0.8
+        }
+      }
+    },
+    {
+      "number": 29,
+      "time_ms": 567833,
+      "saved": [
+        39.0,
+        6.5
+      ],
+      "zone": "mid_baseline_right",
+      "result": "made",
+      "position_confidence": 0.72,
+      "plant_projection": [
+        38.7793,
+        6.2242
+      ],
+      "plant_sample_time_ms": 567467,
+      "gate_verdict": "shot",
+      "decisions": {
+        "primary": {
+          "visual_arc_relation": "inside",
+          "confidence": 0.72,
+          "court_zone": "mid_baseline_right",
+          "court_x": 39.0,
+          "court_y": 6.5,
+          "position_confidence": 0.72
+        }
+      }
+    },
+    {
+      "number": 30,
+      "time_ms": 592533,
+      "saved": [
+        13.0,
+        26.5
+      ],
+      "zone": "three_wing_left",
+      "result": "made",
+      "position_confidence": 0.72,
+      "plant_projection": null,
+      "plant_sample_time_ms": null,
+      "gate_verdict": "shot",
+      "decisions": {
+        "primary": {
+          "visual_arc_relation": "touching",
+          "confidence": 0.7,
+          "court_zone": "mid_wing_left",
+          "court_x": 13.0,
+          "court_y": 24.5,
+          "position_confidence": 0.7
+        },
+        "visual_arc": {
+          "visual_arc_relation": "outside",
+          "confidence": 0.82
+        },
+        "position_consistency": {
+          "visual_arc_relation": "outside",
+          "court_zone": "three_wing_left",
+          "court_x": 13.0,
+          "court_y": 26.5,
+          "confidence": 0.72
+        }
+      }
+    }
+  ],
+  "reference_match": {
+    "expected": 30,
+    "matched": 29,
+    "missing_reference_seconds": [
+      206.001
+    ],
+    "extra_candidate_seconds": [
+      475.6
+    ]
+  },
+  "timing_seconds": {
+    "local_candidates": 335.38,
+    "focused_rescan_and_shot_gate": 159.24,
+    "camera_view_validation": 24.25,
+    "detailed_ai_review": 227.05
+  },
+  "shots_unchanged_since_snapshot": true,
+  "elapsed_seconds": 766.609429
+}

@@ -18,13 +18,20 @@ from app.services.court_calibration import transform_point
 from app.services.court_zones import classify_zone, THREE_POINT_RADIUS_FT, HOOP_X_FT, HOOP_Y_FT
 from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
 from app.analysis.foot_evidence import foot_proxy_is_clipped
+from app.analysis.candidate_windows import WINDOW_RULES
+from app.services.zone_boundary_policy import (normalize_zone_boundary, position_conflict_prompt,
+    coordinate_confidence, DEFAULT_ZONE_BOUNDARY_CM)
 
 
-FRAME_OFFSETS_MS = (
+_BASE_FRAME_OFFSETS_MS = (
     -4000, -3500, -3000, -2500, -2000, -1500, -1000, -600, -300,
     0, 300, 700, 1200, 2000, 3500,
 )
-OUTCOME_EXTENSION_OFFSETS_MS = (4500, 5500)
+_detail_rule = WINDOW_RULES['detail_review']
+FRAME_OFFSETS_MS = tuple(sorted(set((-_detail_rule.before_ms, _detail_rule.after_ms, *(
+    t for t in _BASE_FRAME_OFFSETS_MS if -_detail_rule.before_ms <= t <= _detail_rule.after_ms)))))
+OUTCOME_EXTENSION_OFFSETS_MS = tuple(sorted(set(t for t in (4500, WINDOW_RULES['outcome_extension'].after_ms)
+                                               if t > _detail_rule.after_ms)))
 FOCUS_OFFSETS_MS = (-3500, -2500, -1500, -1000, -300, 300, 700)
 OUTCOME_OFFSETS_MS = (800, 1200, 1600, 2000, 2400, 2800, 3500, 4500)
 ESCALATION_CONFIDENCE = 0.65
@@ -94,6 +101,9 @@ class ShotReviewDecision(VisualArcEvidence):
     court_x: float | None = Field(default=None, ge=0, le=50)
     court_y: float | None = Field(default=None, ge=0, le=47)
     position_confidence: float = Field(default=0, ge=0, le=1)
+    coordinate_confidence: float | None = Field(default=None, ge=0, le=1)
+    zone_confidence: float | None = Field(default=None, ge=0, le=1)
+    uncertainty_scope: Literal['none','internal_midrange_boundary','internal_zone_boundary','coordinate','physical_boundary','view','unclear'] = 'unclear'
     position_reason: str = Field(default="", max_length=300)
     camera_view: CameraView = "unclear"
     overhead_lateral_relation: LateralRelation = "unclear"
@@ -139,6 +149,9 @@ class ShotDetailDecision(VisualArcEvidence):
     court_x: float | None = Field(ge=0, le=50)
     court_y: float | None = Field(ge=0, le=47)
     position_confidence: float = Field(ge=0, le=1)
+    coordinate_confidence: float | None = Field(default=None, ge=0, le=1)
+    zone_confidence: float | None = Field(default=None, ge=0, le=1)
+    uncertainty_scope: Literal['none','internal_midrange_boundary','internal_zone_boundary','coordinate','physical_boundary','view','unclear'] = 'unclear'
     position_reason: str = Field(max_length=300)
     camera_view: CameraView
     overhead_lateral_relation: LateralRelation
@@ -189,6 +202,9 @@ class PositionReviewDecision(VisualArcEvidence):
     overhead_lateral_relation: LateralRelation
     distance_band: DistanceBand
     projection_evidence: list[str]
+    coordinate_confidence: float | None = Field(default=None,ge=0,le=1)
+    zone_confidence: float | None = Field(default=None,ge=0,le=1)
+    uncertainty_scope: Literal['none','internal_midrange_boundary','internal_zone_boundary','coordinate','physical_boundary','view','unclear'] = 'unclear'
 
 
 class OpenAIShotReviewError(RuntimeError):
@@ -256,7 +272,9 @@ def candidate_frame_inputs(
             OUTCOME_EXTENSION_OFFSETS_MS if include_outcome_extension else ()
         )
         for offset in offsets:
-            capture.set(cv2.CAP_PROP_POS_MSEC, max(0, time_ms + offset))
+            if time_ms + offset < 0:
+                continue
+            capture.set(cv2.CAP_PROP_POS_MSEC, time_ms + offset)
             ok, frame = capture.read()
             if ok:
                 images.extend([
@@ -436,6 +454,8 @@ def _projected_foot_position(
     transform: list[list[float]] | None, candidate: dict,
 ) -> tuple[float, float] | None:
     """Return a plausible court projection, never an authoritative shot location."""
+    if candidate.get('foot_point_source') == 'person_box_lower_midpoint':
+        return None  # A release box may already be airborne; never offer it as ground XY.
     foot = candidate.get("foot_point_px")
     source_time = candidate.get('foot_point_time_ms',
         (candidate.get('shot_gate') or {}).get('detector_candidate_time_ms', candidate.get('time_ms')))
@@ -460,19 +480,15 @@ def _projected_plant_position(
     transform: list[list[float]] | None, candidate: dict,
 ) -> tuple[tuple[float, float] | None, int | None]:
     """Project a pre-release foot sample; never use a late layup foot as takeoff."""
-    release_ms = int(candidate["time_ms"])
-    track = candidate.get("foot_track") or []
-    samples = [
-        sample for sample in track
-        if release_ms - 700 <= sample.get("time_ms", -1) <= release_ms - 150
-    ]
-    if not samples:
+    from app.services.ground_contact import plant_sample
+    sample = plant_sample(candidate)
+    if sample is None:
         return None, None
-    sample = min(samples, key=lambda item: abs(item["time_ms"] - (release_ms - 400)))
-    if abs(sample["time_ms"] - (release_ms - 400)) > 200:
-        return None, None
+    # Pose supplies the stable time, not a floor pixel: ankle keypoints sit
+    # ABOVE the sole. Projecting ankles directly biases the court estimate.
+    point = sample['foot_point_px']
     projected = _projected_foot_position(transform, {
-        "foot_point_px": sample.get("foot_point_px"),
+        "foot_point_px": point,
         "foot_point_clipped": sample.get('foot_point_clipped', False),
         "frame_size_px": candidate.get('frame_size_px'),
         "calibration_shifted": candidate.get("calibration_shifted"),
@@ -489,8 +505,8 @@ def _foot_projection_prompt(
         f"{projected[1]:.1f}) feet. "
     ) if projected else ""
     plant_text = (
-        f"A foot sampled about 0.4 seconds before the release projects to ({plant[0]:.1f}, "
-        f"{plant[1]:.1f}) feet. For a layup, determine the shot location from the "
+        f"A player-box lower midpoint at a pose-stable pre-release time gives an approximate ground-motion reference at ({plant[0]:.1f}, "
+        f"{plant[1]:.1f}) feet. This is NOT measured shoe contact; verify the actual grounded shoes in the images. For a layup, determine the shot location from the "
         "last grounded takeoff/plant shoes, not the player drifting toward the hoop "
         "after takeoff. Check the visible feet and lines; this earlier sample may still "
         "be before the actual plant. "
@@ -499,7 +515,7 @@ def _foot_projection_prompt(
         return ""
     return (
         release_text + plant_text +
-        "These points are bounding-box approximations, not detected ankle or shoe contacts. "
+        "Detector projections are approximate; even a stable ankle landmark is not measured shoe contact. "
         "This is supporting evidence, not ground truth: the detected foot or calibration may be "
         "inaccurate. Compare it with the visible planted and release shoes and court lines before choosing "
         "your own coordinates and zone. If they conflict and the image cannot resolve why, "
@@ -636,7 +652,11 @@ def _review_once(
                     "free-throw line must have y>19. Make the numeric coordinates agree with the "
                     "chosen zone. Return court_zone="
                     "needs_review and null coordinates when the feet or court lines cannot support a reliable "
-                    "location. For outcome, first use visible rim passage or rim deflection. If those are not "
+                    "location. Report coordinate_confidence for the numeric XY and zone_confidence for the sector name separately. "
+                    "Set position_confidence to coordinate_confidence; do not lower the XY score solely for an adjacent virtual-sector name. "
+                    "Use uncertainty_scope=internal_zone_boundary only for naming ambiguity within the same paint, midrange or three-point band. "
+                    "Unclear sole contact, paint/restricted or two/three-point distance is physical_boundary or coordinate uncertainty and must lower coordinate_confidence. "
+                    "For outcome, first use visible rim passage or rim deflection. If those are not "
                     "clear, consider the ball falling below the rim, the player's rebound behavior, and a "
                     "visible scoreboard or shot-counter change as secondary evidence. Never invent evidence "
                     "that is off-screen. If a shot attempt and type are visible but the outcome is not, keep "
@@ -742,6 +762,11 @@ def _review_position_once(
                     "or court markings do not support a reliable location. "
                     "The paint spans x=17..33 and y=0..19; a center midrange shot must have y>19. "
                     "The numeric coordinates must classify into the named zone. "
+                    "Return coordinate_confidence for XY reliability and zone_confidence for the sector name separately. "
+                    "Set confidence equal to coordinate_confidence, not the minimum sector-name confidence. "
+                    "Use uncertainty_scope=internal_zone_boundary only for adjacent sector naming ambiguity within the same paint, midrange or three-point distance band. "
+                    "Restricted-area, paint versus midrange and two/three-point boundaries are physical_boundary; never treat them as sector naming issues. "
+                    "Unclear ground contact must lower coordinate_confidence; never call it only a naming issue. "
                     + inconsistency
                 ),
             }, *images],
@@ -842,7 +867,9 @@ def _visual_arc_conflict(decision) -> bool:
 
 def _needs_arc_review(decision) -> bool:
     if decision.court_x is None or decision.court_y is None:
-        return False
+        # A missing numeric answer must not block an independent image-only
+        # check of the shoes and arc. Unclear visual evidence still stays held.
+        return decision.is_shot and decision.position_confidence < POSITION_AUTO_CONFIRM_CONFIDENCE
     distance = hypot(decision.court_x-HOOP_X_FT, decision.court_y-HOOP_Y_FT)
     return _visual_arc_conflict(decision) or (
         abs(distance-THREE_POINT_RADIUS_FT) <= 2 and decision.position_confidence < .8)
@@ -861,6 +888,7 @@ def _apply_position_review(
     initial_zone_mismatch: bool = False,
 ) -> None:
     terra_zone = decision.court_zone
+    position_score=coordinate_confidence(position)
     distance_reversal = (
         terra_zone != 'needs_review' and position.court_zone != 'needs_review'
         and terra_zone.startswith('three_') != position.court_zone.startswith('three_'))
@@ -880,7 +908,7 @@ def _apply_position_review(
         decision.court_zone = "needs_review"
         decision.court_x = None
         decision.court_y = None
-        decision.position_confidence = min(decision.position_confidence, position.confidence)
+        decision.position_confidence = min(decision.position_confidence, position_score)
         decision.position_reason = (
             f"위치 재검토 전({terra_zone})과 후({position.court_zone})가 서로 달라 확인 필요"
         )
@@ -894,7 +922,10 @@ def _apply_position_review(
     decision.court_zone = position.court_zone
     decision.court_x = position.court_x
     decision.court_y = position.court_y
-    decision.position_confidence = position.confidence
+    decision.position_confidence = position_score
+    decision.coordinate_confidence = position_score
+    decision.zone_confidence = position.zone_confidence
+    decision.uncertainty_scope = position.uncertainty_scope
     decision.position_reason = position.reason
     decision.camera_view = position.camera_view
     decision.overhead_lateral_relation = position.overhead_lateral_relation
@@ -907,7 +938,7 @@ def _apply_position_review(
         position.court_zone == "needs_review"
         or position.court_x is None
         or position.court_y is None
-        or position.confidence < POSITION_ESCALATION_CONFIDENCE
+        or position_score < POSITION_ESCALATION_CONFIDENCE
     )
     decision.review_required = (
         position_unclear
@@ -1133,6 +1164,7 @@ def review_candidates_with_openai(
     review_progress=None,
     scoring_rim_evidence: bool = False,
     camera_view_calibrations: dict[int, list[list[float]] | None] | None = None,
+    zone_boundary_tolerance_cm: float = DEFAULT_ZONE_BOUNDARY_CM,
 ) -> dict:
     """Attach AI review metadata without making local analysis depend on the API."""
     if not settings.openai_shot_review_enabled:
@@ -1227,6 +1259,11 @@ def review_candidates_with_openai(
             attempts.append({"model": settings.openai_vision_model, "task": "shot_review", "effort": "low", "usage": usage})
             final_model = settings.openai_vision_model
             model_decisions = {"primary": primary.model_dump()}
+            # Preserve the raw response above, then honor a lower explicit XY
+            # score if a provider returns inconsistent confidence fields.
+            primary.position_confidence = coordinate_confidence(primary)
+            boundary_audit=normalize_zone_boundary(primary,projection_candidate,projected_plant,shoe_evidence,
+                tolerance_cm=zone_boundary_tolerance_cm)
             zone_mismatch = _position_zone_mismatch(primary)
             arc_retry = bool(shoes) and _needs_arc_review(primary)
             visual_arc = None
@@ -1251,11 +1288,7 @@ def review_candidates_with_openai(
                     _invalidate_conflicting_position(primary, '독립적인 신발·3점선 검토를 완료하지 못해 위치 확인 필요')
             if (zone_mismatch or arc_retry or _visual_arc_conflict(primary)) and not visual_unresolved:
                 try:
-                    mismatch_text = (
-                        f"The first pass named {primary.court_zone} but returned "
-                        f"({primary.court_x}, {primary.court_y}), which maps to "
-                        f"{classify_zone(primary.court_x, primary.court_y).value}. "
-                        if primary.court_x is not None and primary.court_y is not None else '')
+                    mismatch_text = position_conflict_prompt(primary)
                     position, usage = timed("position_review", _review_position_once,
                         client, settings.openai_vision_model, position_images,
                         camera_context=camera_context,
@@ -1281,6 +1314,9 @@ def review_candidates_with_openai(
                         "task": "position_consistency" if zone_mismatch else "arc_boundary",
                         "effort": "low", "usage": usage})
                     model_decisions["position_consistency"] = position.model_dump()
+                    retry_boundary=normalize_zone_boundary(position,projection_candidate,projected_plant,shoe_evidence,
+                        tolerance_cm=zone_boundary_tolerance_cm)
+                    boundary_audit['retry']=retry_boundary
                     if visual_arc and position.visual_arc_relation != visual_arc.visual_arc_relation:
                         _invalidate_conflicting_position(primary, '영상 단독 검토와 좌표 검토의 3점 여부가 달라 위치 확인 필요')
                     elif not _position_zone_mismatch(position):
@@ -1437,6 +1473,22 @@ def review_candidates_with_openai(
                 escalated += 1
                 model_decisions["fallback"] = fallback.model_dump()
                 final_review = _consensus(primary, fallback)
+            # A near-free-throw jumper needs measured shoe pixels, rather than
+            # interpreting the stable person-box proxy as sole-ground contact.
+            contact_result = None
+            from app.services.sole_contact import needs_contact_verification, review_contact_pixels, apply_contact_evidence
+            if Path(video_path).is_file() and needs_contact_verification(final_review, projection_candidate, projected_plant):
+                try:
+                    contact_result, usage = timed('sole_contact_pixels', review_contact_pixels,
+                        client, settings.openai_vision_model, video_path, projection_candidate)
+                    if contact_result.get('api_called'):
+                        attempts.append({'model': settings.openai_vision_model, 'task': 'sole_contact_pixels',
+                                         'effort': 'low', 'usage': usage})
+                    model_decisions['pre_contact_policy'] = dict(final_review)
+                    apply_contact_evidence(final_review, contact_result)
+                except Exception as error:
+                    contact_result = {'status': 'needs_review', 'reason': 'contact_verification_failed', 'error_type': type(error).__name__}
+                    apply_contact_evidence(final_review, contact_result)
             # Camera matching must validate the floor, not just background.
             # An AI confidence score cannot grant a missing calibration.
             if candidate.get('calibration_view_valid') is False:
@@ -1452,8 +1504,7 @@ def review_candidates_with_openai(
             plant_sample = next((s for s in candidate.get('foot_track', []) if s.get('time_ms') == plant_time_ms), {})
             # Do not replace a rejected pre-release sample with an airborne or
             # clipped release-frame box and call it a verified plant.
-            foot = (plant_sample.get('foot_point_px') if plant_time_ms is not None else
-                    candidate.get('foot_point_px') if not candidate.get('foot_track') else None)
+            foot = plant_sample.get('foot_point_px') if plant_time_ms is not None else None
             foot_clipped = (plant_sample.get('foot_point_clipped', False) if plant_time_ms is not None else candidate.get('foot_point_clipped', False))
             if foot_clipped or foot_proxy_is_clipped(foot, candidate.get('frame_size_px')):
                 foot = None
@@ -1474,9 +1525,14 @@ def review_candidates_with_openai(
                 "model": final_model,
                 "attempts": attempts,
                 "model_decisions": model_decisions,
+                'zone_boundary':boundary_audit,
+                'sole_contact':contact_result,
+                'position_evidence_source':'sole_pixel_sequence' if contact_result else 'visual_position_review',
                 "calibrated_foot_projection": list(projected_foot) if projected_foot else None,
                 "calibrated_plant_projection": list(projected_plant) if projected_plant else None,
                 "plant_sample_time_ms": plant_time_ms,
+                'plant_reference_source': 'pose_stable_time_box_proxy' if projected_plant else 'unavailable',
+                'plant_reference_is_measured_contact': False,
                 "foot_point_source": candidate.get('foot_point_source', 'person_box_lower_midpoint'),
                 "foot_point_time_ms": candidate.get('foot_point_time_ms', gate.get('detector_candidate_time_ms', candidate['time_ms'])),
                 "three_point_line_check": line_check,

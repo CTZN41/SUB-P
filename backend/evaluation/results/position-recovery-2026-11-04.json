@@ -1,0 +1,291 @@
+{
+  "analysis_id": "cb49b783-591d-4999-a131-286d6ee80b54",
+  "mode": "bounded_paid_position_replay",
+  "window_policy": {
+    "version": "2026-11-04",
+    "rescan_offsets_ms": [
+      -2000,
+      3500
+    ],
+    "plant_refresh_offsets_ms": [
+      -1400,
+      150
+    ],
+    "edge_policy": "truncate_to_available_range",
+    "overlap_policy": "union_for_local_rescans",
+    "decoder_pre_context_ms": 3000,
+    "stage_rules": {
+      "pose_hint": {
+        "offsets_ms": [
+          -2000,
+          3500
+        ],
+        "anchor": "pose_hint_time"
+      },
+      "rejected_candidate": {
+        "offsets_ms": [
+          -2000,
+          3500
+        ],
+        "anchor": "original_candidate_time"
+      },
+      "shot_gate": {
+        "offsets_ms": [
+          -1400,
+          900
+        ],
+        "anchor": "current_candidate_time"
+      },
+      "prior_shot_gate": {
+        "offsets_ms": [
+          -3200,
+          100
+        ],
+        "anchor": "late_candidate_time"
+      },
+      "plant_refresh": {
+        "offsets_ms": [
+          -1400,
+          150
+        ],
+        "anchor": "corrected_release_time"
+      },
+      "ground_contact": {
+        "offsets_ms": [
+          -1200,
+          -150
+        ],
+        "anchor": "corrected_release_time"
+      },
+      "detail_review": {
+        "offsets_ms": [
+          -4000,
+          3500
+        ],
+        "anchor": "corrected_release_time"
+      },
+      "outcome_extension": {
+        "offsets_ms": [
+          -4000,
+          5500
+        ],
+        "anchor": "corrected_release_time"
+      }
+    }
+  },
+  "local_window_comparison": {
+    "trace_old": {
+      "requested_ms": [
+        203133,
+        206733
+      ],
+      "decoder_context_start_ms": 200133,
+      "rule_trace": {
+        "raw_trajectory_count": 0,
+        "raw_pose_count": 1,
+        "raw_rim_count": 0,
+        "filtered": [
+          {
+            "time_ms": 205633,
+            "sources": [
+              "pose_shot_motion"
+            ],
+            "reason": "pose_only_without_trajectory_or_rim"
+          }
+        ],
+        "retained_times_ms": []
+      },
+      "seconds": 11.2595
+    },
+    "trace_extended_same_start": {
+      "requested_ms": [
+        203133,
+        208333
+      ],
+      "decoder_context_start_ms": 200133,
+      "rule_trace": {
+        "raw_trajectory_count": 0,
+        "raw_pose_count": 1,
+        "raw_rim_count": 1,
+        "filtered": [],
+        "retained_times_ms": [
+          205633
+        ]
+      },
+      "seconds": 7.9954
+    },
+    "trace_fixed_policy": {
+      "requested_ms": [
+        202933,
+        208433
+      ],
+      "decoder_context_start_ms": 199933,
+      "rule_trace": {
+        "raw_trajectory_count": 0,
+        "raw_pose_count": 2,
+        "raw_rim_count": 2,
+        "filtered": [],
+        "retained_times_ms": [
+          205633
+        ]
+      },
+      "seconds": 8.3426
+    }
+  },
+  "ground_references": [
+    {
+      "number": 4,
+      "release_ms": 57467,
+      "reference_ms": 57067,
+      "projection": [
+        35.1173,
+        9.4127
+      ],
+      "measured_contact": false,
+      "source": "pose_stable_time_box_lower_midpoint",
+      "local_seconds": 7.9243
+    },
+    {
+      "number": 18,
+      "release_ms": 357833,
+      "reference_ms": 357033,
+      "projection": [
+        35.1959,
+        9.5646
+      ],
+      "measured_contact": false,
+      "source": "pose_stable_time_box_lower_midpoint",
+      "local_seconds": 4.0769
+    },
+    {
+      "number": 29,
+      "release_ms": 567833,
+      "reference_ms": 566900,
+      "projection": [
+        36.3414,
+        12.8095
+      ],
+      "measured_contact": false,
+      "source": "pose_stable_time_box_lower_midpoint",
+      "local_seconds": 3.8862
+    },
+    {
+      "number": 30,
+      "release_ms": 592533,
+      "reference_ms": null,
+      "projection": null,
+      "measured_contact": false,
+      "source": "pose_stable_time_box_lower_midpoint",
+      "local_seconds": 2.5626
+    }
+  ],
+  "paid_calls": [
+    {
+      "task": "missing_xy_visual_arc",
+      "number": 14,
+      "model": "gpt-6.1-terra",
+      "seconds": 6.167,
+      "usage": {
+        "input_tokens": 5427,
+        "output_tokens": 145
+      },
+      "decision": {
+        "visual_arc_relation": "outside",
+        "confidence": 0.83
+      },
+      "summary_only": true
+    },
+    {
+      "task": "position_only",
+      "number": 14,
+      "model": "gpt-6.1-terra",
+      "seconds": 7.206,
+      "usage": {
+        "input_tokens": 6220,
+        "output_tokens": 302
+      },
+      "decision": {
+        "court_zone": "three_wing_left",
+        "court_x": 12.0,
+        "court_y": 26.0,
+        "confidence": 0.72,
+        "visual_arc_relation": "outside"
+      },
+      "passes_position_checks": true,
+      "summary_only": true
+    },
+    {
+      "task": "position_only",
+      "number": 18,
+      "model": "gpt-6.1-terra",
+      "seconds": 6.111,
+      "usage": {
+        "input_tokens": 6977,
+        "output_tokens": 263
+      },
+      "decision": {
+        "court_zone": "mid_baseline_right",
+        "court_x": 35.0,
+        "court_y": 10.0,
+        "confidence": 0.78,
+        "visual_arc_relation": "inside"
+      },
+      "passes_position_checks": true,
+      "summary_only": true
+    },
+    {
+      "task": "position_only",
+      "number": 29,
+      "model": "gpt-6.1-terra",
+      "seconds": 7.852,
+      "usage": {
+        "input_tokens": 6980,
+        "output_tokens": 432
+      },
+      "decision": {
+        "court_zone": "mid_baseline_right",
+        "court_x": 36.0,
+        "court_y": 12.0,
+        "confidence": 0.73,
+        "visual_arc_relation": "inside"
+      },
+      "passes_position_checks": true,
+      "summary_only": true
+    },
+    {
+      "task": "recovered_candidate_shot_gate",
+      "number": "03:26",
+      "model": "gpt-6.1-terra",
+      "seconds": 4.235,
+      "usage": {
+        "input_tokens": 5777,
+        "output_tokens": 97
+      },
+      "decision": {
+        "verdict": "shot",
+        "confidence": 0.99,
+        "release_offset_ms": 500
+      },
+      "summary_only": true
+    }
+  ],
+  "api_usage": {
+    "input_tokens": 31381,
+    "output_tokens": 1239,
+    "total_tokens": 32620
+  },
+  "non_shot_replay": {
+    "before": 30,
+    "after": 29,
+    "excluded": [
+      {
+        "time_ms": 475600,
+        "reason": "high_confidence_pre_shot_dribble",
+        "related_shot_time_ms": 478000
+      }
+    ]
+  },
+  "saved_result_unchanged": true,
+  "paid_response_seconds_sum": 31.571,
+  "paid_record_provenance": "Actual paid-run summaries verified from captured command output; raw decisions were overwritten by an offline rerun. Summary fields only are retained; no additional paid calls were made."
+}

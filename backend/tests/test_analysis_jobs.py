@@ -28,7 +28,7 @@ from app.analysis.phase7_pipeline import (
 def make_ready_client(tmp_path: Path):
     settings = Settings(_env_file=None, app_env="test", database_url=f"sqlite:///{(tmp_path / 'test.db').as_posix()}", upload_dir=str(tmp_path / "uploads"), work_dir=str(tmp_path / "work")); settings.ensure_storage_directories()
     engine = create_engine(settings.database_url, connect_args={"check_same_thread": False}); Base.metadata.create_all(engine); factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-    analysis = Analysis(title="작업 시험", play_type=PlayType.SOLO, original_name="test.mp4", stored_path="", file_size=1, duration_ms=10000, width=320, height=240, fps=30, status=AnalysisStatus.SETUP_REQUIRED, ai_notice_confirmed=True, warnings_accepted=True)
+    analysis = Analysis(title="작업 시험", play_type=PlayType.SOLO, original_name="test.mp4", stored_path="", file_size=1, duration_ms=10000, width=320, height=240, fps=30, status=AnalysisStatus.SETUP_REQUIRED, ai_notice_confirmed=False, warnings_accepted=True)
     with factory() as session:
         session.add(analysis); session.flush(); session.add(Player(analysis_id=analysis.id, display_name="선수 A")); session.add(CourtCalibration(analysis_id=analysis.id, frame_time_ms=0, image_points=[[0,0],[1,0],[1,1],[0,1]], court_points=[[0,0],[50,0],[50,47],[0,47]], hoop_point=[.5,.2], transform=[[1,0,0],[0,1,0],[0,0,1]], source=CalibrationSource.USER)); session.commit(); analysis_id = analysis.id
     folder = settings.upload_path / analysis_id; folder.mkdir(parents=True); (folder / "original.mp4").write_bytes(b"video")

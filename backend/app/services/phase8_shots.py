@@ -18,6 +18,7 @@ from app.models import (
 )
 from app.services.court_zones import classify_zone
 from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
+from app.services.non_shot_policy import exclude_confirmed_non_shots
 
 
 DEFAULT_SEQUENCE_BEFORE_MS = 5000
@@ -84,6 +85,9 @@ def _court_position(
     court_x = ai_review.get("court_x")
     court_y = ai_review.get("court_y")
     confidence = ai_review.get("position_confidence")
+    coordinate_confidence = ai_review.get("coordinate_confidence")
+    if isinstance(confidence, (int, float)) and isinstance(coordinate_confidence, (int, float)):
+        confidence = min(confidence, coordinate_confidence)
     if (
         zone_code == "needs_review"
         or not isinstance(court_x, (int, float))
@@ -100,7 +104,10 @@ def _court_position(
     if calculated_zone != zone_code:
         _append_reason(reasons, "AI가 반환한 구역과 코트 좌표가 서로 맞지 않아 위치 확인 필요")
         return None, None, None
-    return round(float(court_x), 4), round(float(court_y), 4), str(zone_code)
+    # Keep the same numeric point that was classified. Rounding here can move a
+    # point across an exact sector/arc boundary while retaining the old label.
+    # Display rounding belongs in the UI, not in persisted geometry.
+    return float(court_x), float(court_y), str(zone_code)
 
 
 def _result(ai_review: dict, reasons: list[str]) -> ShotResult:
@@ -151,6 +158,7 @@ def materialize_shots_from_candidates(
         raise RuntimeError("슛 기록을 연결할 선수가 없습니다.")
 
     shots: list[Shot] = []
+    exclude_confirmed_non_shots(result)
     candidates = result.get("candidates") or []
     for candidate in candidates:
         candidate_time_ms = max(0, min(analysis.duration_ms, int(candidate["time_ms"])))
@@ -201,6 +209,11 @@ def materialize_shots_from_candidates(
         shot.status = status
         shot.review_reason = "; ".join(reasons) or None
         shot.confidence_data = {
+            'review_kinds': (["ai_failed"] if ai_review.get('status') == 'failed' or not ai_review else
+                ["shot_unconfirmed"] if not ai_review.get('is_shot') else
+                (["outcome_unconfirmed"] if shot_result is ShotResult.NEEDS_REVIEW else []) +
+                (["position_unconfirmed"] if court_x is None else []) +
+                (["type_unconfirmed"] if shot_type is ShotType.NEEDS_REVIEW else [])),
             "local_confidence": candidate.get("confidence"),
             "candidate_source": candidate.get("candidate_source", "trajectory"),
             "scene_id": candidate.get("scene_id", 0),

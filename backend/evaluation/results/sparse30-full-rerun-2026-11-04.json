@@ -1,0 +1,1695 @@
+{
+  "analysis_id": "a4dccc34-508a-46e3-804c-7ed529e82709",
+  "status": "succeeded",
+  "stage": "완료",
+  "processed_ms": 600000,
+  "elapsed_seconds": 1020.8,
+  "error_code": null,
+  "source_analysis_id": "cb49b783-591d-4999-a131-286d6ee80b54",
+  "result_url": "http://127.0.0.1:5173/results/a4dccc34-508a-46e3-804c-7ed529e82709",
+  "registration_seconds": 38.422,
+  "before": {
+    "counts": {
+      "total": 30,
+      "made": 22,
+      "missed": 4,
+      "position_review": 3,
+      "outcome_review": 1
+    },
+    "stage_seconds": {
+      "local_candidates": 335.38,
+      "focused_rescan_and_shot_gate": 159.24,
+      "camera_view_validation": 24.25,
+      "detailed_ai_review": 227.05
+    },
+    "api_usage": {
+      "input_tokens": 1093576,
+      "output_tokens": 18460
+    }
+  },
+  "after": {
+    "counts": {
+      "total": 30,
+      "made": 25,
+      "missed": 4,
+      "position_review": 1,
+      "outcome_review": 0
+    },
+    "raw_result_counts": {
+      "made": 26,
+      "missed": 4
+    },
+    "review_status_count": 1,
+    "stage_seconds": {
+      "local_candidates": 354.6,
+      "focused_rescan_and_shot_gate": 347.44,
+      "camera_view_validation": 31.65,
+      "detailed_ai_review": 242.33
+    },
+    "api_usage": {
+      "input_tokens": 1169879,
+      "output_tokens": 19181
+    },
+    "model": "gpt-6.1-terra",
+    "runtime_options": {
+      "gate_workers": 2,
+      "detail_workers": 2,
+      "prefetch": true,
+      "model_reuse": true,
+      "async_status": true,
+      "scoring_rim_evidence": true,
+      "camera_view_guard": true
+    },
+    "window_policy": {
+      "version": "2026-11-04",
+      "rescan_offsets_ms": [
+        -2000,
+        3500
+      ],
+      "plant_refresh_offsets_ms": [
+        -1400,
+        150
+      ],
+      "edge_policy": "truncate_to_available_range",
+      "overlap_policy": "union_for_local_rescans",
+      "decoder_pre_context_ms": 3000,
+      "stage_rules": {
+        "pose_hint": {
+          "offsets_ms": [
+            -2000,
+            3500
+          ],
+          "anchor": "pose_hint_time"
+        },
+        "rejected_candidate": {
+          "offsets_ms": [
+            -2000,
+            3500
+          ],
+          "anchor": "original_candidate_time"
+        },
+        "shot_gate": {
+          "offsets_ms": [
+            -1400,
+            900
+          ],
+          "anchor": "current_candidate_time"
+        },
+        "prior_shot_gate": {
+          "offsets_ms": [
+            -3200,
+            100
+          ],
+          "anchor": "late_candidate_time"
+        },
+        "plant_refresh": {
+          "offsets_ms": [
+            -1400,
+            150
+          ],
+          "anchor": "corrected_release_time"
+        },
+        "ground_contact": {
+          "offsets_ms": [
+            -1200,
+            -150
+          ],
+          "anchor": "corrected_release_time"
+        },
+        "detail_review": {
+          "offsets_ms": [
+            -4000,
+            3500
+          ],
+          "anchor": "corrected_release_time"
+        },
+        "outcome_extension": {
+          "offsets_ms": [
+            -4000,
+            5500
+          ],
+          "anchor": "corrected_release_time"
+        }
+      }
+    },
+    "foot_track_refresh_summary": {
+      "refreshed": 22,
+      "items": [
+        {
+          "status": "complete",
+          "release_ms": 6000,
+          "window_ms": [
+            4600,
+            6150
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.2512
+        },
+        {
+          "status": "complete",
+          "release_ms": 20900,
+          "window_ms": [
+            19500,
+            21050
+          ],
+          "samples": 21,
+          "stable_plant_found": true,
+          "seconds": 5.946
+        },
+        {
+          "status": "complete",
+          "release_ms": 57467,
+          "window_ms": [
+            56067,
+            57617
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 5.9723
+        },
+        {
+          "status": "complete",
+          "release_ms": 111267,
+          "window_ms": [
+            109867,
+            111417
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 3.729
+        },
+        {
+          "status": "complete",
+          "release_ms": 198333,
+          "window_ms": [
+            196933,
+            198483
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.1371
+        },
+        {
+          "status": "complete",
+          "release_ms": 206133,
+          "window_ms": [
+            204733,
+            206283
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.4358
+        },
+        {
+          "status": "complete",
+          "release_ms": 216500,
+          "window_ms": [
+            215100,
+            216650
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 6.0335
+        },
+        {
+          "status": "complete",
+          "release_ms": 243267,
+          "window_ms": [
+            241867,
+            243417
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.9243
+        },
+        {
+          "status": "complete",
+          "release_ms": 267833,
+          "window_ms": [
+            266433,
+            267983
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 6.2644
+        },
+        {
+          "status": "complete",
+          "release_ms": 292633,
+          "window_ms": [
+            291233,
+            292783
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.3026
+        },
+        {
+          "status": "complete",
+          "release_ms": 311333,
+          "window_ms": [
+            309933,
+            311483
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.0605
+        },
+        {
+          "status": "complete",
+          "release_ms": 320967,
+          "window_ms": [
+            319567,
+            321117
+          ],
+          "samples": 21,
+          "stable_plant_found": true,
+          "seconds": 5.8496
+        },
+        {
+          "status": "complete",
+          "release_ms": 357833,
+          "window_ms": [
+            356433,
+            357983
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 6.5096
+        },
+        {
+          "status": "complete",
+          "release_ms": 398333,
+          "window_ms": [
+            396933,
+            398483
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.7287
+        },
+        {
+          "status": "complete",
+          "release_ms": 406100,
+          "window_ms": [
+            404700,
+            406250
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 4.8699
+        },
+        {
+          "status": "complete",
+          "release_ms": 428933,
+          "window_ms": [
+            427533,
+            429083
+          ],
+          "samples": 23,
+          "stable_plant_found": true,
+          "seconds": 4.806
+        },
+        {
+          "status": "complete",
+          "release_ms": 451300,
+          "window_ms": [
+            449900,
+            451450
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 6.17
+        },
+        {
+          "status": "complete",
+          "release_ms": 511400,
+          "window_ms": [
+            510000,
+            511550
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 3.4639
+        },
+        {
+          "status": "complete",
+          "release_ms": 521033,
+          "window_ms": [
+            519633,
+            521183
+          ],
+          "samples": 21,
+          "stable_plant_found": true,
+          "seconds": 5.1969
+        },
+        {
+          "status": "complete",
+          "release_ms": 543267,
+          "window_ms": [
+            541867,
+            543417
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 3.8135
+        },
+        {
+          "status": "complete",
+          "release_ms": 567833,
+          "window_ms": [
+            566433,
+            567983
+          ],
+          "samples": 24,
+          "stable_plant_found": true,
+          "seconds": 5.43
+        },
+        {
+          "status": "complete",
+          "release_ms": 592533,
+          "window_ms": [
+            591133,
+            592683
+          ],
+          "samples": 24,
+          "stable_plant_found": false,
+          "seconds": 3.9199
+        }
+      ]
+    },
+    "shot_gate_summary": {
+      "calls": 36,
+      "rescans": 4,
+      "call_limit": 600,
+      "unreviewed_candidates": 0,
+      "usage": {
+        "input_tokens": 209242,
+        "output_tokens": 2672
+      },
+      "response_seconds": 109.28
+    },
+    "status_io": {
+      "cancel_queries": 232,
+      "progress_writes": 115,
+      "db_seconds": 510.77436860027956
+    }
+  },
+  "matches": [
+    {
+      "reference_number": 1,
+      "reference_time_ms": 6001,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 1,
+        "id": "376660ba-b08c-41a9-9a1f-a960bd2a9910",
+        "time_ms": 6000,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 21.0,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.77
+      },
+      "timing_error_ms": -1,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 2,
+      "reference_time_ms": 20921,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 2,
+        "id": "f5005375-b73d-400b-9c1f-fe6910e72798",
+        "time_ms": 20900,
+        "result": "made",
+        "court_x": 35.5,
+        "court_y": 15.7,
+        "zone_code": "mid_wing_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.78
+      },
+      "timing_error_ms": -21,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 3,
+      "reference_time_ms": 36991,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 3,
+        "id": "b2ff110e-b402-4863-b43d-61670c1b5d98",
+        "time_ms": 36933,
+        "result": "made",
+        "court_x": 19.0,
+        "court_y": 20.2,
+        "zone_code": "mid_center",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": -58,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 4,
+      "reference_time_ms": 57444,
+      "historical_outcome": "missed",
+      "new_shot": {
+        "number": 4,
+        "id": "f1676edf-5701-4671-8d3a-5f155f504594",
+        "time_ms": 57467,
+        "result": "missed",
+        "court_x": 35.0,
+        "court_y": 9.5,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": 23,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 5,
+      "reference_time_ms": 85650,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 5,
+        "id": "4d88868b-a1f0-4e08-8264-640f80c24fd4",
+        "time_ms": 85467,
+        "result": "made",
+        "court_x": 10.0,
+        "court_y": 13.0,
+        "zone_code": "mid_baseline_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.73
+      },
+      "timing_error_ms": -183,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 6,
+      "reference_time_ms": 111269,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 6,
+        "id": "3107033e-1306-4dbd-9e7c-29bd5b507b4b",
+        "time_ms": 111267,
+        "result": "made",
+        "court_x": 11.5,
+        "court_y": 19.5,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": -2,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 7,
+      "reference_time_ms": 128772,
+      "historical_outcome": "missed",
+      "new_shot": {
+        "number": 7,
+        "id": "8e0acbfe-442c-49cd-a99c-84a4b5e52bbd",
+        "time_ms": 128800,
+        "result": "missed",
+        "court_x": 21.0,
+        "court_y": 21.0,
+        "zone_code": "mid_center",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.78
+      },
+      "timing_error_ms": 28,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 8,
+      "reference_time_ms": 150293,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 8,
+        "id": "e46be678-450b-484b-a90b-f48ee98797f9",
+        "time_ms": 150933,
+        "result": "made",
+        "court_x": 37.0,
+        "court_y": 17.0,
+        "zone_code": "mid_wing_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "timing_error_ms": 640,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 9,
+      "reference_time_ms": 177948,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 9,
+        "id": "2846f711-53de-4045-8b92-723fa90e6eec",
+        "time_ms": 178000,
+        "result": "made",
+        "court_x": 10.9,
+        "court_y": 12.5,
+        "zone_code": "mid_baseline_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 52,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 10,
+      "reference_time_ms": 198252,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 10,
+        "id": "0930cb15-d025-4349-accb-c8e07f8fde63",
+        "time_ms": 198333,
+        "result": "made",
+        "court_x": 9.0,
+        "court_y": 24.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "step_back",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": 81,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 11,
+      "reference_time_ms": 206001,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 11,
+        "id": "a9358835-37b3-408c-9c18-f6379f190e2a",
+        "time_ms": 206133,
+        "result": "made",
+        "court_x": 12.1,
+        "court_y": 19.8,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": 132,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 12,
+      "reference_time_ms": 216370,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 12,
+        "id": "b91981d5-68a6-4130-aa9c-a3c1d842f3e3",
+        "time_ms": 216500,
+        "result": "made",
+        "court_x": 35.4,
+        "court_y": 15.8,
+        "zone_code": "mid_wing_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "timing_error_ms": 130,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 13,
+      "reference_time_ms": 243208,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 13,
+        "id": "ef837080-0137-4cfc-b022-b03770968ec2",
+        "time_ms": 243267,
+        "result": "made",
+        "court_x": 26.0,
+        "court_y": 22.5,
+        "zone_code": "mid_center",
+        "shot_type": "step_back",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.8
+      },
+      "timing_error_ms": 59,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 14,
+      "reference_time_ms": 267713,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 14,
+        "id": "ac8740dd-e8a4-4f9e-813a-18496b46c49d",
+        "time_ms": 267833,
+        "result": "made",
+        "court_x": 36.3,
+        "court_y": 12.9,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.75
+      },
+      "timing_error_ms": 120,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 15,
+      "reference_time_ms": 292568,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 15,
+        "id": "d8a1bfa6-21f0-4087-9d1e-2446e265c800",
+        "time_ms": 292633,
+        "result": "made",
+        "court_x": 10.0,
+        "court_y": 25.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.74
+      },
+      "timing_error_ms": 65,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 16,
+      "reference_time_ms": 311269,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 16,
+        "id": "45c4831c-71b5-49d2-8d0b-f3ba48219da8",
+        "time_ms": 311333,
+        "result": "made",
+        "court_x": 11.4,
+        "court_y": 19.7,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": 64,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 17,
+      "reference_time_ms": 320921,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 17,
+        "id": "39e668e8-2690-44a9-92e3-9e80bb1f247b",
+        "time_ms": 320967,
+        "result": "made",
+        "court_x": 35.0,
+        "court_y": 15.0,
+        "zone_code": "mid_wing_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.75
+      },
+      "timing_error_ms": 46,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 18,
+      "reference_time_ms": 336991,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 18,
+        "id": "85676f43-0c0d-4f17-a642-5fe66395c104",
+        "time_ms": 337067,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The final planted shoes are at the free-throw line, but their contact relative to the paint boundary is not clear enough to distinguish paint from midrange reliably.; The shooter dribbles forward toward the basket, gathers, plants and rises for a jumper. The visible steps are forward, with no clear retreating or lateral space-creating step. The rim crops show the ball descending through the rim and net.",
+        "position_confidence": 0.53
+      },
+      "timing_error_ms": 76,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 19,
+      "reference_time_ms": 357444,
+      "historical_outcome": "missed",
+      "new_shot": {
+        "number": 19,
+        "id": "d077a0d3-654e-4bbb-b03c-76f75160e34b",
+        "time_ms": 357833,
+        "result": "missed",
+        "court_x": 35.0,
+        "court_y": 10.0,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.71
+      },
+      "timing_error_ms": 389,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 20,
+      "reference_time_ms": 398252,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 20,
+        "id": "29242992-55c7-4905-92e5-9e6c0e896772",
+        "time_ms": 398333,
+        "result": "made",
+        "court_x": 8.0,
+        "court_y": 23.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "step_back",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 81,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 21,
+      "reference_time_ms": 406001,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 21,
+        "id": "a0e42f27-b710-4083-9b48-9466d369d919",
+        "time_ms": 406100,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 19.0,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 99,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 22,
+      "reference_time_ms": 428772,
+      "historical_outcome": "missed",
+      "new_shot": {
+        "number": 22,
+        "id": "76fe6175-fbd9-40d5-bfd4-4d0b072a1664",
+        "time_ms": 428933,
+        "result": "missed",
+        "court_x": 20.0,
+        "court_y": 21.0,
+        "zone_code": "mid_center",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.78
+      },
+      "timing_error_ms": 161,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 23,
+      "reference_time_ms": 450293,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 23,
+        "id": "25c16209-784a-4b85-a3be-daff5481486d",
+        "time_ms": 451300,
+        "result": "made",
+        "court_x": 35.5,
+        "court_y": 12.3,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.75
+      },
+      "timing_error_ms": 1007,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 24,
+      "reference_time_ms": 477948,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 24,
+        "id": "1d3c0f84-8138-4ca0-92a2-03c5cbfd67dc",
+        "time_ms": 478000,
+        "result": "made",
+        "court_x": 11.0,
+        "court_y": 12.5,
+        "zone_code": "mid_baseline_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": 52,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 25,
+      "reference_time_ms": 492568,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 25,
+        "id": "cdbb0b02-95b2-4b6c-873c-b00e15355933",
+        "time_ms": 492533,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 26.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.73
+      },
+      "timing_error_ms": -35,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 26,
+      "reference_time_ms": 511269,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 26,
+        "id": "2a73a7c2-d27a-47b4-a116-d219aad2c9b1",
+        "time_ms": 511400,
+        "result": "made",
+        "court_x": 11.4,
+        "court_y": 19.5,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "timing_error_ms": 131,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 27,
+      "reference_time_ms": 520921,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 27,
+        "id": "4a92d02a-0fc8-4721-8796-11e478b09dd7",
+        "time_ms": 521033,
+        "result": "made",
+        "court_x": 35.2,
+        "court_y": 16.0,
+        "zone_code": "mid_wing_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "timing_error_ms": 112,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 28,
+      "reference_time_ms": 543208,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 28,
+        "id": "f9f31a33-bb90-467a-8da4-52316bd689e7",
+        "time_ms": 543267,
+        "result": "made",
+        "court_x": 26.0,
+        "court_y": 22.4,
+        "zone_code": "mid_center",
+        "shot_type": "step_back",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.78
+      },
+      "timing_error_ms": 59,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 29,
+      "reference_time_ms": 567713,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 29,
+        "id": "cb415689-b812-4ef8-adff-7740f78a67c2",
+        "time_ms": 567833,
+        "result": "made",
+        "court_x": 36.0,
+        "court_y": 13.0,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.73
+      },
+      "timing_error_ms": 120,
+      "outcome_matches": true
+    },
+    {
+      "reference_number": 30,
+      "reference_time_ms": 592568,
+      "historical_outcome": "made",
+      "new_shot": {
+        "number": 30,
+        "id": "657d60ad-e46f-4f0c-b610-5a3608fd0b25",
+        "time_ms": 592533,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 26.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.75
+      },
+      "timing_error_ms": -35,
+      "outcome_matches": true
+    }
+  ],
+  "missing": [],
+  "extra": [],
+  "highlights": [
+    {
+      "original_number": 3,
+      "before": {
+        "number": 3,
+        "id": "20d8e39c-af67-42c4-950f-bbadb14811a7",
+        "time_ms": 36933,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The plant is near the free-throw line, just inside the lane and toward its court-left side. The approximate coordinates reflect the visible shoes and lane boundary rather than the airborne release box.; The player dribbles forward toward the hoop, gathers and plants for a jumper. No retreating or lateral space-creating step is visible. The rim crops show the ball descending through the net.",
+        "position_confidence": 0.69
+      },
+      "after": {
+        "number": 3,
+        "id": "b2ff110e-b402-4863-b43d-61670c1b5d98",
+        "time_ms": 36933,
+        "result": "made",
+        "court_x": 19.0,
+        "court_y": 20.2,
+        "zone_code": "mid_center",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      }
+    },
+    {
+      "original_number": 4,
+      "before": {
+        "number": 4,
+        "id": "27a714b2-e10b-476b-9030-eb527f21a2e6",
+        "time_ms": 57467,
+        "result": "missed",
+        "court_x": 35.2,
+        "court_y": 9.9,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      },
+      "after": {
+        "number": 4,
+        "id": "f1676edf-5701-4671-8d3a-5f155f504594",
+        "time_ms": 57467,
+        "result": "missed",
+        "court_x": 35.0,
+        "court_y": 9.5,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      }
+    },
+    {
+      "original_number": 14,
+      "before": {
+        "number": 14,
+        "id": "97d5ec63-9552-4a95-a6dc-181c7b5ca951",
+        "time_ms": 292633,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The plant is near the arc, but the overlapping shoes obscure the precise line contact and do not support a reliable two- versus three-point location.; The shooter dribbles, gathers and brings the feet together into a jumper. The visible adjustment does not clearly establish a retreating step or a deliberate lateral space-creating step. The rim crops show the ball descending through the net; the plant's exact arc contact warrants location review.",
+        "position_confidence": 0.38
+      },
+      "after": {
+        "number": 15,
+        "id": "d8a1bfa6-21f0-4087-9d1e-2446e265c800",
+        "time_ms": 292633,
+        "result": "made",
+        "court_x": 10.0,
+        "court_y": 25.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.74
+      }
+    },
+    {
+      "original_number": 17,
+      "before": {
+        "number": 17,
+        "id": "8cd0e267-e8d4-4bb2-880c-5fa8b4436b23",
+        "time_ms": 337067,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The grounded plant is near the free-throw line at the left side of the lane; the exact side of the line and shoe coordinates are approximate.; The shooter dribbles toward the hoop, plants near the free-throw line and rises for a jumper without a visible retreating or lateral space-creating step. The rim crops show the ball descending through the net.",
+        "position_confidence": 0.69
+      },
+      "after": {
+        "number": 18,
+        "id": "85676f43-0c0d-4f17-a642-5fe66395c104",
+        "time_ms": 337067,
+        "result": "made",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "dribble_pull_up",
+        "status": "needs_review",
+        "review_reason": "The final planted shoes are at the free-throw line, but their contact relative to the paint boundary is not clear enough to distinguish paint from midrange reliably.; The shooter dribbles forward toward the basket, gathers, plants and rises for a jumper. The visible steps are forward, with no clear retreating or lateral space-creating step. The rim crops show the ball descending through the rim and net.",
+        "position_confidence": 0.53
+      }
+    },
+    {
+      "original_number": 18,
+      "before": {
+        "number": 18,
+        "id": "946bb998-1c2f-4299-a749-4b7fe712bc6d",
+        "time_ms": 357833,
+        "result": "missed",
+        "court_x": 39.0,
+        "court_y": 9.0,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "after": {
+        "number": 19,
+        "id": "d077a0d3-654e-4bbb-b03c-76f75160e34b",
+        "time_ms": 357833,
+        "result": "missed",
+        "court_x": 35.0,
+        "court_y": 10.0,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.71
+      }
+    },
+    {
+      "original_number": 23,
+      "before": {
+        "number": 23,
+        "id": "7ea9b121-7b1e-4c4d-b340-fe5e6510fa5a",
+        "time_ms": 475600,
+        "result": "needs_review",
+        "court_x": null,
+        "court_y": null,
+        "zone_code": null,
+        "shot_type": "needs_review",
+        "status": "needs_review",
+        "review_reason": "AI가 슛 위치를 확정하지 못함; AI가 새 슛 동작을 확인하지 못했습니다. 리바운드·패스 등일 수 있으니 원본을 확인해 주세요.; 슛 종류를 확정하지 못함; 독립적인 슛 여부 판정에서 슛을 확인하지 못함. 기록은 확인 필요로 보존",
+        "position_confidence": null
+      },
+      "after": null
+    },
+    {
+      "original_number": 24,
+      "before": {
+        "number": 24,
+        "id": "6891694b-6501-49f3-b51e-f1d956ba1060",
+        "time_ms": 478000,
+        "result": "made",
+        "court_x": 11.0,
+        "court_y": 12.0,
+        "zone_code": "mid_baseline_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.7
+      },
+      "after": {
+        "number": 24,
+        "id": "1d3c0f84-8138-4ca0-92a2-03c5cbfd67dc",
+        "time_ms": 478000,
+        "result": "made",
+        "court_x": 11.0,
+        "court_y": 12.5,
+        "zone_code": "mid_baseline_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.76
+      }
+    },
+    {
+      "original_number": 26,
+      "before": {
+        "number": 26,
+        "id": "c2f23493-d2bf-4999-abbe-9103bb31dec5",
+        "time_ms": 511400,
+        "result": "made",
+        "court_x": 11.3,
+        "court_y": 19.5,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.8
+      },
+      "after": {
+        "number": 26,
+        "id": "2a73a7c2-d27a-47b4-a116-d219aad2c9b1",
+        "time_ms": 511400,
+        "result": "made",
+        "court_x": 11.4,
+        "court_y": 19.5,
+        "zone_code": "mid_wing_left",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      }
+    },
+    {
+      "original_number": 29,
+      "before": {
+        "number": 29,
+        "id": "58878848-482f-4a6a-a194-b450ea615b14",
+        "time_ms": 567833,
+        "result": "made",
+        "court_x": 39.0,
+        "court_y": 6.5,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "after": {
+        "number": 29,
+        "id": "cb415689-b812-4ef8-adff-7740f78a67c2",
+        "time_ms": 567833,
+        "result": "made",
+        "court_x": 36.0,
+        "court_y": 13.0,
+        "zone_code": "mid_baseline_right",
+        "shot_type": "dribble_pull_up",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.73
+      }
+    },
+    {
+      "original_number": 30,
+      "before": {
+        "number": 30,
+        "id": "7b4242ef-3c25-4a35-b35c-e7172f89ce07",
+        "time_ms": 592533,
+        "result": "made",
+        "court_x": 13.0,
+        "court_y": 26.5,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.72
+      },
+      "after": {
+        "number": 30,
+        "id": "657d60ad-e46f-4f0c-b610-5a3608fd0b25",
+        "time_ms": 592533,
+        "result": "made",
+        "court_x": 12.0,
+        "court_y": 26.0,
+        "zone_code": "three_wing_left",
+        "shot_type": "side_step",
+        "status": "auto",
+        "review_reason": null,
+        "position_confidence": 0.75
+      }
+    }
+  ],
+  "shots": [
+    {
+      "number": 1,
+      "id": "376660ba-b08c-41a9-9a1f-a960bd2a9910",
+      "time_ms": 6000,
+      "result": "made",
+      "court_x": 12.0,
+      "court_y": 21.0,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.77
+    },
+    {
+      "number": 2,
+      "id": "f5005375-b73d-400b-9c1f-fe6910e72798",
+      "time_ms": 20900,
+      "result": "made",
+      "court_x": 35.5,
+      "court_y": 15.7,
+      "zone_code": "mid_wing_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.78
+    },
+    {
+      "number": 3,
+      "id": "b2ff110e-b402-4863-b43d-61670c1b5d98",
+      "time_ms": 36933,
+      "result": "made",
+      "court_x": 19.0,
+      "court_y": 20.2,
+      "zone_code": "mid_center",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 4,
+      "id": "f1676edf-5701-4671-8d3a-5f155f504594",
+      "time_ms": 57467,
+      "result": "missed",
+      "court_x": 35.0,
+      "court_y": 9.5,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 5,
+      "id": "4d88868b-a1f0-4e08-8264-640f80c24fd4",
+      "time_ms": 85467,
+      "result": "made",
+      "court_x": 10.0,
+      "court_y": 13.0,
+      "zone_code": "mid_baseline_left",
+      "shot_type": "side_step",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.73
+    },
+    {
+      "number": 6,
+      "id": "3107033e-1306-4dbd-9e7c-29bd5b507b4b",
+      "time_ms": 111267,
+      "result": "made",
+      "court_x": 11.5,
+      "court_y": 19.5,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 7,
+      "id": "8e0acbfe-442c-49cd-a99c-84a4b5e52bbd",
+      "time_ms": 128800,
+      "result": "missed",
+      "court_x": 21.0,
+      "court_y": 21.0,
+      "zone_code": "mid_center",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.78
+    },
+    {
+      "number": 8,
+      "id": "e46be678-450b-484b-a90b-f48ee98797f9",
+      "time_ms": 150933,
+      "result": "made",
+      "court_x": 37.0,
+      "court_y": 17.0,
+      "zone_code": "mid_wing_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.7
+    },
+    {
+      "number": 9,
+      "id": "2846f711-53de-4045-8b92-723fa90e6eec",
+      "time_ms": 178000,
+      "result": "made",
+      "court_x": 10.9,
+      "court_y": 12.5,
+      "zone_code": "mid_baseline_left",
+      "shot_type": "side_step",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 10,
+      "id": "0930cb15-d025-4349-accb-c8e07f8fde63",
+      "time_ms": 198333,
+      "result": "made",
+      "court_x": 9.0,
+      "court_y": 24.0,
+      "zone_code": "three_wing_left",
+      "shot_type": "step_back",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 11,
+      "id": "a9358835-37b3-408c-9c18-f6379f190e2a",
+      "time_ms": 206133,
+      "result": "made",
+      "court_x": 12.1,
+      "court_y": 19.8,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 12,
+      "id": "b91981d5-68a6-4130-aa9c-a3c1d842f3e3",
+      "time_ms": 216500,
+      "result": "made",
+      "court_x": 35.4,
+      "court_y": 15.8,
+      "zone_code": "mid_wing_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.7
+    },
+    {
+      "number": 13,
+      "id": "ef837080-0137-4cfc-b022-b03770968ec2",
+      "time_ms": 243267,
+      "result": "made",
+      "court_x": 26.0,
+      "court_y": 22.5,
+      "zone_code": "mid_center",
+      "shot_type": "step_back",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.8
+    },
+    {
+      "number": 14,
+      "id": "ac8740dd-e8a4-4f9e-813a-18496b46c49d",
+      "time_ms": 267833,
+      "result": "made",
+      "court_x": 36.3,
+      "court_y": 12.9,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.75
+    },
+    {
+      "number": 15,
+      "id": "d8a1bfa6-21f0-4087-9d1e-2446e265c800",
+      "time_ms": 292633,
+      "result": "made",
+      "court_x": 10.0,
+      "court_y": 25.0,
+      "zone_code": "three_wing_left",
+      "shot_type": "side_step",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.74
+    },
+    {
+      "number": 16,
+      "id": "45c4831c-71b5-49d2-8d0b-f3ba48219da8",
+      "time_ms": 311333,
+      "result": "made",
+      "court_x": 11.4,
+      "court_y": 19.7,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 17,
+      "id": "39e668e8-2690-44a9-92e3-9e80bb1f247b",
+      "time_ms": 320967,
+      "result": "made",
+      "court_x": 35.0,
+      "court_y": 15.0,
+      "zone_code": "mid_wing_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.75
+    },
+    {
+      "number": 18,
+      "id": "85676f43-0c0d-4f17-a642-5fe66395c104",
+      "time_ms": 337067,
+      "result": "made",
+      "court_x": null,
+      "court_y": null,
+      "zone_code": null,
+      "shot_type": "dribble_pull_up",
+      "status": "needs_review",
+      "review_reason": "The final planted shoes are at the free-throw line, but their contact relative to the paint boundary is not clear enough to distinguish paint from midrange reliably.; The shooter dribbles forward toward the basket, gathers, plants and rises for a jumper. The visible steps are forward, with no clear retreating or lateral space-creating step. The rim crops show the ball descending through the rim and net.",
+      "position_confidence": 0.53
+    },
+    {
+      "number": 19,
+      "id": "d077a0d3-654e-4bbb-b03c-76f75160e34b",
+      "time_ms": 357833,
+      "result": "missed",
+      "court_x": 35.0,
+      "court_y": 10.0,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.71
+    },
+    {
+      "number": 20,
+      "id": "29242992-55c7-4905-92e5-9e6c0e896772",
+      "time_ms": 398333,
+      "result": "made",
+      "court_x": 8.0,
+      "court_y": 23.0,
+      "zone_code": "three_wing_left",
+      "shot_type": "step_back",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 21,
+      "id": "a0e42f27-b710-4083-9b48-9466d369d919",
+      "time_ms": 406100,
+      "result": "made",
+      "court_x": 12.0,
+      "court_y": 19.0,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 22,
+      "id": "76fe6175-fbd9-40d5-bfd4-4d0b072a1664",
+      "time_ms": 428933,
+      "result": "missed",
+      "court_x": 20.0,
+      "court_y": 21.0,
+      "zone_code": "mid_center",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.78
+    },
+    {
+      "number": 23,
+      "id": "25c16209-784a-4b85-a3be-daff5481486d",
+      "time_ms": 451300,
+      "result": "made",
+      "court_x": 35.5,
+      "court_y": 12.3,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.75
+    },
+    {
+      "number": 24,
+      "id": "1d3c0f84-8138-4ca0-92a2-03c5cbfd67dc",
+      "time_ms": 478000,
+      "result": "made",
+      "court_x": 11.0,
+      "court_y": 12.5,
+      "zone_code": "mid_baseline_left",
+      "shot_type": "side_step",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 25,
+      "id": "cdbb0b02-95b2-4b6c-873c-b00e15355933",
+      "time_ms": 492533,
+      "result": "made",
+      "court_x": 12.0,
+      "court_y": 26.0,
+      "zone_code": "three_wing_left",
+      "shot_type": "side_step",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.73
+    },
+    {
+      "number": 26,
+      "id": "2a73a7c2-d27a-47b4-a116-d219aad2c9b1",
+      "time_ms": 511400,
+      "result": "made",
+      "court_x": 11.4,
+      "court_y": 19.5,
+      "zone_code": "mid_wing_left",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.72
+    },
+    {
+      "number": 27,
+      "id": "4a92d02a-0fc8-4721-8796-11e478b09dd7",
+      "time_ms": 521033,
+      "result": "made",
+      "court_x": 35.2,
+      "court_y": 16.0,
+      "zone_code": "mid_wing_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.76
+    },
+    {
+      "number": 28,
+      "id": "f9f31a33-bb90-467a-8da4-52316bd689e7",
+      "time_ms": 543267,
+      "result": "made",
+      "court_x": 26.0,
+      "court_y": 22.4,
+      "zone_code": "mid_center",
+      "shot_type": "step_back",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.78
+    },
+    {
+      "number": 29,
+      "id": "cb415689-b812-4ef8-adff-7740f78a67c2",
+      "time_ms": 567833,
+      "result": "made",
+      "court_x": 36.0,
+      "court_y": 13.0,
+      "zone_code": "mid_baseline_right",
+      "shot_type": "dribble_pull_up",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.73
+    },
+    {
+      "number": 30,
+      "id": "657d60ad-e46f-4f0c-b610-5a3608fd0b25",
+      "time_ms": 592533,
+      "result": "made",
+      "court_x": 12.0,
+      "court_y": 26.0,
+      "zone_code": "three_wing_left",
+      "shot_type": "side_step",
+      "status": "auto",
+      "review_reason": null,
+      "position_confidence": 0.75
+    }
+  ],
+  "excluded": [
+    {
+      "time_ms": 475600,
+      "exclusion": {
+        "reason": "high_confidence_pre_shot_dribble",
+        "related_shot_time_ms": 478000
+      }
+    }
+  ],
+  "source_result_unchanged": true,
+  "source_shots_unchanged": true,
+  "label_limit": "Historical labels from repeated shots; not independent real-video accuracy",
+  "historical_outcome_comparison": {
+    "matched": 30,
+    "decided": 30,
+    "decided_agree": 30,
+    "decided_disagree": [],
+    "held": []
+  },
+  "worker_elapsed_seconds": 1019.488
+}

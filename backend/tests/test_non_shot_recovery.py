@@ -39,3 +39,28 @@ def test_real_or_ambiguous_second_attempts_are_preserved(change):
     result = examples()
     result["candidates"][1].update(change)
     assert len(separate_recovery_motion(result)["candidates"]) == 2
+
+
+def test_pre_shot_dribble_is_excluded_only_with_completed_nearby_same_player_shot():
+    before={'time_ms':475600,'scene_id':0,'candidate_source':'trajectory',
+            'candidate_sources':['trajectory','pose_shot_motion'],'foot_point_px':[900,800],'frame_size_px':[1920,1080],
+            'shot_gate':{'status':'complete','verdict':'not_shot','confidence':.99},'ai_review':{'is_shot':False}}
+    actual={'time_ms':478000,'scene_id':0,'foot_point_px':[950,790],
+            'shot_gate':{'verdict':'shot','confidence':.99},'ai_review':{'is_shot':True,'outcome':'made'}}
+    result=separate_recovery_motion({'candidates':[deepcopy(before),deepcopy(actual)]})
+    assert result['candidates'] == [actual]
+    assert result['excluded_non_shot_candidates'][0]['exclusion']['reason'] == 'high_confidence_pre_shot_dribble'
+    for change in ({'scene_id':1},{'foot_point_px':[50,50]}, {'time_ms':480000}, {'ai_review':{'is_shot':True,'outcome':'unclear'}}):
+        result=separate_recovery_motion({'candidates':[deepcopy(before),{**deepcopy(actual),**change}]})
+        assert len(result['candidates'])==2
+
+
+def test_moving_dribbler_requires_continuous_track_bridge_not_a_larger_distance_limit():
+    from app.services.non_shot_recovery import _same_player_motion
+    a={'foot_point_px':[788,856],'frame_size_px':[1920,1080], 'foot_track':[
+        {'time_ms':475733,'foot_point_px':[739,870]}, {'time_ms':475867,'foot_point_px':[713,889]}]}
+    b={'foot_point_px':[445,707],'foot_track':[
+        {'time_ms':476267,'foot_point_px':[652,867]}, {'time_ms':476400,'foot_point_px':[609,827]}]}
+    assert _same_player_motion(a,b)
+    assert not _same_player_motion({**a,'foot_track':[]},b)
+    assert not _same_player_motion({**a,'player_track_id':1},{**b,'player_track_id':2})

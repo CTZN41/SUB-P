@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     database_url: str | None = None
     upload_dir: str = "./uploads"
     work_dir: str = "./work"
-    max_video_minutes: int = 10
+    max_video_minutes: int = 40
     max_video_bytes: int = 5 * 1024 * 1024 * 1024
     candidate_runtime: Literal["torch", "openvino_cpu", "openvino_gpu"] = "torch"
     openai_api_key: str | None = None

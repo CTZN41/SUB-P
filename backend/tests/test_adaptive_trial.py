@@ -26,7 +26,7 @@ def test_unrepresented_pose_hint_rescans_missing_middle_shot() -> None:
             {"time_ms": 410467, "confidence": .63, "scene_id": 0},
         ],
     }
-    assert select_rescan_windows(base) == [(404000, 409333)]
+    assert select_rescan_windows(base) == [(403800, 411033)]
 
 
 def test_shot_gate_can_return_not_shot_without_changing_a_saved_candidate(monkeypatch) -> None:
@@ -91,7 +91,7 @@ def test_rejected_cues_are_grouped_for_high_fps_rescan(monkeypatch) -> None:
         trial, [1603533, 1614600, 1618200],
     )
     assert calls == [
-        (1601533, 1605533, 30),
+        (1601533, 1607033, 30),
         (1612600, 1620000, 30),
     ]
     assert result["candidates"] == []

@@ -10,10 +10,11 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable
 from app.analysis.foot_evidence import foot_proxy_is_clipped
+from app.analysis.candidate_windows import DECODER_CONTEXT_MS
 
 SAMPLE_FPS = 8.0
 DETAILED_PERSON_HEIGHT_RATIO = .25
-SEGMENT_CONTEXT_MS = 3000
+SEGMENT_CONTEXT_MS = DECODER_CONTEXT_MS
 HOOP_HOLD_MS = 1500
 SCENE_JUMP_RATIO = .18
 CANDIDATE_COOLDOWN_MS = 1000
@@ -106,21 +107,17 @@ def _detections(result: Any, names: dict[int, str]) -> dict[str, list[dict[str, 
 
 def _pose_for_person(result: Any, person: dict[str, Any] | None) -> dict[str, Any] | None:
     """Return the COCO keypoints belonging to the tracked player."""
-    if person is None or result.keypoints is None or not len(result.keypoints):
+    if person is None:
         return None
     person_center = center(person)
     best: tuple[float, dict[str, Any]] | None = None
-    for index, keypoints in enumerate(result.keypoints):
-        xy = keypoints.xy[0].tolist()
-        confidence = (
-            keypoints.conf[0].tolist()
-            if keypoints.conf is not None
-            else [1.0] * len(xy)
-        )
+    observations = result if isinstance(result, list) else _pose_observations(result)
+    for observation in observations:
+        xy, confidence = observation['xy'], observation['confidence']
         if len(xy) < 17:
             continue
-        if result.boxes is not None and index < len(result.boxes):
-            box = [float(value) for value in result.boxes.xyxy[index].tolist()]
+        if observation['box'] is not None:
+            box = observation['box']
             distance = math.dist(person_center, ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2))
         else:
             visible = [point for point, score in zip(xy, confidence) if score >= POSE_CONFIDENCE]
@@ -135,6 +132,18 @@ def _pose_for_person(result: Any, person: dict[str, Any] | None) -> dict[str, An
         if best is None or distance < best[0]:
             best = (distance, pose)
     return best[1] if best else None
+
+
+def _pose_observations(result):
+    observations = []
+    if result.keypoints is None:
+        return observations
+    for index, keypoints in enumerate(result.keypoints):
+        xy = keypoints.xy[0].tolist()
+        observations.append({'xy': xy,
+            'confidence': keypoints.conf[0].tolist() if keypoints.conf is not None else [1.0] * len(xy),
+            'box': result.boxes.xyxy[index].tolist() if result.boxes is not None and index < len(result.boxes) else None})
+    return observations
 
 
 def _raised_shooting_arm(record: dict[str, Any]) -> tuple[int, tuple[float, float], float] | None:
@@ -241,6 +250,7 @@ def merge_candidate_evidence(
     candidates: list[dict[str, Any]],
     frame_width: int,
     frame_height: int,
+    *, audit: list[dict] | None = None,
 ) -> list[dict[str, Any]]:
     """Merge late rim/pose evidence into a preceding release without hiding fast shots."""
     merged: list[dict[str, Any]] = []
@@ -318,6 +328,9 @@ def merge_candidate_evidence(
             consolidated.append(incoming)
             continue
         existing = consolidated[-1]
+        if existing.get('scene_id', 0) != incoming.get('scene_id', 0):
+            consolidated.append(incoming)
+            continue  # A rescan boundary must not join evidence across scenes.
         gap = incoming["time_ms"] - existing["time_ms"]
         sources = set(existing.get("candidate_sources", [existing.get("candidate_source", "trajectory")]))
         sources.update(incoming.get("candidate_sources", [incoming.get("candidate_source", "trajectory")]))
@@ -367,6 +380,10 @@ def merge_candidate_evidence(
             and candidate.get("calibration_shifted")
             and "rim_approach_backtrack" not in sources
         ):
+            if audit is not None:
+                audit.append({'time_ms': candidate['time_ms'], 'sources': sorted(sources),
+                              'reason': 'pose_only_without_trajectory_or_rim' if sources == {'pose_shot_motion'}
+                              else 'weak_candidate_in_changed_view'})
             continue
         preceding = filtered[-1] if filtered else None
         # A weak ball-only trace immediately after a strong pose-backed release
@@ -647,7 +664,20 @@ def attach_candidate_foot_tracks(
                 "time_ms": record["time_ms"],
                 "foot_point_px": [round(foot[0], 2), round(foot[1], 2)],
                 "foot_point_clipped": foot_proxy_is_clipped(foot, [frame_width, frame_height], person['xyxy']),
+                "person_box_px": person['xyxy'],
+                "foot_point_source": "person_box_lower_midpoint",
             })
+            pose = record.get('pose')
+            if pose:
+                ankles = [pose['xy'][i] for i in (15, 16)
+                          if len(pose['xy']) > i and len(pose['confidence']) > i
+                          and pose['confidence'][i] >= POSE_CONFIDENCE]
+                if ankles:
+                    # Ankle landmarks are a better crop/ground-motion reference,
+                    # still not a measured shoe/ground contact point.
+                    track[-1]['ankle_points_px'] = [p for p in ankles if len(p)==2
+                        and all(math.isfinite(float(v)) for v in p)
+                        and 0 <= p[0] < frame_width and 0 <= p[1] < frame_height]
         if track:
             candidate["foot_track"] = track
 
@@ -658,7 +688,7 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
                   progress: Callable[[int], None] | None = None, cancelled: Callable[[], bool] | None = None,
                   collect_motion_hints: bool = False,
                   inference_device: str = "cpu", prefetch_frames: bool = False,
-                  model_reuse=None) -> dict[str, Any]:
+                  model_reuse=None, foot_track_targets: list[dict] | None = None) -> dict[str, Any]:
     """Read source frames at fixed intervals and retain their original timestamps."""
     if not source.is_file() or not model_path.exists():
         raise Phase7Error("원본 영상 또는 탐지 모델 파일을 찾을 수 없습니다.")
@@ -673,6 +703,10 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
     pose_model = (model_reuse.get(pose_model_path, "pose", inference_device) if model_reuse else
                   YOLO(str(pose_model_path), task="pose") if pose_model_path and pose_model_path.exists() else None)
     timings["model_load"] += perf_counter() - started
+    cache_enabled = model_reuse is not None and model_reuse.max_prediction_bytes > 0
+    cache_source = model_reuse.source_identity(source) if cache_enabled else None
+    cache_model = model_reuse.model_identity(model_path) if cache_enabled else None
+    cache_pose = model_reuse.model_identity(pose_model_path) if cache_enabled and pose_model is not None else None
     if model_path.is_dir():
         import yaml
         metadata = yaml.safe_load((model_path / "metadata.yaml").read_text(encoding="utf-8"))
@@ -714,9 +748,15 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
         if first_frame and not cap.set(cv2.CAP_PROP_POS_FRAMES, first_frame):
             raise Phase7Error("분석 구간의 시작 프레임으로 이동하지 못했습니다.")
         next_frame_index = first_frame
+        # MP4 headers may count a few unavailable trailing frames. Limit this
+        # exception to the physical file end: at most 5 seconds AND 0.5% of the
+        # source. A damaged middle or a short requested range still fails.
+        end_tolerance = min(int(fps*5), math.floor(count*.005)) if last_frame == count else 0
+        early_end = None
+        last_valid_index = None
         if prefetch_frames:
             from app.analysis.frame_prefetch_trial import FramePrefetchTrial
-            frame_reader = FramePrefetchTrial(cap, first_frame, last_frame, step)
+            frame_reader = FramePrefetchTrial(cap, first_frame, last_frame, step, end_tolerance_frames=end_tolerance)
         for frame_index in range(first_frame, last_frame, step):
             started = perf_counter()
             should_cancel = cancelled and cancelled()
@@ -726,6 +766,9 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
             started = perf_counter()
             if frame_reader is not None:
                 item = frame_reader.next()
+                if item is None and frame_reader.early_end is not None:
+                    early_end = frame_reader.early_end
+                    break
                 if item is None or item[0] != frame_index:
                     raise Phase7Error("프레임 순서가 달라 시험을 중단했습니다.")
                 _, ok, frame, decode_seconds = item
@@ -734,22 +777,36 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
             else:
                 while next_frame_index < frame_index:
                     if not cap.grab():
+                        if last_valid_index is not None and 0 < count-next_frame_index <= end_tolerance:
+                            early_end = {'first_unread_frame': next_frame_index, 'last_sampled_frame': last_valid_index,
+                                         'reported_end_frame': count, 'reason': 'short_unreadable_video_tail'}
+                            break
                         raise Phase7Error("분석 구간의 영상 프레임을 건너뛰지 못했습니다.")
                     next_frame_index += 1
+                if early_end is not None:
+                    break
                 ok, frame = cap.read()
                 next_frame_index += 1
                 timings["decode"] += perf_counter() - started
             if not ok:
+                if last_valid_index is not None and 0 < count-frame_index <= end_tolerance:
+                    early_end = {'first_unread_frame': frame_index, 'last_sampled_frame': last_valid_index,
+                                 'reported_end_frame': count, 'reason': 'short_unreadable_video_tail'}
+                    break
                 issues["읽지 못한 프레임"] += 1
                 continue
+            last_valid_index = frame_index
             started = perf_counter()
-            result = model.predict(
-                frame, classes=wanted, conf=.12, imgsz=640,
-                device=inference_device, verbose=False
-            )[0]
+            frame_identity = model_reuse.frame_identity(cache_source, frame_index, frame) if cache_enabled else None
+            def detect(size):
+                compute = lambda: _detections(model.predict(frame, classes=wanted, conf=.12,
+                    imgsz=size, device=inference_device, verbose=False)[0], names)
+                return model_reuse.prediction(source, frame_index, frame, model_path, 'detect',
+                    inference_device, (size, .12, tuple(wanted)), compute,
+                    frame_identity=frame_identity, model_identity=cache_model) if model_reuse else compute()
+            groups = detect(640)
             timings["detector_640"] += perf_counter() - started
             inference_sizes[640] += 1
-            groups = _detections(result, names)
             person = choose(groups["person"], person_last, width, height, .18)
             if (
                 person is None
@@ -757,13 +814,9 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
                 < height * DETAILED_PERSON_HEIGHT_RATIO
             ):
                 started = perf_counter()
-                detailed = model.predict(
-                    frame, classes=wanted, conf=.12, imgsz=960,
-                    device=inference_device, verbose=False
-                )[0]
+                detailed_groups = detect(960)
                 timings["detector_960"] += perf_counter() - started
                 inference_sizes[960] += 1
-                detailed_groups = _detections(detailed, names)
                 detailed_person = choose(
                     detailed_groups["person"], person_last, width, height, .18
                 )
@@ -772,10 +825,11 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
             pose = None
             if pose_model is not None and person is not None:
                 started = perf_counter()
-                pose_result = pose_model.predict(
-                    frame, classes=[0], conf=.2, imgsz=640,
-                    device=inference_device, verbose=False,
-                )[0]
+                compute_pose = lambda: _pose_observations(pose_model.predict(frame, classes=[0], conf=.2,
+                    imgsz=640, device=inference_device, verbose=False)[0])
+                pose_result = model_reuse.prediction(source, frame_index, frame, pose_model_path, 'pose',
+                    inference_device, (640, .2, (0,)), compute_pose,
+                    frame_identity=frame_identity, model_identity=cache_pose) if model_reuse else compute_pose()
                 timings["pose"] += perf_counter() - started
                 pose = _pose_for_person(pose_result, person)
             time_ms = round(frame_index / fps * 1000)
@@ -842,15 +896,32 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
         release_candidates = trajectory_candidates(records, hoop_point, height)
         motion_candidates = pose_motion_candidates(records, hoop_point, height) if pose_model is not None else []
         rim_candidates = rim_approach_candidates(records, hoop_point, height)
+        rule_exclusions = []
         candidates = merge_candidate_evidence(
-            [*release_candidates, *motion_candidates, *rim_candidates], width, height
+            [*release_candidates, *motion_candidates, *rim_candidates], width, height,
+            audit=rule_exclusions if collect_motion_hints else None,
         )
         range_end_ms = round(last_frame / fps * 1000)
+        if early_end is not None:
+            range_end_ms = min(range_end_ms, round((early_end['last_sampled_frame']+1)/fps*1000))
+            issues['영상 끝의 짧은 미해독 구간 제외'] += 1
         candidates = [
             candidate for candidate in candidates
             if candidate_overlaps_range(candidate, start_ms, range_end_ms)
         ]
         attach_candidate_foot_tracks(candidates, records, width, height)
+        if foot_track_targets is not None:
+            # Local scans start a new scene counter; preserve the target's main
+            # scene ID and attach only the local records matching its release.
+            for target in foot_track_targets:
+                near = min(records, key=lambda item: abs(item['time_ms'] - target['time_ms']))
+                local = {**target, 'scene_id': near.get('scene_id', 0)}
+                attach_candidate_foot_tracks([local], records, width, height)
+                for key in ('foot_track', 'frame_size_px'):
+                    if key in local:
+                        target[key] = local[key]
+                target['foot_track'] = [s for s in target.get('foot_track', [])
+                                        if start_ms <= s['time_ms'] <= (end_ms or duration_ms)]
         if not candidates:
             issues["슛 후보 없음 — 직접 확인 필요"] += 1
         if rim_frames == 0:
@@ -867,6 +938,11 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
                 "hoop_point_px": hoop_point,
                 "candidates": candidates, "issues": dict(issues)}
         if collect_motion_hints:
+            result['candidate_rule_trace'] = {
+                'raw_trajectory_count': len(release_candidates), 'raw_pose_count': len(motion_candidates),
+                'raw_rim_count': len(rim_candidates), 'filtered': rule_exclusions,
+                'retained_times_ms': [c['time_ms'] for c in candidates],
+            }
             result["motion_hints"] = [
                 {"time_ms": item["time_ms"], "confidence": item["confidence"],
                  "scene_id": item["scene_id"]}
@@ -879,6 +955,9 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
             "seconds": {key: round(value, 4) for key, value in timings.items()},
             "total_seconds": round(perf_counter() - total_started, 4),
         }
+        if early_end is not None:
+            result['decode_warning'] = {**early_end, 'decoded_end_ms': range_end_ms,
+                                       'reported_duration_ms': duration_ms, 'frames_fabricated': False}
         return result
     finally:
         if frame_reader is not None:
@@ -886,13 +965,16 @@ def analyze_video(source: Path, model_path: Path, hoop_point: list[float], *, po
         cap.release()
 
 
-def save_result(work_path: Path, analysis_id: str, result: dict[str, Any]) -> Path:
+def save_result(work_path: Path, analysis_id: str, result: dict[str, Any], *, filename="phase7-candidates.json") -> Path:
     """Write atomically so canceled jobs cannot leave a partial result."""
     directory = (work_path / analysis_id).resolve()
     if work_path.resolve() not in directory.parents:
         raise Phase7Error("분석 결과 경로가 올바르지 않습니다.")
+    if Path(filename).name != filename or not filename.endswith('.json'):
+        raise Phase7Error('분석 결과 파일 이름이 올바르지 않습니다.')
     directory.mkdir(parents=True, exist_ok=True)
-    output, temporary = directory / "phase7-candidates.json", directory / "phase7-candidates.tmp"
+    output = directory / filename
+    temporary = output.with_suffix('.tmp')
     try:
         temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(temporary, output)

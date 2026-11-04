@@ -132,18 +132,6 @@ function markerTexture(result: string, selected: boolean, number: number) {
   return texture
 }
 
-function spreadOverlaps(shots: CourtShot[]) {
-  const counts = new Map<string, number>()
-  return shots.map((shot) => {
-    const key = `${Math.round(shot.court_x! * 4)},${Math.round(shot.court_y! * 4)}`
-    const index = counts.get(key) ?? 0
-    counts.set(key, index + 1)
-    const angle = index * 2.39996
-    const radius = index === 0 ? 0 : 2.8 * Math.sqrt(index)
-    return { shot, offsetX: radius * Math.cos(angle), offsetY: radius * Math.sin(angle) }
-  })
-}
-
 export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jerseyNumber, showPlayerName = true, onSelect, onOpenDetails, detailsOpen = false, typeLabels, zone, onZoneChange }: {
   shots: CourtShot[]
   numbers: Record<string, number>
@@ -338,7 +326,7 @@ export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jers
     }
     const located = shots.filter((shot) => shot.court_x != null && shot.court_y != null &&
       shot.court_x >= 0 && shot.court_x <= 50 && shot.court_y >= 0 && shot.court_y <= 47)
-    for (const { shot, offsetX, offsetY } of spreadOverlaps(located)) {
+    for (const shot of located) {
       const point = courtPosition(shot.court_x!, shot.court_y!)
       const selected = shot.id === selectedShot?.id
       const number = numbers[shot.id]
@@ -352,9 +340,9 @@ export function ShotCourt3D({ shots, numbers, selectedShot, selectedAction, jers
       )
       marker.rotation.x = -Math.PI / 2
       marker.position.set(
-        THREE.MathUtils.clamp(point.x + offsetX, -25 + size / 2, 25 - size / 2),
+        point.x,
         .17 + (zonesRef.current.get(shot.zone_code ?? '')?.position.y ?? 0),
-        THREE.MathUtils.clamp(point.z + offsetY, -23.5 + size / 2, 23.5 - size / 2),
+        point.z,
       )
       marker.userData.shotId = shot.id
       marker.userData.zoneCode = shot.zone_code

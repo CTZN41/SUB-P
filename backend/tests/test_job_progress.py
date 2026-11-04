@@ -2,6 +2,8 @@ from types import SimpleNamespace
 
 from app.models import AnalysisJob
 from app.services.job_progress import JobProgressReporter
+from sqlalchemy.exc import OperationalError, IntegrityError
+import pytest
 
 
 class Store:
@@ -60,3 +62,46 @@ def test_removed_job_stops_analysis_instead_of_continuing():
     store.job = None
     reporter = JobProgressReporter(store, "analysis", "job", "슛 후보 찾기")
     assert reporter.cancelled()
+
+
+def test_disconnected_status_read_recovers_with_a_fresh_session():
+    class Flaky(Store):
+        attempts=0
+        def get(self,*args):
+            self.attempts+=1
+            if self.attempts==1:
+                raise OperationalError('test',{},Exception('disconnected'),connection_invalidated=True)
+            return super().get(*args)
+    store=Flaky();delays=[]
+    reporter=JobProgressReporter(store,'analysis','job','stage',retry_sleep=delays.append)
+    assert not reporter.cancelled()
+    assert store.attempts==2 and reporter.stats['db_retries']==1 and delays==[.2]
+    store.job.cancel_requested=True
+    reporter.last_poll=float('-inf')
+    assert reporter.cancelled()
+
+
+def test_disconnected_progress_write_is_retried_but_constraints_are_not():
+    class Flaky(Store):
+        attempts=0
+        def commit(self):
+            self.attempts+=1
+            if self.attempts==1:
+                raise OperationalError('test',{},Exception('disconnected'),connection_invalidated=True)
+            super().commit()
+    store=Flaky();reporter=JobProgressReporter(store,'analysis','job','stage',retry_sleep=lambda _:None)
+    reporter.progress(100)
+    assert store.attempts==2 and store.commits==1 and reporter.stats['db_retries']==1
+    class Invalid(Store):
+        def commit(self):raise IntegrityError('test',{},Exception('constraint'))
+    reporter=JobProgressReporter(Invalid(),'analysis','job','stage',retry_sleep=lambda _:None)
+    with pytest.raises(IntegrityError):reporter.progress(100)
+    assert reporter.stats['db_retries']==0
+
+
+def test_persistent_connection_failure_is_bounded_and_not_silently_ignored():
+    class Broken(Store):
+        def get(self,*a):raise OperationalError('test',{},Exception('disconnected'),connection_invalidated=True)
+    delays=[];reporter=JobProgressReporter(Broken(),'analysis','job','stage',retry_sleep=delays.append)
+    with pytest.raises(OperationalError):reporter.cancelled()
+    assert delays==[.2,.4] and reporter.stats['db_retries']==2

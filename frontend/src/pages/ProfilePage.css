@@ -1,0 +1,19 @@
+.profile-header { margin-bottom: 32px; }
+.profile-header h1 { margin-bottom: 0; }
+.profile-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.profile-card { min-width: 0; padding: var(--card-padding); background: var(--card-background); border: var(--card-border); border-radius: var(--card-radius); }
+.profile-card h2 { font-size: 20px; margin: 0 0 24px; }
+.profile-nickname { margin-bottom: 20px; }
+.profile-details { margin: 0; display: grid; gap: 22px; }
+.profile-details div { min-width: 0; }
+.profile-details dt { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+.profile-details dd { margin: 0; overflow-wrap: anywhere; word-break: keep-all; font-weight: 600; }
+.profile-form { max-width: 520px; }
+.profile-help { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+.profile-form > .button { justify-self: start; }
+.profile-password-status { color: var(--success); margin: 0; font-weight: 700; }
+.profile-feedback { margin-top: 20px; }
+.profile-email-form { margin-top: 28px; padding-top: 24px; border-top: var(--card-border); }
+.profile-email-form h3 { margin: 0; font-size: 17px; }
+.profile-email-refresh { margin-top: 16px; }
+@media (max-width: 1100px) { .profile-columns { grid-template-columns: 1fr; } }

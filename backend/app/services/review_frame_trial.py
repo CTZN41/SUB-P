@@ -19,7 +19,10 @@ def dense_shoe_inputs(video, candidate):
     focus = candidate.get('foot_point_px')
     if not focus or not Path(video).is_file():
         return [], {'status': 'unavailable', 'offsets_ms': []}
-    offsets = [o for o in PLANT_OFFSETS_MS if release + o >= 0]
+    from app.services.ground_contact import plant_sample
+    reference = plant_sample(candidate)
+    reference_offsets = [reference['time_ms'] - release] if reference else []
+    offsets = sorted(set(o for o in [*PLANT_OFFSETS_MS, *reference_offsets] if release + o >= 0))
     frames = frame_map(video, [release + o for o in offsets])
     images, available, clipped = [], [], []
     for offset in offsets:
@@ -107,10 +110,12 @@ def frame_map(video: Path, times: list[float]):
 def fast_candidate_frame_inputs(video, time_ms, focus_point=None, *, include_outcome_extension=False):
     from app.services import openai_shot_review as r
     offsets = r.FRAME_OFFSETS_MS + (r.OUTCOME_EXTENSION_OFFSETS_MS if include_outcome_extension else ())
-    frames = frame_map(video, [max(0, time_ms + offset) for offset in offsets])
+    frames = frame_map(video, [time_ms + offset for offset in offsets if time_ms + offset >= 0])
     full, focus, encoded = [], [], {}
     for offset in offsets:
-        target = max(0, time_ms + offset)
+        target = time_ms + offset
+        if target < 0:
+            continue
         frame = frames.get(target)
         if frame is None:
             continue

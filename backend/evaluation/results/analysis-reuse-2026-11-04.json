@@ -1,0 +1,71 @@
+{
+  "analysis_id": "f6680389-9556-4c53-8d0d-d67e3c4ad655",
+  "source_seconds": 8,
+  "source_start_seconds": 16,
+  "runs": [
+    {
+      "enabled": false,
+      "stages": [
+        {
+          "stage": "base",
+          "seconds": 10.4989,
+          "sampled_frames": 165,
+          "foot_track_samples": 32
+        },
+        {
+          "stage": "rescan",
+          "seconds": 15.903,
+          "sampled_frames": 240,
+          "foot_track_samples": 58
+        },
+        {
+          "stage": "foot_refresh",
+          "seconds": 6.1147,
+          "sampled_frames": 90,
+          "foot_track_samples": 29
+        }
+      ],
+      "seconds": 32.5166,
+      "cache": {
+        "hits": 0,
+        "misses": 1450,
+        "evictions": 0
+      },
+      "cache_bytes": 0
+    },
+    {
+      "enabled": true,
+      "stages": [
+        {
+          "stage": "base",
+          "seconds": 9.8693,
+          "sampled_frames": 165,
+          "foot_track_samples": 32
+        },
+        {
+          "stage": "rescan",
+          "seconds": 8.534,
+          "sampled_frames": 240,
+          "foot_track_samples": 58
+        },
+        {
+          "stage": "foot_refresh",
+          "seconds": 0.3804,
+          "sampled_frames": 90,
+          "foot_track_samples": 29
+        }
+      ],
+      "seconds": 18.7837,
+      "cache": {
+        "hits": 630,
+        "misses": 820,
+        "evictions": 0
+      },
+      "cache_bytes": 246153
+    }
+  ],
+  "exact_output_match": true,
+  "speedup_percent": 42.23,
+  "paid_api_calls": 0,
+  "scope": "same native frames, full candidate and foot-track outputs; not independent accuracy"
+}

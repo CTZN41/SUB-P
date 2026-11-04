@@ -152,7 +152,8 @@ def test_layup_uses_earlier_plant_and_rechecks_hoop_location(tmp_path, monkeypat
     candidate = {
         "time_ms": 4500, "foot_point_px": [26, 5],
         "foot_track": [
-            {"time_ms": 4100, "foot_point_px": [31, 9]},
+            {"time_ms": 4000, "foot_point_px": [31, 9], "ankle_points_px": [[31, 9]], "person_box_px": [20, -90, 42, 10]},
+            {"time_ms": 4100, "foot_point_px": [31, 9], "ankle_points_px": [[31, 9]], "person_box_px": [20, -90, 42, 10]},
             {"time_ms": 4400, "foot_point_px": [27, 6]},
         ],
     }
@@ -181,7 +182,10 @@ def test_layup_unresolved_plant_conflict_does_not_save_wrong_zone(tmp_path, monk
     result = review_candidates_with_openai(
         tmp_path / "video.mp4",
         {"candidates": [{"time_ms": 4500, "foot_point_px": [26, 5],
-                         "foot_track": [{"time_ms": 4100, "foot_point_px": [31, 9]}]}]},
+                         "foot_track": [
+                             {"time_ms": 4000, "foot_point_px": [31, 9], "ankle_points_px": [[31, 9]], "person_box_px": [20, -90, 42, 10]},
+                             {"time_ms": 4100, "foot_point_px": [31, 9], "ankle_points_px": [[31, 9]], "person_box_px": [20, -90, 42, 10]},
+                         ]}]},
         Settings(_env_file=None, openai_api_key="test-key"),
         client=SimpleNamespace(responses=FakeResponses([first, retry])),
         calibration_transform=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],

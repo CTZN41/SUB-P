@@ -11,6 +11,7 @@ import { ShotReviewPage } from './pages/ShotReviewPage'
 import { MonthlyResultsPage } from './pages/MonthlyResultsPage'
 import { AuthGate, AuthProvider } from './auth/AuthProvider'
 import { AuthCallbackPage, AuthPage } from './pages/AuthPage'
+import { ProfilePage } from './pages/ProfilePage'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
       <Route element={<AuthGate><AppLayout /></AuthGate>}>
         <Route index element={<HomePage />} />
         <Route path="new" element={<NewAnalysisPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="court/:analysisId" element={<CourtCalibrationPage />} />
         <Route path="players/:analysisId" element={<PlayerSetupPage />} />
         <Route path="progress/:analysisId" element={<AnalysisProgressPage />} />

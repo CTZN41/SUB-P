@@ -12,7 +12,7 @@ from app.api.analyses import router
 from app.core.config import Settings
 from app.db.base import Base
 from app.models import Analysis, AnalysisStatus, Player
-from app.services.video_registration import video_codec
+from app.services.video_registration import video_codec, probe_video, RegistrationError
 
 
 def make_mp4(path: Path, *, fps: float = 30, frames: int = 12) -> bytes:
@@ -53,7 +53,6 @@ def valid_form(**overrides) -> dict[str, str]:
         "play_type": "solo",
         "contains_others": "false",
         "consent_confirmed": "false",
-        "ai_notice_confirmed": "true",
         "player_name": "",
     }
     form.update(overrides)
@@ -77,6 +76,7 @@ def test_valid_mp4_is_saved_with_metadata_and_default_player(tmp_path) -> None:
         assert payload["width"] == 320
         assert payload["height"] == 240
         assert payload["warnings_accepted"] is False
+        assert payload["ai_notice_confirmed"] is False
 
         accepted = client.post(f"/api/analyses/{payload['id']}/accept-warnings")
         assert accepted.status_code == 200
@@ -116,7 +116,6 @@ def test_multiplayer_name_is_saved_as_first_player(tmp_path) -> None:
     ("form", "expected_code"),
     [
         (valid_form(title="   "), "TITLE_INVALID"),
-        (valid_form(ai_notice_confirmed="false"), "AI_NOTICE_REQUIRED"),
         (
             valid_form(contains_others="true", consent_confirmed="false"),
             "CONSENT_REQUIRED",
@@ -181,3 +180,31 @@ def test_file_size_and_duration_limits_are_rejected(tmp_path) -> None:
     assert duration_response.json()["detail"]["code"] == "FILE_LIMIT"
     assert list(duration_settings.upload_path.iterdir()) == []
     duration_engine.dispose()
+
+
+@pytest.mark.parametrize('limit_minutes,frames,accepted', [
+    (40, 108000, True),  # 30 minutes at 60fps
+    (40, 144000, True),  # exactly 40 minutes
+    (40, 144001, False), # one frame beyond the limit
+    (25, 108000, False), # custom limit must also appear in the message
+])
+def test_long_video_metadata_boundary_and_configured_error(monkeypatch, limit_minutes, frames, accepted):
+    class Capture:
+        released = False
+        def isOpened(self): return True
+        def get(self, prop):
+            return {cv2.CAP_PROP_FPS: 60, cv2.CAP_PROP_FRAME_COUNT: frames,
+                    cv2.CAP_PROP_FRAME_WIDTH: 1920, cv2.CAP_PROP_FRAME_HEIGHT: 1080}[prop]
+        def set(self, *args): return True
+        def read(self): return False, None
+        def release(self): self.released = True
+    capture = Capture()
+    monkeypatch.setattr('app.services.video_registration.cv2.VideoCapture', lambda *a: capture)
+    if accepted:
+        assert probe_video(Path('metadata-boundary.mp4'), limit_minutes*60000).duration_ms == round(frames/60*1000)
+    else:
+        with pytest.raises(RegistrationError) as caught:
+            probe_video(Path('metadata-boundary.mp4'), limit_minutes*60000)
+        assert caught.value.status_code == 413
+        assert f'{limit_minutes}' in caught.value.message
+    assert capture.released
