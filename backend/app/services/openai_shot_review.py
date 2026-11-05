@@ -19,6 +19,7 @@ from app.services.court_zones import classify_zone, THREE_POINT_RADIUS_FT, HOOP_
 from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE, BOUNDARY_EVIDENCE_CONFIDENCE
 from app.analysis.foot_evidence import foot_proxy_is_clipped
 from app.analysis.candidate_windows import WINDOW_RULES
+from app.services.ground_contact import grounded_image_offsets
 from app.services.zone_boundary_policy import (normalize_zone_boundary, position_conflict_prompt,
     coordinate_confidence, DEFAULT_ZONE_BOUNDARY_CM)
 
@@ -440,8 +441,9 @@ def _camera_context_prompt(context: CameraContextDecision | None) -> str:
             "needs_review with null coordinates."
         )
     return (
-        "A fixed-scene camera analysis was already completed and must not be reinterpreted per shot. "
-        f"camera_view={context.camera_view}; "
+        "A fixed-scene camera analysis was already completed and must not be reinterpreted per shot. " +
+        (f"camera_view={context.camera_view}; " if context.camera_view != "unclear" else
+         "Use the calibrated ground axes below. A camera-side label is not supplied and must not be guessed. ") +
         f"court-left points toward screen {context.court_left_direction_on_screen}; "
         f"half-court points toward screen {context.toward_half_court_direction_on_screen}; "
         f"shared orientation: {context.orientation_summary}. "
@@ -872,7 +874,7 @@ def _needs_coordinate_review(decision, candidate, shoe_evidence, attempts) -> bo
             or any(a['task'] != 'shot_review' for a in attempts)):
         return False
     available = set(shoe_evidence.get('offsets_ms', [])) - set(shoe_evidence.get('image_edge_offsets_ms', []))
-    grounded = {t for t in decision.grounded_frame_offsets_ms if t in available and -1200 <= t < 0}
+    grounded = grounded_image_offsets(decision.grounded_frame_offsets_ms) & available
     return len(grounded) >= 2 and bool(decision.arc_evidence.strip())
 
 
@@ -902,7 +904,7 @@ def _needs_arc_review(decision) -> bool:
 
 def _grounded_arc_evidence(position) -> bool:
     return (position.visual_arc_relation in ('outside', 'inside', 'touching')
-            and len(set(t for t in position.grounded_frame_offsets_ms if -1000 <= t < 0)) >= 2
+            and len(grounded_image_offsets(position.grounded_frame_offsets_ms)) >= 2
             and bool(position.arc_evidence.strip()))
 
 
@@ -1062,12 +1064,58 @@ def _calibrated_court_left_direction(transform: list[list[float]] | None) -> Scr
     return ("upper_" if dy < 0 else "lower_") + ("left" if dx < 0 else "right")
 
 
+def _calibrated_camera_axes(transform: list[list[float]] | None, frame_size) -> dict | None:
+    """Describe both ground axes and labeled lane corners without guessing camera side."""
+    if transform is None or not isinstance(frame_size, (list, tuple)) or len(frame_size) != 2:
+        return None
+    try:
+        width, height = map(float, frame_size)
+        inverse = np.linalg.inv(np.asarray(transform, dtype=np.float64))
+        court = np.asarray([[17, 0, 1], [33, 0, 1], [33, 19, 1], [17, 19, 1],
+                            [20, 19, 1], [30, 19, 1], [25, 10, 1], [25, 19, 1]], dtype=float)
+        pixels = court @ inverse.T
+        if (not np.isfinite([width, height]).all() or width <= 0 or height <= 0 or not np.isfinite(pixels).all()
+                or not (np.all(pixels[:, 2] > 1e-8) or np.all(pixels[:, 2] < -1e-8))):
+            return None
+        pixels = pixels[:, :2] / pixels[:, 2:]
+        left = pixels[4] - pixels[5]
+        forward = pixels[7] - pixels[6]
+        lengths = np.linalg.norm(left) * np.linalg.norm(forward)
+        cross = left[0] * forward[1] - left[1] * forward[0]
+        if lengths < 1 or abs(cross) / lengths < .1:
+            return None
+    except (TypeError, ValueError, IndexError, np.linalg.LinAlgError):
+        return None
+
+    def direction(vector):
+        dx, dy = vector
+        if abs(dx) >= 2.5 * abs(dy):
+            return "left" if dx < 0 else "right"
+        if abs(dy) >= 2.5 * abs(dx):
+            return "up" if dy < 0 else "down"
+        return ("upper_" if dy < 0 else "lower_") + ("left" if dx < 0 else "right")
+
+    labels = ("left baseline (17,0)", "right baseline (33,0)",
+              "right free-throw (33,19)", "left free-throw (17,19)")
+    corners = "; ".join(f"{label}=({100*p[0]/width:.1f}%,{100*p[1]/height:.1f}%)"
+                        for label, p in zip(labels, pixels[:4]))
+    return {
+        "court_left_direction_on_screen": direction(left),
+        "toward_half_court_direction_on_screen": direction(forward),
+        "orientation_summary": (
+            "Confirmed lane corners in full-frame percentages from top-left: " + corners + ". "
+            "Use these labeled edges to locate the grounded shoes. Camera-side guesses cannot reverse them."
+        ),
+    }
+
+
 def _build_shared_camera_contexts(
     client,
     video_path: Path,
     candidates: list[dict],
     settings: Settings,
     calibration_left_direction: ScreenDirection | None = None,
+    calibration_transform: list[list[float]] | None = None,
 ) -> tuple[dict[int, CameraContextDecision | None], list[dict], int]:
     """Resolve one reusable orientation for each fixed scene before shot review."""
     groups: dict[int, list[dict]] = {}
@@ -1079,6 +1127,7 @@ def _build_shared_camera_contexts(
     for scene_id, scene_candidates in groups.items():
         attempts: list[dict] = []
         try:
+            axes = _calibrated_camera_axes(calibration_transform, scene_candidates[0].get('frame_size_px'))
             images = camera_context_frame_inputs(video_path, scene_candidates)
             primary, usage = _review_camera_context_once(
                 client, settings.openai_vision_model, images,
@@ -1095,7 +1144,16 @@ def _build_shared_camera_contexts(
                 calibration_left_direction
                 and chosen.court_left_direction_on_screen != calibration_left_direction
             )
-            if calibration_left_direction:
+            if axes:
+                conflict = conflict or chosen.toward_half_court_direction_on_screen != axes['toward_half_court_direction_on_screen']
+                chosen.court_left_direction_on_screen = axes['court_left_direction_on_screen']
+                chosen.toward_half_court_direction_on_screen = axes['toward_half_court_direction_on_screen']
+                chosen.orientation_summary = axes['orientation_summary']
+                # An image-only camera-side guess can contradict the confirmed
+                # lane axes. Keep that guess in diagnostics, never in the prompt.
+                chosen.camera_view = 'unclear'
+                chosen.reason = 'Use confirmed lane axes instead of an image-only camera-side label.'
+            elif calibration_left_direction:
                 chosen.court_left_direction_on_screen = calibration_left_direction
                 if conflict:
                     chosen.orientation_summary = (
@@ -1105,7 +1163,8 @@ def _build_shared_camera_contexts(
                     )[:500]
             decisions = {"primary": raw_decision}
             final_model = settings.openai_vision_model
-            resolved = not _camera_context_is_unclear(chosen)
+            resolved = (chosen.confidence >= CAMERA_CONTEXT_CONFIDENCE if axes else
+                        not _camera_context_is_unclear(chosen))
             contexts[scene_id] = chosen if resolved else None
             records.append({
                 "scene_id": scene_id,
@@ -1114,6 +1173,7 @@ def _build_shared_camera_contexts(
                 "decision": chosen.model_dump(),
                 "calibration_direction": calibration_left_direction,
                 "orientation_conflict": conflict,
+                "calibrated_axes": axes,
                 "attempts": attempts,
                 "model_decisions": decisions,
             })
@@ -1214,7 +1274,7 @@ def review_candidates_with_openai(
     calibration_left_direction = _calibrated_court_left_direction(calibration_transform)
     if camera_view_calibrations is None:
         camera_contexts, camera_context_records, escalated = _build_shared_camera_contexts(
-            client, video_path, candidates, settings, calibration_left_direction,
+            client, video_path, candidates, settings, calibration_left_direction, calibration_transform,
         )
     else:
         camera_contexts, camera_context_records, escalated = {}, [], 0
@@ -1222,7 +1282,7 @@ def review_candidates_with_openai(
             transform = camera_view_calibrations.get(scene)
             contexts, records, count = _build_shared_camera_contexts(
                 client, video_path, [c for c in candidates if int(c.get("scene_id",0))==scene],
-                settings, _calibrated_court_left_direction(transform),
+                settings, _calibrated_court_left_direction(transform), transform,
             )
             camera_contexts.update(contexts)
             camera_context_records.extend(records)
@@ -1450,11 +1510,17 @@ def review_candidates_with_openai(
             if _outcome_needs_dedicated_review(primary) or ((require_outcome_evidence or scoring_rim_evidence) and needs_direct_outcome_check(primary)):
                 outcome_path_used = True
                 try:
+                    outcome_options = {}
+                    if prepare_outcome is dense_rim_inputs and primary.shot_type in ('layup', 'dunk'):
+                        outcome_options = {'include_early': True,
+                            'scene_start_ms': candidate.get('scene_start_ms', 0),
+                            'scene_end_ms': candidate.get('scene_end_ms')}
                     outcome_images = timed("prepare_outcome_images", prepare_outcome,
                         video_path,
                         int(candidate["time_ms"]),
                         candidate.get("tracked_hoop_px"),
                         candidate.get("evidence_end_ms"),
+                        **outcome_options,
                     )
                 except InsufficientOutcomeEvidenceError:
                     outcome_images = []
@@ -1536,7 +1602,7 @@ def review_candidates_with_openai(
                 model_decisions['pre_contact_policy'] = dict(final_review)
                 try:
                     contact_result, usage = timed('sole_contact_pixels', review_contact_pixels,
-                        client, settings.openai_vision_model, video_path, projection_candidate)
+                        client, settings.openai_vision_model, video_path, projection_candidate, final_review.get('shot_type'))
                     if contact_result.get('api_called'):
                         attempts.append({'model': settings.openai_vision_model, 'task': 'sole_contact_pixels',
                                          'effort': 'low', 'usage': usage})

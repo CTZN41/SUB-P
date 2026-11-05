@@ -22,6 +22,8 @@ function legacyLaneOrder(points: number[][]): number[] | null {
 
 type Analysis = { id: string; title: string; duration_ms: number; width: number; height: number; play_type: string }
 type SavedView = { id: string; frame_time_ms: number; image_points: number[][]; court_points: number[][]; hoop_point: number[]; confirmed_at: string | null }
+type LandmarkQuality = { point_index: number; usable: boolean; reason: string }
+type CalibrationQuality = { landmarks: LandmarkQuality[]; usable_count: number; required_count: number }
 
 export function CourtCalibrationPage() {
   const { analysisId = '' } = useParams()
@@ -40,6 +42,7 @@ export function CourtCalibrationPage() {
   const [confirmed, setConfirmed] = useState(false)
   const [guideMessage, setGuideMessage] = useState('')
   const [views, setViews] = useState<SavedView[]>([])
+  const [quality, setQuality] = useState<{ key: string; report?: CalibrationQuality; error?: string } | null>(null)
   const frameUrl = useMemo(() => `${API_BASE}/analyses/${analysisId}/calibration/frame?time_ms=${timeMs}`, [analysisId, timeMs])
   const frameReady = loadedFrameUrl === frameUrl
   const laneTemplate = matchesTemplate(courtPoints, INITIAL_COURT_POINTS)
@@ -48,6 +51,14 @@ export function CourtCalibrationPage() {
   const previousLaneOrder = legacyLaneOrder(courtPoints)
   const allPointsPlaced = placedPoints.every(Boolean)
   const missingPointNames = [...pointNames, '림 중심'].filter((_, index) => !placedPoints[index])
+  const qualityRequest = useMemo(() => analysis && allPointsPlaced && supportedTemplate ? JSON.stringify({
+    frame_time_ms: timeMs,
+    image_points: points.map(([x, y]) => [x * analysis.width / 100, y * analysis.height / 100]),
+    court_points: courtPoints,
+    hoop_point: [hoop[0] * analysis.width / 100, hoop[1] * analysis.height / 100],
+  }) : null, [analysis, allPointsPlaced, supportedTemplate, timeMs, points, courtPoints, hoop])
+  const qualityKey = `${analysisId}:${qualityRequest}`
+  const currentQuality = qualityRequest && quality?.key === qualityKey ? quality : null
 
   function resetCalibration() {
     setPoints(INITIAL_POINTS)
@@ -89,6 +100,26 @@ export function CourtCalibrationPage() {
     image.src = frameUrl
     return () => { image.onload = null; image.onerror = null }
   }, [frameUrl])
+
+  useEffect(() => {
+    if (!qualityRequest || !frameReady || draggingPoint !== null) return
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`${API_BASE}/analyses/${analysisId}/calibration/quality`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: qualityRequest, signal: controller.signal,
+        })
+        const payload = await response.json()
+        if (!response.ok) throw new Error(payload.detail?.message ?? '기준점 품질을 확인하지 못했습니다.')
+        if (!controller.signal.aborted) setQuality({ key: qualityKey, report: payload })
+      } catch (caught) {
+        if (!controller.signal.aborted) setQuality({ key: qualityKey,
+          error: caught instanceof Error ? caught.message : '기준점 품질을 확인하지 못했습니다.' })
+      }
+    }, 350)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [analysisId, qualityRequest, qualityKey, frameReady, draggingPoint])
 
   function movePoint(index: number, event: React.PointerEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -167,6 +198,14 @@ export function CourtCalibrationPage() {
       </div>
       {!supportedTemplate && <p className="inline-warning"><span className="message-line">{previousLaneOrder ? '기존 기록의 기준은 현재 페인트존 경계와 달라 화면 점을 그대로 사용하지 않습니다.' : '이 기록의 가상 좌표는 현재 코트 경계 기준과 다릅니다.'}</span><span className="message-line">‘재설정’을 누른 뒤 페인트존 네 모서리와 림 중심을 다시 지정해 주세요.</span><span className="message-line">기존 분석 결과는 자동으로 바뀌지 않습니다.</span></p>}
       {guideMessage && <p className="inline-warning">{guideMessage}</p>}
+      {currentQuality?.report && currentQuality.report.usable_count < 4 && <div className="inline-warning" role="status">
+        <strong>주변 영상 특징을 비교할 수 있는 기준점 {currentQuality.report.usable_count}/4개</strong>
+        <ul className="message-list">{currentQuality.report.landmarks.filter(point => !point.usable).map(point => <li key={point.point_index}>
+          {point.point_index}번 · {pointNames[point.point_index - 1]} — {point.reason === 'image_edge' ? '화면 끝에 가까워 주변 선을 비교하기 어렵습니다.' : '주변 선이나 바닥 특징이 흐려 비교하기 어렵습니다.'}
+        </li>)}</ul>
+        <span className="message-line">같은 교차점이 선명하고 화면 끝에서 떨어져 보이는 장면을 선택해 주세요. 구도 검증에는 최소 {currentQuality.report.required_count}개가 필요합니다.</span>
+      </div>}
+      {currentQuality?.error && <p className="inline-warning" role="status">{currentQuality.error}</p>}
       {!allPointsPlaced && <div className="inline-warning" role="status"><strong>아직 확인하지 않은 기준점</strong><ul className="message-list">{missingPointNames.map(name => <li key={name}>{name}</li>)}</ul><span className="message-line">해당 점을 실제 위치로 옮기거나, 이미 맞다면 한 번 눌러 주세요.</span></div>}
       <label className="check-row"><input type="checkbox" checked={confirmed} disabled={!allPointsPlaced || !supportedTemplate} onChange={(event) => setConfirmed(event.target.checked)} /><span>영상에 반코트와 골대가 보이고 기준점을 실제 위치에 맞춘 것을 확인했습니다.</span></label>
       {allPointsPlaced && supportedTemplate && !confirmed && <p role="status">위 확인란을 체크하면 저장할 수 있습니다.</p>}

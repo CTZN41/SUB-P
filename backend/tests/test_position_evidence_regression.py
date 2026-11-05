@@ -115,6 +115,74 @@ def test_geometry_prompt_supplies_actual_numeric_boundary():
     assert '23.75' in prompt and 'FIRST report visual_arc_relation' in prompt
 
 
+def test_crop_padding_at_image_border_is_not_marked_as_a_clipped_shoe(tmp_path):
+    video = tmp_path / 'visible-shoes.mp4'
+    writer = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*'mp4v'), 20, (640, 360))
+    for _ in range(60):
+        writer.write(np.full((360, 640, 3), 100, dtype=np.uint8))
+    writer.release()
+    _, evidence = dense_shoe_inputs(video, {'time_ms': 1500, 'foot_point_px': [320, 335]})
+    assert evidence['crop_padding_edge_offsets_ms'] == list(PLANT_OFFSETS_MS)
+    assert evidence['image_edge_offsets_ms'] == []
+
+
+@pytest.mark.parametrize('offsets,expected', [
+    ([-1067, -1000], True), ([-1200, -1000], True),
+    ([-1201, -1000], False), ([-1000, 0], False), ([-1000, -1000], False),
+])
+def test_grounded_arc_uses_the_same_reference_window_as_shoe_input(offsets, expected):
+    value = review.VisualArcDecision(visual_arc_relation='outside', confidence=.96,
+        grounded_frame_offsets_ms=offsets, arc_evidence='Two visible planted shoes behind arc')
+    assert review._grounded_arc_evidence(value) is expected
+
+
+def test_t3_reference_frame_is_accepted_through_the_normal_review_pipeline(monkeypatch):
+    from app.core.config import Settings
+    from app.services import review_frame_trial as frames
+    monkeypatch.setattr(review, '_build_shared_camera_contexts', lambda *a: ({0: camera_context()}, [], 0))
+    monkeypatch.setattr(review, 'candidate_frame_inputs', lambda *a: [])
+    monkeypatch.setattr(frames, 'dense_shoe_inputs', lambda *a: (
+        [{'type': 'input_image', 'image_url': 'shoes'}],
+        {'status': 'available', 'offsets_ms': [-1067, -1000], 'image_edge_offsets_ms': []}))
+    monkeypatch.setattr(review, '_review_once', lambda *a, **k: (
+        decision(court_zone='three_wing_left', court_x=11, court_y=26, position_confidence=.75), {}))
+    visual = review.VisualArcDecision(visual_arc_relation='outside', confidence=.96,
+        grounded_frame_offsets_ms=[-1067, -1000], arc_evidence='Visible soles on the far side of arc')
+    monkeypatch.setattr(review, '_review_visual_arc_once', lambda *a: (visual, {}))
+    result = review.review_candidates_with_openai(Path('unused'), {'candidates': [{'time_ms': 4400}]},
+        Settings(_env_file=None, openai_api_key='test', openai_vision_fallback_model=None), client=object())
+    value = result['candidates'][0]['ai_review']
+    assert value['court_x'] == 11 and value['court_zone'] == 'three_wing_left'
+    assert [a['task'] for a in value['attempts']] == ['shot_review', 'visual_arc']
+
+
+def test_floor_quality_distinguishes_missing_patches_from_conflicting_pixels():
+    frame = np.random.default_rng(8).integers(0, 255, (360, 640, 3), dtype=np.uint8)
+    frame[200:300, 250:350] = 100
+    points = [[100, 250], [300, 250], [540, 340], [540, 250]]
+    quality = views.floor_landmark_quality(frame, points)
+    assert [p['reason'] for p in quality] == ['usable', 'low_texture', 'image_edge', 'usable']
+    with pytest.raises(views.FloorAlignmentError) as caught:
+        views.validate_floor_alignment(frame, frame, np.eye(3), points)
+    assert caught.value.evidence['reason'] == 'insufficient_usable_landmarks'
+    wrong = np.zeros_like(frame)
+    with pytest.raises(views.FloorAlignmentError) as caught:
+        views.validate_floor_alignment(frame, wrong, np.eye(3), [[100, 200], [540, 200], [540, 300], [100, 300]])
+    assert caught.value.evidence['reason'] == 'floor_landmark_mismatch'
+
+
+def test_temporal_failure_keeps_the_point_support_counts(monkeypatch):
+    frame = np.random.default_rng(8).integers(0, 255, (360, 640, 3), dtype=np.uint8)
+    frame[200:300, 250:350] = 100
+    points = [[100, 250], [300, 250], [540, 340], [540, 250]]
+    monkeypatch.setattr(views, 'align_view', lambda *a: (np.eye(3), {}))
+    frames = {t: frame for t in (3800, 4400, 5600, 6200, 9400, 10600)}
+    with pytest.raises(views.FloorAlignmentError) as caught:
+        views.temporal_floor_alignment(Frames(frames), frame, frame, np.eye(3), points, 5000, 10000)
+    assert caught.value.evidence['reason'] == 'insufficient_usable_landmarks'
+    assert caught.value.evidence['support_counts'] == [3, 0, 0, 3]
+
+
 def test_retimed_release_does_not_reuse_old_frame_pixels_as_release_feet():
     candidate = {'time_ms': 1500, 'foot_point_px': [25, 30],
                  'foot_point_time_ms': 1000, 'foot_track': [

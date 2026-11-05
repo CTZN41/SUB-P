@@ -91,7 +91,7 @@ def test_other_camera_does_not_receive_original_numeric_projection(monkeypatch):
         court_left_direction_on_screen="left",toward_half_court_direction_on_screen="down",
         orientation_summary="fixed",visible_landmarks=["paint"],reason="test")
     directions=[]
-    def contexts(client,video,candidates,settings,direction):
+    def contexts(client,video,candidates,settings,direction,transform=None):
         directions.append(direction)
         return {int(candidates[0]["scene_id"]):context},[],0
     monkeypatch.setattr(r,"_build_shared_camera_contexts",contexts)
@@ -127,6 +127,48 @@ def test_initial_gate_parallel_preserves_call_budget(monkeypatch):
     assert [c["time_ms"] for c in result["candidates"]]==[1300,4000]
     assert result["shot_gate_summary"]["calls"]==1
     assert result["shot_gate_summary"]["unreviewed_candidates"]==1
+
+
+@pytest.mark.parametrize('workers', [1, 2])
+@pytest.mark.parametrize('limit,expected_time,calls', [(1, 56400, 1), (2, 56800, 2)])
+def test_missing_release_time_gets_one_budgeted_dense_timing_check(monkeypatch, workers, limit, expected_time, calls):
+    initial = {'status': 'complete', 'verdict': 'shot', 'confidence': .99, 'release_offset_ms': None,
+               'window': {'purpose': 'shot_gate'}, 'usage': {'input_tokens': 10, 'output_tokens': 1}}
+    monkeypatch.setattr('app.services.candidate_enrichment.review_shot_existence', lambda *a, **k: deepcopy(initial))
+    seen = []
+    def timing(*a, **k):
+        seen.append(k)
+        return {'status': 'complete', 'verdict': 'shot', 'confidence': .99, 'release_offset_ms': 400,
+                'window': {'used_offsets_ms': [200, 300, 400, 500]}, 'usage': {'input_tokens': 20, 'output_tokens': 2}}
+    monkeypatch.setattr('app.services.candidate_enrichment.review_release_timing', timing)
+    source = {'duration_ms': 75000, 'source_fps': 30, 'candidates': [{'time_ms': 56400, 'scene_start_ms': 55000, 'scene_end_ms': 59000}]}
+    result = enrich_candidates(Path('unused'), Path('unused'), Path('unused'), [1, 1], source,
+        Settings(_env_file=None, openai_api_key='test', openai_max_shot_gate_reviews=limit), gate_workers=workers)
+    assert result['candidates'][0]['time_ms'] == expected_time
+    assert result['shot_gate_summary']['calls'] == calls
+    assert result['shot_gate_summary']['usage']['input_tokens'] == (30 if calls == 2 else 10)
+    assert len(seen) == calls-1
+    if seen:
+        assert seen[0]['scene_start_ms'] == 55000 and seen[0]['scene_end_ms'] == 59000
+
+
+@pytest.mark.parametrize('failure', ['unclear', 'low_confidence', 'not_supplied', 'failed'])
+def test_timing_recheck_cannot_discard_the_confirmed_shot_or_invent_a_timestamp(monkeypatch, failure):
+    initial = {'status': 'complete', 'verdict': 'shot', 'confidence': .99, 'release_offset_ms': None,
+               'window': {'purpose': 'shot_gate'}}
+    monkeypatch.setattr('app.services.candidate_enrichment.review_shot_existence', lambda *a, **k: deepcopy(initial))
+    def timing(*a, **k):
+        if failure == 'failed': raise TimeoutError('test')
+        return {'status': 'complete', 'verdict': 'unclear' if failure == 'unclear' else 'shot',
+                'confidence': .89 if failure == 'low_confidence' else .99, 'release_offset_ms': 400,
+                'window': {'used_offsets_ms': [200, 300] if failure == 'not_supplied' else [200, 300, 400]}}
+    monkeypatch.setattr('app.services.candidate_enrichment.review_release_timing', timing)
+    source = {'duration_ms': 75000, 'source_fps': 30, 'candidates': [{'time_ms': 56400}]}
+    result = enrich_candidates(Path('unused'), Path('unused'), Path('unused'), [1, 1], source,
+        Settings(_env_file=None, openai_api_key='test'))
+    assert result['candidates'][0]['time_ms'] == 56400
+    assert result['candidates'][0]['shot_gate']['verdict'] == 'shot'
+    assert result['shot_gate_summary']['calls'] == 2
 
 
 def test_initial_gate_sequential_parallel_same_results(monkeypatch):
@@ -207,3 +249,54 @@ def test_scoring_recheck_still_rejects_a_truncated_video(monkeypatch):
     monkeypatch.setattr(r, '_encode_frame', lambda frame: str(frame))
     with pytest.raises(r.InsufficientOutcomeEvidenceError):
         frames.dense_rim_inputs(Path('unused'), 598349, [739, 332])
+
+
+def test_fast_layup_rim_inputs_include_early_contact_without_crossing_the_scene(monkeypatch):
+    from app.services import review_frame_trial as frames
+    requested = []
+    def extract(video, times):
+        requested.extend(times)
+        return {t: t for t in times}
+    monkeypatch.setattr(frames, 'frame_map', extract)
+    monkeypatch.setattr(r, '_hoop_crop', lambda frame, point: frame)
+    monkeypatch.setattr(r, '_encode_frame', lambda frame: str(frame))
+    images = frames.dense_rim_inputs(Path('unused'), 23967, [1016, 208], include_early=True)
+    assert list(range(23567, 24567, 100)) == requested[:10]
+    assert sum(v['type'] == 'input_image' for v in images) == 40
+    requested.clear()
+    frames.dense_rim_inputs(Path('unused'), 200, [1, 1], include_early=True, scene_start_ms=100, scene_end_ms=3000)
+    assert min(requested) == 100 and max(requested) <= 3000
+    assert len(requested) == len(set(requested))
+
+
+def test_early_layup_frames_alone_cannot_replace_missing_outcome_tail(monkeypatch):
+    from app.services import review_frame_trial as frames
+    monkeypatch.setattr(frames, 'frame_map', lambda video, times: {t: t for t in times if t <= 24000})
+    monkeypatch.setattr(r, '_hoop_crop', lambda frame, point: frame)
+    monkeypatch.setattr(r, '_encode_frame', lambda frame: str(frame))
+    with pytest.raises(r.InsufficientOutcomeEvidenceError):
+        frames.dense_rim_inputs(Path('unused'), 23967, [1016, 208], include_early=True)
+
+
+@pytest.mark.parametrize('shot_type,early', [('layup', True), ('dunk', True), ('set_shot', False)])
+def test_normal_pipeline_adds_early_rim_only_to_the_existing_layup_request(monkeypatch, shot_type, early):
+    from app.services import review_frame_trial as frames
+    from test_openai_shot_review import camera_context
+    monkeypatch.setattr(r, '_build_shared_camera_contexts', lambda *a: ({0: camera_context()}, [], 0))
+    monkeypatch.setattr(frames, 'evidence_rich_detail_inputs', lambda *a: [])
+    monkeypatch.setattr(frames, 'dense_shoe_inputs', lambda *a: ([], {}))
+    monkeypatch.setattr(r, '_review_once', lambda *a, **k: (decision(shot_type=shot_type, visible_evidence=['ball_falling_below_rim']), {}))
+    calls = []
+    def prepare(*args, **kwargs):
+        calls.append(kwargs)
+        return [{'type': 'input_image'}]
+    monkeypatch.setattr(frames, 'dense_rim_inputs', prepare)
+    monkeypatch.setattr('app.services.outcome_evidence_trial.strict_outcome_once', lambda *a: (
+        r.OutcomeReviewDecision(outcome='missed', confidence=.9, visible_evidence=['rim_deflection'],
+                                review_required=False, reason='visible rebound'), {}))
+    result = r.review_candidates_with_openai(Path('unused'), {'candidates': [{'time_ms': 23967, 'scene_start_ms': 22000, 'scene_end_ms': 26000}]},
+        Settings(_env_file=None, openai_api_key='test', openai_vision_fallback_model=None), client=object(), scoring_rim_evidence=True)
+    assert calls == ([{'include_early': True, 'scene_start_ms': 22000, 'scene_end_ms': 26000}] if early else [{}])
+    reviewed = result['candidates'][0]['ai_review']
+    assert reviewed['outcome'] == 'missed'
+    assert [a['task'] for a in reviewed['attempts']] == ['shot_review', 'outcome_only']

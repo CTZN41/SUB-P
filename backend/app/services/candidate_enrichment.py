@@ -7,7 +7,7 @@ from math import ceil
 
 from app.analysis.adaptive_trial import add_focused_candidates
 from app.analysis.phase7_pipeline import Phase7Canceled, analyze_video
-from app.analysis.shot_gate_trial import review_prior_shot_existence, review_shot_existence
+from app.analysis.shot_gate_trial import review_prior_shot_existence, review_shot_existence, review_release_timing, TIMING_OFFSETS_MS
 from app.core.config import Settings
 from app.analysis.candidate_windows import (rescan_window, RESCAN_BEFORE_MS, RESCAN_AFTER_MS,
     GATE_BEFORE_MS, GATE_AFTER_MS, PRIOR_BEFORE_MS, window_policy)
@@ -52,6 +52,34 @@ def enrich_candidates(
         api_seconds += float(decision.get("seconds", 0) or 0)
 
     def apply_release_offset(candidate: dict, gate: dict, reference_time: int, basis: str) -> None:
+        nonlocal calls
+        if (gate.get('status') == 'complete' and gate.get('verdict') == 'shot' and gate.get('confidence', 0) >= .9
+                and 'release_offset_ms' in gate and gate['release_offset_ms'] is None
+                and (gate.get('window') or {}).get('purpose') == 'shot_gate'
+                and 'timing_review' not in gate and calls < max_calls):
+            if cancelled and cancelled():
+                raise Phase7Canceled('사용자가 분석을 취소했습니다.')
+            calls += 1
+            if activity_progress:
+                activity_progress('추가 슛 검증', 0, 1)
+            try:
+                timing = review_release_timing(video_path, reference_time, settings,
+                    scene_start_ms=candidate.get('scene_start_ms', result.get('range_start_ms', 0)) or 0,
+                    scene_end_ms=candidate.get('scene_end_ms', result['duration_ms']),
+                    **({'client': gate_client} if gate_client is not None else {}))
+                count_result(timing)
+                gate['timing_review'] = timing
+                if (timing.get('status') == 'complete' and timing.get('verdict') == 'shot'
+                        and timing.get('confidence', 0) >= .9 and type(timing.get('release_offset_ms')) is int
+                        and timing['release_offset_ms'] in TIMING_OFFSETS_MS
+                        and timing['release_offset_ms'] in (timing.get('window') or {}).get('used_offsets_ms', [])):
+                    gate['original_release_offset_ms'] = None
+                    gate['release_offset_ms'] = timing['release_offset_ms']
+                    gate['release_timing_source'] = 'dense_timing_review'
+            except Exception as error:
+                gate['timing_review'] = {'status': 'failed', 'error_type': type(error).__name__}
+            if activity_progress:
+                activity_progress('추가 슛 검증', 1, 1)
         offset = gate.get("release_offset_ms")
         if (
             gate.get("verdict") != "shot" or gate.get("confidence", 0) < .9

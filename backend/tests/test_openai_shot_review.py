@@ -42,6 +42,69 @@ def test_confirmed_court_points_anchor_lateral_direction() -> None:
     assert _calibrated_court_left_direction(transform) == "left"
 
 
+@pytest.mark.parametrize('mirror', [False, True])
+def test_confirmed_axes_replace_conflicting_camera_side_without_moving_shot(tmp_path, monkeypatch, mirror):
+    from app.services.openai_shot_review import _calibrated_camera_axes, _camera_context_prompt
+    points = [[451, 695], [923, 618], [1446, 635], [944, 756]]
+    if mirror:
+        points = [[1920-x, y] for x, y in points]
+    transform = calculate_transform(points, [[17, 0], [33, 0], [33, 19], [17, 19]])
+    axes = _calibrated_camera_axes(transform, [1920, 1080])
+    assert axes['court_left_direction_on_screen'] == ('right' if mirror else 'left')
+    assert axes['toward_half_court_direction_on_screen'] == ('left' if mirror else 'right')
+    prompts = []
+    for view in ('left_sideline', 'right_sideline'):
+        guessed = camera_context().model_copy(update={'camera_view': view})
+        responses = FakeResponses([guessed])
+        monkeypatch.setattr('app.services.openai_shot_review.camera_context_frame_inputs', lambda *a: [])
+        contexts, records, _ = _build_shared_camera_contexts(
+            SimpleNamespace(responses=responses), tmp_path/'video.mp4',
+            [{'time_ms':150933, 'scene_id':0, 'frame_size_px':[1920,1080]}],
+            Settings(_env_file=None, openai_api_key='test-key'),
+            _calibrated_court_left_direction(transform), transform)
+        assert contexts[0].camera_view == 'unclear'
+        assert records[0]['model_decisions']['primary']['camera_view'] == view
+        assert records[0]['calibrated_axes'] == axes
+        prompts.append(_camera_context_prompt(contexts[0]))
+    assert prompts[0] == prompts[1]
+    assert 'left free-throw (17,19)' in prompts[0]
+    assert 'right free-throw (33,19)' in prompts[0]
+    assert 'left_sideline' not in prompts[0] and 'right_sideline' not in prompts[0]
+
+
+@pytest.mark.parametrize('transform,size', [
+    ([[0,0,0]]*3,[1920,1080]),
+    ([[1,0,0],[0,1,0],[0,0,1]],[0,1080]),
+    ([[1,0,0],[0,1,0],[0,0,1]],[float('nan'),1080]),
+    (None,[1920,1080]),
+    ([[1,0,0],[0,1,0],[0,0,1]],None),
+])
+def test_invalid_calibration_cannot_supply_camera_axes(transform,size):
+    from app.services.openai_shot_review import _calibrated_camera_axes
+    assert _calibrated_camera_axes(transform,size) is None
+
+
+def test_calibrated_axes_follow_rotated_video():
+    from app.services.openai_shot_review import _calibrated_camera_axes
+    points = [[1080-y,x] for x,y in [[451,695],[923,618],[1446,635],[944,756]]]
+    transform = calculate_transform(points, [[17,0],[33,0],[33,19],[17,19]])
+    axes = _calibrated_camera_axes(transform,[1080,1920])
+    assert axes['court_left_direction_on_screen'] == 'up'
+    assert axes['toward_half_court_direction_on_screen'] == 'down'
+
+
+def test_calibrated_axes_do_not_raise_low_camera_confidence(tmp_path,monkeypatch):
+    guessed = camera_context().model_copy(update={'confidence':.5})
+    monkeypatch.setattr('app.services.openai_shot_review.camera_context_frame_inputs',lambda *a: [])
+    contexts,records,_ = _build_shared_camera_contexts(
+        SimpleNamespace(responses=FakeResponses([guessed])),tmp_path/'video.mp4',
+        [{'time_ms':1000,'frame_size_px':[100,100]}],
+        Settings(_env_file=None,openai_api_key='test-key'),'left',
+        [[1,0,0],[0,1,0],[0,0,1]])
+    assert contexts[0] is None
+    assert records[0]['decision']['confidence'] == .5
+
+
 def test_inconsistent_zone_coordinates_get_one_terra_position_retry(tmp_path, monkeypatch) -> None:
     first = decision(.9, False)
     first.court_zone = "mid_center"
@@ -202,7 +265,7 @@ def use_shared_camera_context(monkeypatch):
     shared = camera_context()
     monkeypatch.setattr(
         "app.services.openai_shot_review._build_shared_camera_contexts",
-        lambda client, video_path, candidates, settings, calibration_left_direction=None: (
+        lambda client, video_path, candidates, settings, calibration_left_direction=None, calibration_transform=None: (
             {int(candidate.get("scene_id", 0)): shared for candidate in candidates},
             [{"scene_id": 0, "status": "resolved", "decision": shared.model_dump()}],
             0,

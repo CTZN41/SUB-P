@@ -253,9 +253,9 @@ def test_native_frames_are_decoded_at_source_fps_without_resizing_the_shoe_crop(
                               'person_box_px':[290,90,350,300]} for t in (1400,1533)]}
     monkeypatch.setattr(module,'observe_free_throw_line',lambda *a,**k:{'status':'unavailable'})
     images, meta, frames=prepare_contact_sequence(video,candidate)
-    assert meta['source_fps']==60 and 35<=len(frames)<=37
+    assert meta['source_fps']==60 and 45<=len(frames)<=47
     assert meta['source_frame_indices']==list(range(min(frames),max(frames)+1))
-    assert meta['anchor_time_ms']==1533 and not meta['native_crop_resized']
+    assert meta['anchor_time_ms']==2000 and meta['plant_reference_time_ms']==1533 and not meta['native_crop_resized']
     assert all(f.shape==(480,640,3) for f in frames.values())
     assert len(meta['sent_frame_indices'])>=18
 
@@ -265,6 +265,36 @@ def test_visible_line_alone_cannot_grant_permission_to_use_an_unverified_floor()
     meta.pop('verified_contact_frames')
     result = evaluate_contact_sequence(seq, meta, c)
     assert result['status']=='needs_review' and not result['measured_frames']
+
+
+@pytest.mark.parametrize('locator_y,prepared', [(450, True), (479, False)])
+def test_contact_preparation_keeps_visible_shoes_when_only_padding_is_clipped(tmp_path, monkeypatch, locator_y, prepared):
+    import app.services.sole_contact as module
+    video = tmp_path / 'edge.mp4'
+    writer = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*'mp4v'), 30, (640, 480))
+    for _ in range(90):
+        writer.write(np.full((480, 640, 3), 80, dtype=np.uint8))
+    writer.release()
+    candidate = {'time_ms': 2000, 'calibration_view_valid': True, 'validated_court_transform': np.eye(3).tolist(),
+        'foot_track': [{'time_ms': t, 'foot_point_px': [320, locator_y], 'ankle_points_px': [[310, locator_y-10], [330, locator_y-10]],
+                        'person_box_px': [280, 100, 360, locator_y]} for t in (1000, 1133)]}
+    monkeypatch.setattr(module, 'verify_fixed_floor', lambda *a: {'verified': True})
+    monkeypatch.setattr(module, 'observe_free_throw_line', lambda *a, **k: {'status': 'unavailable'})
+    images, meta, _ = prepare_contact_sequence(video, candidate)
+    assert (meta['status'] == 'prepared') is prepared
+    if prepared:
+        assert images and meta['crop_padding_clipped'] and meta['roi_px'][3] == 480
+    else:
+        assert not images and meta['reason'] == 'sole_crop_clipped'
+
+
+def test_measured_points_must_still_fit_inside_a_padding_clipped_crop():
+    seq, meta, candidate = sample()
+    meta['crop_padding_clipped'] = True
+    assert evaluate_contact_sequence(seq, meta, candidate)['status'] == 'resolved'
+    for frame in seq.frames[:3]:
+        frame.contacts[1].y = meta['roi_px'][3]
+    assert evaluate_contact_sequence(seq, meta, candidate)['status'] == 'needs_review'
 
 
 def test_fixed_view_guard_rejects_camera_motion_and_checks_floor_patches(monkeypatch):
@@ -277,3 +307,152 @@ def test_fixed_view_guard_rejects_camera_motion_and_checks_floor_patches(monkeyp
     warp=np.eye(3);warp[0,2]=3
     monkeypatch.setattr(alignment,'align_view',lambda *a:(warp,{'holdout_median_px':.5}))
     assert not verify_fixed_floor(None,None,np.eye(3))['verified']
+
+
+@pytest.mark.parametrize('background,line_color,polarity', [(190, 30, 'dark'), (60, 235, 'bright')])
+def test_observed_free_throw_line_supports_both_dark_and_bright_paint(background, line_color, polarity):
+    candidate = sample()[2]
+    frame = np.full((480, 640, 3), background, dtype=np.uint8)
+    cv2.line(frame, (170, 190), (330, 190), (line_color,)*3, 4)
+    result = observe_free_throw_line(frame, candidate['validated_court_transform'])
+    assert result['status'] == 'observed' and result['line_polarity'] == polarity
+    assert max(abs(y-19) for y in result['observed_y_ft']) < .1
+
+
+def test_dark_floor_noise_shadow_or_wrong_line_cannot_supply_a_measured_line():
+    candidate = sample()[2]
+    for y in (None, 181):
+        frame = np.full((480, 640, 3), 60, dtype=np.uint8)
+        if y is not None:
+            cv2.line(frame, (170, y), (330, y), (10, 10, 10), 3)
+        assert observe_free_throw_line(frame, candidate['validated_court_transform'])['status'] == 'unavailable'
+    frame = np.full((480, 640, 3), 190, dtype=np.uint8)
+    cv2.rectangle(frame, (170, 178), (330, 202), (30, 30, 30), -1)
+    assert observe_free_throw_line(frame, candidate['validated_court_transform'])['status'] == 'unavailable'
+
+
+def test_thin_floorboard_seams_and_flat_bright_floor_are_not_painted_lines():
+    candidate = sample()[2]
+    frame = np.full((480, 640, 3), 190, dtype=np.uint8)
+    cv2.line(frame, (170, 190), (330, 190), (40, 40, 40), 1)
+    assert observe_free_throw_line(frame, candidate['validated_court_transform'])['status'] == 'unavailable'
+
+
+def grounded_sample():
+    seq, meta, candidate = sample()
+    seq.takeoff_frame_index = None
+    seq.frames[-1] = seq.frames[0].model_copy(deep=True, update={'frame_index': 16})
+    seq.frames.append(seq.frames[0].model_copy(deep=True, update={'frame_index': 18}))
+    meta['sent_frame_indices'].append(18)
+    meta['verified_contact_frames']['18'] = {'verified': True, 'landmark_displacement_px': 0}
+    meta['line_observations'].extend([{**meta['line_observations'][0], 'frame_index': i} for i in (16, 18)])
+    meta['reviewed_shot_type'] = 'set_shot'
+    candidate.update(time_ms=533, shot_gate={'status': 'complete', 'verdict': 'shot', 'confidence': .99})
+    return seq, meta, candidate
+
+
+def test_grounded_set_shot_uses_visible_contacts_through_verified_release_without_inventing_takeoff():
+    seq, meta, candidate = grounded_sample()
+    result = evaluate_contact_sequence(seq, meta, candidate)
+    assert result['status'] == 'resolved' and result['contact_mode'] == 'grounded_through_release'
+    assert seq.takeoff_frame_index is None and result['court_zone'] == 'mid_center'
+    assert result['court_x'] == 25 and result['court_y'] == 21
+    assert result['post_release_frames'] and len(result['measured_frames']) >= 3
+
+
+def test_post_release_contact_checks_never_move_the_saved_pre_release_position():
+    seq, meta, candidate = grounded_sample()
+    seq.frames.append(seq.frames[-1].model_copy(deep=True, update={'frame_index': 20}))
+    meta['sent_frame_indices'].append(20)
+    meta['verified_contact_frames']['20'] = {'verified': True, 'landmark_displacement_px': 0}
+    meta['line_observations'].append({**meta['line_observations'][0], 'frame_index': 20})
+    for frame in seq.frames:
+        if frame.frame_index >= 16:
+            for contact in frame.contacts: contact.x += 3
+    result = evaluate_contact_sequence(seq, meta, candidate)
+    assert result['status'] == 'resolved' and result['court_x'] == 25
+
+
+@pytest.mark.parametrize('weakness', ['no_gate', 'low_gate', 'uncertain_gate', 'wrong_type', 'post_unclear',
+                                    'post_missing', 'post_clipped', 'post_low_confidence', 'post_unverified',
+                                    'post_airborne', 'post_moving', 'post_boundary'])
+def test_grounded_release_cannot_bypass_missing_or_conflicting_contact_evidence(weakness):
+    seq, meta, candidate = grounded_sample()
+    if weakness == 'no_gate': candidate['shot_gate'] = {}
+    if weakness == 'low_gate': candidate['shot_gate']['confidence'] = .89
+    if weakness == 'uncertain_gate': candidate['shot_gate']['verdict'] = 'unclear'
+    if weakness == 'wrong_type': meta['reviewed_shot_type'] = 'dribble_pull_up'
+    if weakness == 'post_unclear': seq.frames[-1].state = 'unclear'
+    if weakness == 'post_missing': seq.frames.pop()
+    if weakness == 'post_clipped': seq.frames[-1].contacts[0].x = 0
+    if weakness == 'post_low_confidence': seq.frames[-1].contacts[0].confidence = .69
+    if weakness == 'post_unverified': meta['verified_contact_frames']['18']['verified'] = False
+    if weakness == 'post_airborne': seq.frames[-1].state = 'airborne'
+    if weakness == 'post_moving':
+        for contact in seq.frames[-1].contacts: contact.x += 20
+    if weakness == 'post_boundary':
+        for contact in seq.frames[-1].contacts: contact.y = 190
+    assert evaluate_contact_sequence(seq, meta, candidate)['status'] == 'needs_review'
+
+
+def test_stationary_shoe_motion_can_preserve_a_reliable_stance_before_heel_raise():
+    seq, meta, candidate = grounded_sample()
+    seq.stance_motion, seq.stance_motion_confidence = 'stationary', .95
+    for frame in seq.frames:
+        if frame.frame_index >= 16:
+            for contact in frame.contacts: contact.confidence = .6
+    result = evaluate_contact_sequence(seq, meta, candidate)
+    assert result['status'] == 'resolved' and result['court_x'] == 25
+    assert result['contact_mode'] == 'verified_stationary_pre_release_stance'
+    assert result['confidence'] == .8
+    seq.stance_motion_confidence = .69
+    assert evaluate_contact_sequence(seq, meta, candidate)['status'] == 'needs_review'
+    seq.stance_motion_confidence, seq.stance_motion = .95, 'stepping'
+    assert evaluate_contact_sequence(seq, meta, candidate)['status'] == 'needs_review'
+
+
+def test_stationary_selection_cannot_choose_away_a_conflicting_boundary_measurement():
+    seq, meta, candidate = grounded_sample()
+    seq.stance_motion, seq.stance_motion_confidence = 'stationary', .8
+    for contact in seq.frames[-1].contacts: contact.confidence = .6
+    for contact in seq.frames[1].contacts: contact.y = 170
+    result = evaluate_contact_sequence(seq, meta, candidate)
+    assert result['status'] == 'needs_review' and result['reason'] == 'stationary_measurements_disagree'
+    for contact in seq.frames[1].contacts: contact.y = 190
+    result = evaluate_contact_sequence(seq, meta, candidate)
+    assert result['status'] == 'needs_review'
+
+
+def test_stationary_reference_selection_uses_the_same_600ms_window_as_input_preparation():
+    seq, meta, candidate = grounded_sample()
+    reference = seq.frames[0]
+    seq.frames = [reference.model_copy(deep=True, update={'frame_index': i}) for i in (13, 14, 15, 29, 31, 33)]
+    for frame in seq.frames[3:]:
+        for contact in frame.contacts: contact.confidence = .6
+    seq.stance_motion, seq.stance_motion_confidence = 'stationary', .8
+    candidate['time_ms'] = 1033
+    meta['sent_frame_indices'] = [f.frame_index for f in seq.frames]
+    meta['verified_contact_frames'] = {str(i): {'verified': True, 'landmark_displacement_px': 0} for i in meta['sent_frame_indices']}
+    line = meta['line_observations'][0]
+    meta['line_observations'] = [{**line, 'frame_index': i} for i in meta['sent_frame_indices']]
+    result = evaluate_contact_sequence(seq, meta, candidate)
+    assert result['status'] == 'resolved' and result['court_y'] == 21
+    assert result['measured_frames'][-1]['time_ms'] < candidate['time_ms']-500
+    seq.frames[0].frame_index = 12
+    meta['sent_frame_indices'][0] = 12
+    meta['verified_contact_frames']['12'] = {'verified': True, 'landmark_displacement_px': 0}
+    meta['line_observations'][0]['frame_index'] = 12
+    assert evaluate_contact_sequence(seq, meta, candidate)['status'] == 'needs_review'
+
+
+@pytest.mark.parametrize('weakness', ['missing', 'unclear', 'one_foot', 'duplicate_foot', 'unverified'])
+def test_stationary_claim_alone_cannot_replace_visible_grounded_shoe_states(weakness):
+    seq, meta, candidate = grounded_sample()
+    seq.stance_motion, seq.stance_motion_confidence = 'stationary', .95
+    for contact in seq.frames[-1].contacts: contact.confidence = .6
+    if weakness == 'missing': seq.frames.pop()
+    if weakness == 'unclear': seq.frames[-1].state = 'unclear'
+    if weakness == 'one_foot': seq.frames[-1].state = 'one_grounded'
+    if weakness == 'duplicate_foot': seq.frames[-1].contacts[0].foot_id = 'foot_2'
+    if weakness == 'unverified': meta['verified_contact_frames']['18']['verified'] = False
+    assert evaluate_contact_sequence(seq, meta, candidate)['status'] == 'needs_review'

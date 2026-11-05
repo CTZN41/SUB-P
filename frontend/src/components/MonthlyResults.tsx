@@ -5,15 +5,13 @@ import type { CourtShot } from './ShotCourt3D'
 import { ShotHeatmap } from './ShotHeatmap'
 import './MonthlyResults.css'
 import { ShotResultSummary } from './ShotResultSummary'
+import { ShotTypeComparison } from './ShotTypeComparison'
+import { ShotPlaylist } from './ShotPlaylist'
+import { SHOT_TYPES, SHOT_TYPE_LABELS as TYPE_LABELS } from '../utils/shotTypes'
 import { shotCategory, shotNumbers } from '../utils/shotPresentation'
 import type { ShotCategory } from '../utils/shotPresentation'
 
 const ShotCourt3D = lazy(() => import('./ShotCourt3D').then((module) => ({ default: module.ShotCourt3D })))
-const TYPE_LABELS: Record<string, string> = {
-  catch_and_shoot: '캐치 앤 슛', set_shot: '제자리 슛', dribble_pull_up: '드리블 풀업', side_step: '사이드 스텝',
-  layup: '레이업', dunk: '덩크', fadeaway: '페이더웨이', step_back: '스텝백',
-  turnaround: '턴어라운드', hook_shot: '훅슛', other: '기타', needs_review: '확인 필요',
-}
 
 type StatLine = { attempts: number; made: number; missed: number; success_rate: number | null; attempt_share: number | null; difference_from_overall: number | null }
 type MonthlyShot = CourtShot & { analysis_id: string; analysis_title: string; jersey_number: string | null; zone_code: string | null }
@@ -34,6 +32,10 @@ export function MonthlyResults() {
   const courtRef = useRef<HTMLDivElement>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [selectedType, setSelectedType] = useState('')
+  const [playlistOpen, setPlaylistOpen] = useState(false)
+
+  useEffect(() => { setPlaylistOpen(false); setSelectedId(null) }, [month, selectedCategory, selectedType, selectedZone])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -50,9 +52,10 @@ export function MonthlyResults() {
 
   const numbers = useMemo(() => shotNumbers(data?.shots ?? []), [data?.shots])
   const overall = data?.statistics.overall
-  const categoryShots = data?.shots.filter((shot) => !selectedCategory || shotCategory(shot) === selectedCategory) ?? []
+  const comparisonShots = data?.shots.filter(shot => (!selectedCategory || shotCategory(shot) === selectedCategory) && (!selectedZone || shot.zone_code === selectedZone)) ?? []
+  const categoryShots = data?.shots.filter((shot) => (!selectedCategory || shotCategory(shot) === selectedCategory) && (!selectedType || shot.shot_type === selectedType)) ?? []
   const visibleShots = categoryShots.filter((shot) => !selectedZone || shot.zone_code === selectedZone)
-  const zoneStatistics = selectedCategory ? Object.fromEntries(Object.keys(data?.statistics.by_zone ?? {}).map((code) => {
+  const zoneStatistics = selectedCategory || selectedType ? Object.fromEntries(Object.keys(data?.statistics.by_zone ?? {}).map((code) => {
     const shots = categoryShots.filter((shot) => shot.zone_code === code)
     const made = shots.filter((shot) => shotCategory(shot) === 'made').length
     const missed = shots.filter((shot) => shotCategory(shot) === 'missed').length
@@ -74,6 +77,14 @@ export function MonthlyResults() {
       {data && <>
         <p>분석 기록 {data.analysis_count}개</p>
         <ShotResultSummary shots={data.shots} selectedCategory={selectedCategory} onSelect={(category) => { setSelectedCategory(category); setSelectedZone(null); setSelectedId(null) }} />
+        <div className="result-filters" aria-label="월별 결과 필터">
+          <label>슛 종류<select value={selectedType} onChange={event => setSelectedType(event.target.value)}>
+            <option value="">전체 종류</option>{SHOT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {data.shots.some(shot => shot.shot_type === 'needs_review') && <option value="needs_review">종류 확인 필요</option>}
+          </select></label>
+          <button type="button" className="button secondary" onClick={() => { setSelectedType(''); setSelectedCategory(null); setSelectedZone(null) }}>필터 초기화</button>
+        </div>
+        <ShotTypeComparison shots={comparisonShots} selectedType={selectedType} onSelect={setSelectedType} />
         {overall?.attempts ? <ShotHeatmap
           statistics={zoneStatistics}
           selectedZone={selectedZone}
@@ -90,11 +101,13 @@ export function MonthlyResults() {
         selectedAction={selected && <Link className="button secondary" to={`/results/${selected.analysis_id}?shot=${selected.id}`}>원본 분석 보기</Link>}
         showPlayerName={!!selected && !/^선수\s+[A-F]$/.test(selected.player_name.trim())}
         jerseyNumber={selected?.jersey_number ?? null}
-        onSelect={setSelectedId}
+        onSelect={id => { setPlaylistOpen(false); setSelectedId(id) }}
         typeLabels={TYPE_LABELS}
         zone={selectedZone}
         onZoneChange={(zone) => { setSelectedZone(zone); setSelectedId(null) }}
       /></Suspense></div>
+      <ShotPlaylist shots={visibleShots} numbers={numbers} open={playlistOpen}
+        onClose={() => setPlaylistOpen(false)} onStart={() => { setSelectedId(null); setPlaylistOpen(true) }} />
       {selected && <MonthlyShotPreview key={selected.id} shot={selected} number={numbers[selected.id]} typeLabel={TYPE_LABELS[selected.shot_type] ?? selected.shot_type} onClose={() => setSelectedId(null)} />}
     </>}
   </div>

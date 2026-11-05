@@ -131,3 +131,20 @@ def test_auto_suggestion_endpoint_is_removed(tmp_path) -> None:
         response = client.get(f"/api/analyses/{analysis_id}/calibration/suggestion")
         assert response.status_code == 404
     engine.dispose()
+
+
+def test_quality_preview_reports_weak_points_without_saving_a_calibration(tmp_path):
+    client, analysis_id, engine = make_client(tmp_path)
+    with client:
+        result = client.post(f'/api/analyses/{analysis_id}/calibration/quality', json=valid_payload())
+        assert result.status_code == 200
+        quality = result.json()
+        assert quality['usable_count'] == 0 and quality['required_count'] == 3
+        assert [p['reason'] for p in quality['landmarks']] == ['image_edge', 'image_edge', 'low_texture', 'low_texture']
+        assert client.get(f'/api/analyses/{analysis_id}/calibration').status_code == 404
+        payload = valid_payload(); payload['frame_time_ms'] = 1001
+        assert client.post(f'/api/analyses/{analysis_id}/calibration/quality', json=payload).status_code == 400
+        payload = valid_payload(); payload['image_points'][0] = [-1, 20]
+        assert client.post(f'/api/analyses/{analysis_id}/calibration/quality', json=payload).status_code == 400
+        assert client.post('/api/analyses/missing/calibration/quality', json=valid_payload()).status_code == 404
+    engine.dispose()

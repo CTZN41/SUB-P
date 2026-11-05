@@ -80,7 +80,7 @@ def resolve_video_path(upload_path: Path, analysis_id: str) -> Path:
     return path
 
 
-def read_video_frame(video_path: Path, time_ms: int) -> tuple[bytes, int, int]:
+def read_video_image(video_path: Path, time_ms: int) -> np.ndarray:
     capture = cv2.VideoCapture(str(video_path))
     try:
         if not capture.isOpened():
@@ -89,13 +89,18 @@ def read_video_frame(video_path: Path, time_ms: int) -> tuple[bytes, int, int]:
         ok, frame = capture.read()
         if not ok:
             raise CalibrationError("선택한 시간의 영상 장면을 읽을 수 없습니다.")
-        height, width = frame.shape[:2]
-        encoded, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 88])
-        if not encoded:
-            raise CalibrationError("영상 대표 장면을 만들 수 없습니다.")
-        return buffer.tobytes(), width, height
+        return frame
     finally:
         capture.release()
+
+
+def read_video_frame(video_path: Path, time_ms: int) -> tuple[bytes, int, int]:
+    frame = read_video_image(video_path, time_ms)
+    height, width = frame.shape[:2]
+    encoded, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 88])
+    if not encoded:
+        raise CalibrationError("영상 대표 장면을 만들 수 없습니다.")
+    return buffer.tobytes(), width, height
 
 
 def validate_points(

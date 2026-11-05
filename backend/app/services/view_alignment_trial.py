@@ -6,6 +6,31 @@ import cv2
 import numpy as np
 
 
+class FloorAlignmentError(ValueError):
+    def __init__(self, message, evidence):
+        super().__init__(message)
+        self.evidence = evidence
+
+
+def floor_landmark_quality(frame, points):
+    """Report whether each manual point has a checkable native-pixel patch."""
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
+    height, width = gray.shape
+    quality = []
+    for index, point in enumerate(points[:4]):
+        x, y = map(int, point)
+        margin = min(x, y, width-1-x, height-1-y)
+        texture = None
+        reason = 'image_edge'
+        if margin >= 28:
+            texture = float(gray[y-22:y+23, x-22:x+23].std())
+            reason = 'usable' if texture >= 12 else 'low_texture'
+        quality.append({'point_index': index+1, 'usable': reason == 'usable',
+                        'reason': reason, 'margin_px': margin,
+                        'texture_stddev': round(texture, 4) if texture is not None else None})
+    return quality
+
+
 def align_view(reference, current):
     orb = cv2.ORB_create(nfeatures=5000)
     a, da = orb.detectAndCompute(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY), None)
@@ -61,15 +86,12 @@ def floor_patch_scores(reference, current, matrix, points):
     a = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY)
     b = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
     scores = []
-    for x, y in points[:4]:
+    for (x, y), quality in zip(points[:4], floor_landmark_quality(a, points)):
         x, y = int(x), int(y)
-        if x < 28 or y < 28 or x+28 >= a.shape[1] or y+28 >= a.shape[0]:
+        if not quality['usable']:
             scores.append(None)
             continue
         patch = a[y-22:y+23, x-22:x+23]
-        if float(patch.std()) < 12:
-            scores.append(None)
-            continue
         score = cv2.matchTemplate(b[y-25:y+26,x-25:x+26], patch, cv2.TM_CCOEFF_NORMED).max()
         scores.append(float(score))
     return scores
@@ -77,9 +99,13 @@ def floor_patch_scores(reference, current, matrix, points):
 
 def validate_floor_alignment(reference, current, matrix, points):
     """Check manual floor landmark patches independently of background matches."""
-    scores = [s for s in floor_patch_scores(reference, current, matrix, points) if s is not None]
+    patches = floor_patch_scores(reference, current, matrix, points)
+    scores = [s for s in patches if s is not None]
     if len(scores) < 3 or sum(s >= .75 for s in scores) < 3:
-        raise ValueError('manual floor landmarks do not agree')
+        reason = 'insufficient_usable_landmarks' if len(scores) < 3 else 'floor_landmark_mismatch'
+        raise FloorAlignmentError('manual floor landmarks '+reason,
+            {'method': 'single_frame', 'reason': reason, 'scores': patches,
+             'landmarks': floor_landmark_quality(reference, points)})
     return scores
 
 
@@ -126,6 +152,7 @@ def temporal_floor_alignment(capture, reference, current, matrix, points,
             continue
     supports = [set() for _ in points[:4]]
     best = [0.0 for _ in points[:4]]
+    observable = set()
     for current_time, current_image, current_matrix in currents:
         for _, ref_image, ref_matrix in references:
             # Original reference points -> this reference neighbor -> current
@@ -136,6 +163,7 @@ def temporal_floor_alignment(capture, reference, current, matrix, points,
             for i, score in enumerate(floor_patch_scores(
                     ref_image, current_image, neighbor_matrix, neighbor_points)):
                 if score is not None:
+                    observable.add(i)
                     best[i] = max(best[i], score)
                     if score >= .75:
                         supports[i].add(current_time)
@@ -144,9 +172,14 @@ def temporal_floor_alignment(capture, reference, current, matrix, points,
         'reference_frames': len(references), 'current_frames': len(currents),
         'best_scores': [round(s, 4) for s in best],
         'support_counts': [len(s) for s in supports],
+        'usable_landmark_count': len(observable),
     }
     if sum(len(s) >= 2 for s in supports) < 3:
-        raise ValueError('temporal floor landmarks do not agree')
+        reason = ('insufficient_usable_landmarks' if len(observable) < 3 else
+                  'floor_landmark_mismatch' if sum(s >= .75 for s in best) < 3 else
+                  'insufficient_temporal_support')
+        evidence['reason'] = reason
+        raise FloorAlignmentError('temporal floor landmarks '+reason, evidence)
     return evidence
 
 
@@ -205,6 +238,8 @@ def group_camera_views(video, candidates, calibration):
                         break
                     except ValueError as error:
                         checks.append({'profile': index, 'status': 'rejected', 'reason': str(error)})
+                        if isinstance(error, FloorAlignmentError):
+                            checks[-1]['floor'] = error.evidence
                         continue
             if selected is None:
                 selected=len(references)

@@ -12,12 +12,14 @@ from pydantic import BaseModel, Field
 from app.core.config import Settings
 from app.services.openai_shot_review import _encode_frame
 from app.analysis.candidate_windows import GATE_BEFORE_MS, GATE_AFTER_MS, PRIOR_BEFORE_MS, PRIOR_AFTER_MS
+from app.analysis.candidate_windows import WINDOW_RULES
 
 
 OFFSETS_MS = tuple(sorted(set(t for t in (-GATE_BEFORE_MS, -1000, -700, -400, -200, 0, 200, 500, GATE_AFTER_MS)
                                if -GATE_BEFORE_MS <= t <= GATE_AFTER_MS)))
 PRIOR_OFFSETS_MS = tuple(sorted(set(t for t in (-PRIOR_BEFORE_MS, -2800, -2400, -2000, -1700, -1400, -1100, -800, -500, -200, PRIOR_AFTER_MS)
                                      if -PRIOR_BEFORE_MS <= t <= PRIOR_AFTER_MS)))
+TIMING_OFFSETS_MS = tuple(range(-WINDOW_RULES['release_timing'].before_ms, WINDOW_RULES['release_timing'].after_ms+1, 100))
 
 
 class ShotExistenceDecision(BaseModel):
@@ -73,20 +75,31 @@ def review_prior_shot_existence(
     return _cached_gate(video_path, time_ms, settings, client, True)
 
 
-def _cached_gate(video_path, time_ms, settings, client, prior_window):
-    compute = lambda: _review_shot_gate(video_path, time_ms, settings, client=client, prior_window=prior_window)
+def review_release_timing(video_path: Path, time_ms: int, settings: Settings, *, client=None,
+                          scene_start_ms=0, scene_end_ms=None) -> dict:
+    return _cached_gate(video_path, time_ms, settings, client, False, timing_window=True,
+                        scene_start_ms=scene_start_ms, scene_end_ms=scene_end_ms)
+
+
+def _cached_gate(video_path, time_ms, settings, client, prior_window, timing_window=False,
+                 scene_start_ms=0, scene_end_ms=None):
+    compute = lambda: _review_shot_gate(video_path, time_ms, settings, client=client,
+                                       prior_window=prior_window, timing_window=timing_window,
+                                       scene_start_ms=scene_start_ms, scene_end_ms=scene_end_ms)
     if client is None or not hasattr(client, 'cached_review'):
         return compute()
     stat = video_path.stat()
-    return client.cached_review({'task': 'prior_shot_gate' if prior_window else 'shot_gate',
+    task = 'release_timing' if timing_window else 'prior_shot_gate' if prior_window else 'shot_gate'
+    return client.cached_review({'task': task,
         'source': [str(video_path.resolve()), stat.st_size, stat.st_mtime_ns],
         'anchor_ms': time_ms, 'model': settings.openai_vision_model,
-        'offsets_ms': PRIOR_OFFSETS_MS if prior_window else OFFSETS_MS}, compute)
+        'offsets_ms': TIMING_OFFSETS_MS if timing_window else PRIOR_OFFSETS_MS if prior_window else OFFSETS_MS,
+        'scene_bounds_ms': [scene_start_ms, scene_end_ms]}, compute)
 
 
 def _review_shot_gate(
     video_path: Path, time_ms: int, settings: Settings, *, client=None,
-    prior_window: bool = False,
+    prior_window: bool = False, timing_window: bool = False, scene_start_ms=0, scene_end_ms=None,
 ) -> dict:
     if not settings.openai_api_key:
         return {"status": "not_configured"}
@@ -95,6 +108,8 @@ def _review_shot_gate(
         client = OpenAI(api_key=settings.openai_api_key,
                         timeout=settings.openai_timeout_seconds)
     frames = (
+        shot_gate_frames(video_path, time_ms, offsets_ms=tuple(offset for offset in TIMING_OFFSETS_MS
+            if time_ms+offset >= scene_start_ms and (scene_end_ms is None or time_ms+offset <= scene_end_ms))) if timing_window else
         shot_gate_frames(video_path, time_ms, offsets_ms=PRIOR_OFFSETS_MS)
         if prior_window else shot_gate_frames(video_path, time_ms)
     )
@@ -116,6 +131,15 @@ def _review_shot_gate(
         "earliest visible release_offset_ms relative to t=0; use null when its "
         "timing is uncertain. State only concrete visible evidence."
     )
+    if timing_window:
+        prompt = (
+            'A shot attempt has already been confirmed but its release timestamp was unresolved. '
+            'Inspect these denser chronological frames. Identify the earliest SUPPLIED timestamp '
+            'where the ball is visibly separated from the shooting hand toward the basket. '
+            'Give that exact supplied release_offset_ms. A raised ball still touching the hand is not released. '
+            'Do not choose a midpoint between frames or a later rim contact. '
+            'If separation cannot be seen, return unclear with a null timestamp. Describe the actual frames.'
+        )
     started = perf_counter()
     response = client.responses.parse(
         model=settings.openai_vision_model,
@@ -131,7 +155,7 @@ def _review_shot_gate(
     if decision is None:
         raise ValueError("AI가 슛 여부 판정 형식에 맞는 결과를 반환하지 않았습니다.")
     usage = response.usage
-    offsets = PRIOR_OFFSETS_MS if prior_window else OFFSETS_MS
+    offsets = TIMING_OFFSETS_MS if timing_window else PRIOR_OFFSETS_MS if prior_window else OFFSETS_MS
     used_offsets = [int(item['text'][2:-2]) for item in frames if item['type'] == 'input_text']
     return {
         "status": "complete",
@@ -142,7 +166,7 @@ def _review_shot_gate(
             "output_tokens": int(getattr(usage, "output_tokens", 0) or 0),
         },
         "seconds": round(perf_counter() - started, 2),
-        'window': {'anchor_ms': time_ms, 'purpose': 'prior_shot_gate' if prior_window else 'shot_gate',
+        'window': {'anchor_ms': time_ms, 'purpose': 'release_timing' if timing_window else 'prior_shot_gate' if prior_window else 'shot_gate',
                    'requested_offsets_ms': [min(offsets), max(offsets)], 'used_offsets_ms': used_offsets,
                    'edge_truncated': len(used_offsets) < len(offsets)},
     }

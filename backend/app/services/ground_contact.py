@@ -3,6 +3,11 @@ from math import dist, isfinite
 from app.analysis.candidate_windows import rescan_window, WINDOW_RULES
 
 
+def grounded_image_offsets(offsets) -> set[int]:
+    """Use one pre-release bound for supplied shoe images and their validators."""
+    return {offset for offset in offsets if -WINDOW_RULES['ground_contact'].before_ms <= offset < 0}
+
+
 def plant_sample(candidate: dict) -> dict | None:
     release = int(candidate['time_ms'])
     rule = WINDOW_RULES['ground_contact']

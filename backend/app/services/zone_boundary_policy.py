@@ -2,7 +2,7 @@
 from math import hypot, isfinite
 
 from app.services.court_zones import classify_zone
-from app.services.ground_contact import plant_sample
+from app.services.ground_contact import grounded_image_offsets, plant_sample
 from app.services.shot_review_policy import POSITION_AUTO_CONFIRM_CONFIDENCE
 from app.services.zone_boundaries import physical_clearance, zone_boundaries, zone_family
 
@@ -94,7 +94,7 @@ def normalize_zone_boundary(decision, candidate: dict, projected_plant, shoe_evi
         audit['reason'] = 'plant_projection_disagrees'
         return audit
     available = set(shoe_evidence.get('offsets_ms', []))-set(shoe_evidence.get('image_edge_offsets_ms', []))
-    grounded = sorted({t for t in decision.grounded_frame_offsets_ms if t in available and -1200 <= t < 0})
+    grounded = sorted(grounded_image_offsets(decision.grounded_frame_offsets_ms) & available)
     if shoe_evidence.get('status') != 'available' or len(grounded) < 2 or not decision.arc_evidence.strip():
         audit['reason'] = 'grounded_images_insufficient'
         return audit

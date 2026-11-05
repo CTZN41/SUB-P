@@ -46,6 +46,7 @@ from app.services.court_calibration import (
     CalibrationError,
     calculate_transform,
     read_video_frame,
+    read_video_image,
     resolve_video_path,
     uses_known_inconsistent_lane_points,
     validate_points,
@@ -58,6 +59,7 @@ from app.services.shot_statistics import calculate_statistics
 from app.services.monthly_statistics import monthly_statistics
 from app.services.non_shot_policy import visible_shot
 from app.services.authentication import require_analysis_user
+from app.services.practice_report import ReportError, comparison_context, generate_report, report_view
 
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"], dependencies=[Depends(require_analysis_user)])
@@ -90,6 +92,21 @@ def find_analysis(session: Session, analysis_id: str) -> Analysis:
     if analysis is None or (session.info.get('auth_required') and analysis.owner_id != session.info.get('auth_user_id')):
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "분석 기록을 찾을 수 없습니다."})
     return analysis
+
+
+@router.get("/{analysis_id}/practice-report")
+def get_practice_report(analysis_id: str, request: Request, session: Annotated[Session, Depends(get_db_session)]) -> dict:
+    analysis = find_analysis(session, analysis_id)
+    return report_view(comparison_context(session, analysis), request.app.state.settings, analysis_id)
+
+
+@router.post("/{analysis_id}/practice-report")
+def create_practice_report(analysis_id: str, request: Request, session: Annotated[Session, Depends(get_db_session)]) -> dict:
+    analysis = find_analysis(session, analysis_id)
+    try:
+        return generate_report(session, analysis, request.app.state.settings)
+    except ReportError as error:
+        raise HTTPException(status_code=error.status, detail={"code": error.code, "message": str(error)}) from error
 
 
 def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *, has_calibration: bool, has_assigned_player: bool) -> AnalysisListItem:
@@ -257,6 +274,27 @@ def get_calibration_frame(
     except CalibrationError as error:
         raise HTTPException(status_code=400, detail={"code": "FRAME_READ_FAILED", "message": str(error)}) from error
     return Response(content=content, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@router.post("/{analysis_id}/calibration/quality")
+def get_calibration_quality(
+    request: Request,
+    analysis_id: str,
+    payload: CourtCalibrationRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict:
+    analysis = find_analysis(session, analysis_id)
+    if payload.frame_time_ms > analysis.duration_ms:
+        raise HTTPException(status_code=400, detail={"code": "FRAME_TIME_INVALID", "message": "대표 장면 시간이 영상 범위를 벗어났습니다."})
+    try:
+        frame = read_video_image(resolve_video_path(request.app.state.settings.upload_path, analysis.id), payload.frame_time_ms)
+        height, width = frame.shape[:2]
+        validate_points(payload.image_points, payload.court_points, payload.hoop_point, width, height)
+    except CalibrationError as error:
+        raise HTTPException(status_code=400, detail={"code": "CALIBRATION_INVALID", "message": str(error)}) from error
+    from app.services.view_alignment_trial import floor_landmark_quality
+    landmarks = floor_landmark_quality(frame, payload.image_points)
+    return {"landmarks": landmarks, "usable_count": sum(p['usable'] for p in landmarks), "required_count": 3}
 
 
 @router.get("/{analysis_id}/calibration", response_model=CourtCalibrationResponse)

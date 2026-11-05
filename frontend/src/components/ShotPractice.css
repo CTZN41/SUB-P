@@ -1,0 +1,13 @@
+.shot-type-comparison { margin: 22px 0; }
+.shot-type-comparison h2, .shot-playlist h2 { margin: 0; font-size: 1.1rem; }
+.shot-type-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.shot-type-stat { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-inset); color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.shot-type-stat[aria-pressed="true"] { border-color: var(--accent); background: #d8ff4f0c; }
+.shot-type-stat:hover, .shot-type-stat:focus-visible { border-color: var(--accent); }
+.shot-type-stat .shot-type-rate { font-size: 1.65rem; font-weight: 750; }
+.shot-type-stat > span:last-of-type, .shot-type-stat small { color: var(--text-secondary); font-size: .8rem; line-height: 1.6; }
+.shot-playlist { margin-top: 18px; padding: 22px; border: 1px solid var(--border); border-radius: 24px; background: var(--surface); }
+.shot-playlist .panel-title { flex-wrap: wrap; }
+.shot-playlist .panel-title p { color: var(--text-secondary); margin: 7px 0 0; font-size: .85rem; }
+.shot-playlist video { display: block; width: 100%; max-height: 65vh; background: #000; border-radius: 12px; }
+.shot-playlist-player { scroll-margin-top: 24px; }

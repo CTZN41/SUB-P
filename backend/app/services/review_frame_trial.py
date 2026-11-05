@@ -19,12 +19,12 @@ def dense_shoe_inputs(video, candidate):
     focus = candidate.get('foot_point_px')
     if not focus or not Path(video).is_file():
         return [], {'status': 'unavailable', 'offsets_ms': []}
-    from app.services.ground_contact import plant_sample
+    from app.services.ground_contact import grounded_image_offsets, plant_sample
     reference = plant_sample(candidate)
     reference_offsets = [reference['time_ms'] - release] if reference else []
-    offsets = sorted(set(o for o in [*PLANT_OFFSETS_MS, *reference_offsets] if release + o >= 0))
+    offsets = sorted(o for o in grounded_image_offsets([*PLANT_OFFSETS_MS, *reference_offsets]) if release + o >= 0)
     frames = frame_map(video, [release + o for o in offsets])
-    images, available, clipped = [], [], []
+    images, available, clipped, padded = [], [], [], []
     for offset in offsets:
         target = release + offset
         frame = frames.get(target)
@@ -45,16 +45,22 @@ def dense_shoe_inputs(video, candidate):
         crop = frame[y1:y2, x1:x2]
         if crop.shape[0] < 64 or crop.shape[1] < 64:
             continue
-        edge = y+height*.10 >= height or x1 == 0 or x2 == width
+        padding_clipped = y+height*.10 >= height or x1 == 0 or x2 == width
+        tracked_clipped = (sample.get('foot_point_clipped', False)
+                           if sample and abs(sample['time_ms']-target) <= 250 else candidate.get('foot_point_clipped', False))
+        edge = not (0 < x < width-1 and 0 < y < height-1) or tracked_clipped
         available.append(offset)
         if edge:
             clipped.append(offset)
+        if padding_clipped:
+            padded.append(offset)
         images.extend([
             {'type': 'input_text', 'text': (
                 f'pre-release shoe/line crop t={offset:+d}ms; '
                 f'original pixels ROI=({x1},{y1},{x2},{y2}); '
                 'box midpoint is a crop locator, NOT an ankle or contact measurement. '
-                + ('Image border is included; feet may be off-screen. ' if edge else '')
+                + ('Crop padding reaches the original image border; check whether the actual shoes remain visible. ' if padding_clipped else '')
+                + ('The tracked foot locator is clipped; do not infer an off-screen sole. ' if edge else '')
                 + 'Determine actual ground contact from the shoes in these images; '
                 'do not treat airborne feet or an image edge as ground contact.'
             )},
@@ -62,6 +68,7 @@ def dense_shoe_inputs(video, candidate):
         ])
     return images, {'status': 'available' if available else 'unavailable',
                     'offsets_ms': available, 'image_edge_offsets_ms': clipped,
+                    'crop_padding_edge_offsets_ms': padded,
                     'source': 'original_shoe_pixels', 'numeric_proxy_replaced': False}
 
 
@@ -156,18 +163,25 @@ def fast_outcome_frame_inputs(video, time_ms, hoop_point, evidence_end_ms=None):
     return [*full, *crops]
 
 
-def dense_rim_inputs(video, time_ms, hoop_point, evidence_end_ms=None):
-    """Experimental new evidence: 100ms rim sequence plus two overview frames.
+def dense_rim_inputs(video, time_ms, hoop_point, evidence_end_ms=None, *,
+                     include_early=False, scene_start_ms=0, scene_end_ms=None):
+    """100ms rim sequence, including earlier contact for fast layups/dunks.
 
     Unlike fast_outcome_frame_inputs, this deliberately changes the inputs and
     must be validated against outcome labels before use.
     """
     from app.services import openai_shot_review as r
+    from app.analysis.candidate_windows import WINDOW_RULES
     # Fast, clean makes can pass through the net between the 100ms samples.
     # Add five midpoint crops to the existing second-pass request, not a new call.
-    offsets = sorted(set(range(600, 2801, 100)) | {850, 950, 1050, 1150, 1250})
-    frames = frame_map(video, [time_ms + offset for offset in offsets])
+    offsets = sorted(set(range(600, WINDOW_RULES['layup_rim'].after_ms+1, 100)) | {850, 950, 1050, 1150, 1250})
+    if include_early:
+        offsets = sorted(set(offsets) | set(range(-WINDOW_RULES['layup_rim'].before_ms, 600, 100)))
+    frames = frame_map(video, [time_ms + offset for offset in offsets
+        if time_ms + offset >= scene_start_ms
+        and (scene_end_ms is None or time_ms + offset <= scene_end_ms)])
     images = []
+    post_release_crops = 0
     for offset in offsets:
         frame = frames.get(time_ms + offset)
         if frame is None:
@@ -177,9 +191,10 @@ def dense_rim_inputs(video, time_ms, hoop_point, evidence_end_ms=None):
                            {"type": "input_image", "image_url": r._encode_frame(frame), "detail": "high"}])
         crop = r._hoop_crop(frame, hoop_point)
         if crop is not None:
+            post_release_crops += offset >= 600
             images.extend([{"type": "input_text", "text": f"rim crop t={offset:+d}ms"},
                            {"type": "input_image", "image_url": r._encode_frame(crop), "detail": "high"}])
-    if len(images) < 12:
+    if len(images) < 12 or post_release_crops < 5:
         raise r.InsufficientOutcomeEvidenceError("insufficient rim evidence")
     return images
 

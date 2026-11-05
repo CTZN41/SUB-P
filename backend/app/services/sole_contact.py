@@ -15,7 +15,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 from typing import Literal
 
-from app.services.ground_contact import plant_sample
+from app.services.ground_contact import grounded_image_offsets, plant_sample
 from app.services.court_zones import classify_zone
 from app.analysis.candidate_windows import WINDOW_RULES
 from app.services.shot_review_policy import BOUNDARY_EVIDENCE_CONFIDENCE
@@ -46,6 +46,8 @@ class ContactSequence(BaseModel):
     frames: list[ContactFrame]
     takeoff_frame_index: int | None = Field(ge=0)
     reason: str = Field(max_length=500)
+    stance_motion: Literal['stationary', 'stepping', 'unclear'] = 'unclear'
+    stance_motion_confidence: float = Field(default=0, ge=0, le=1)
 
 
 def project_xy(matrix, point):
@@ -77,7 +79,7 @@ def verify_fixed_floor(reference, current, court_transform):
 
 
 def observe_free_throw_line(frame, matrix, *, blocked_box=None):
-    """Fit actual white pixels in a narrow band around the calibrated line.
+    """Fit actual bright or dark line pixels near the calibrated segment.
 
     The predicted line is a search guide, never returned as observed evidence.
     Both length coverage and residual are checked; occluded regions are omitted.
@@ -95,20 +97,33 @@ def observe_free_throw_line(frame, matrix, *, blocked_box=None):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     pixels = cv2.remap(hsv, samples[:, :, 0].astype('float32'), samples[:, :, 1].astype('float32'), cv2.INTER_NEAREST)
     white = (pixels[:, :, 1] < 65) & (pixels[:, :, 2] > 135)
+    brightness = pixels[:, :, 2].astype(float)
+    background = np.median(brightness, axis=1, keepdims=True)
+    white &= brightness-background >= 35
+    dark = (brightness < 100) & (background-brightness >= 45)
     inside = ((samples[:, :, 0] >= 1) & (samples[:, :, 0] < frame.shape[1]-1)
               & (samples[:, :, 1] >= 1) & (samples[:, :, 1] < frame.shape[0]-1))
     white &= inside
+    dark &= inside
     if blocked_box:
         x1, y1, x2, y2 = blocked_box
-        white &= ~((samples[:, :, 0] >= x1-12) & (samples[:, :, 0] <= x2+12)
-                   & (samples[:, :, 1] >= y1-12) & (samples[:, :, 1] <= y2+12))
+        visible = ~((samples[:, :, 0] >= x1-12) & (samples[:, :, 0] <= x2+12)
+                    & (samples[:, :, 1] >= y1-12) & (samples[:, :, 1] <= y2+12))
+        white &= visible
+        dark &= visible
     selected = []
-    for i, row in enumerate(white):
-        runs = np.split(np.flatnonzero(row), np.flatnonzero(np.diff(np.flatnonzero(row)) > 1)+1)
-        runs = [r for r in runs if 2 <= len(r) <= 14]
+    polarities = []
+    for i in range(len(positions)):
+        runs = []
+        for polarity, mask in (('bright', white), ('dark', dark)):
+            pixels_in_line = np.flatnonzero(mask[i])
+            segments = np.split(pixels_in_line, np.flatnonzero(np.diff(pixels_in_line) > 1)+1)
+            minimum_width = 4 if polarity == 'dark' else 2
+            runs.extend((segment, polarity) for segment in segments if minimum_width <= len(segment) <= 14)
         if runs:
-            best = min(runs, key=lambda r: abs(float(np.mean(distances[r]))))
+            best, polarity = min(runs, key=lambda item: abs(float(np.mean(distances[item[0]]))))
             selected.append((float(positions[i]), float(np.mean(distances[best]))))
+            polarities.append(polarity)
     if len(selected) < 60:
         return {'status': 'unavailable', 'reason': 'white_line_not_visible'}
     values = np.asarray(selected)
@@ -132,16 +147,17 @@ def observe_free_throw_line(frame, matrix, *, blocked_box=None):
     return {'status': 'observed', 'points_px': observed.tolist(), 'predicted_points_px': endpoints.tolist(),
             'coverage': coverage, 'support': support, 'residual_px': residual,
             'pixel_error_px': max(2., residual+1.), 'observed_y_ft': line_y,
-            'source': 'white_pixels_near_calibrated_free_throw_line'}
+            'source': 'observed_pixels_near_calibrated_free_throw_line',
+            'line_polarity': max(set(polarities), key=polarities.count)}
 
 
 def prepare_contact_sequence(video: Path, candidate: dict):
-    """Decode every native frame in a fixed window anchored to the plant time."""
+    """Decode native frames through takeoff in the fixed release-time window."""
     reference = plant_sample(candidate)
     matrix = candidate.get('validated_court_transform')
     if reference is None or candidate.get('calibration_view_valid') is not True or not matrix:
         return [], {'status': 'unavailable', 'reason': 'stable_plant_or_validated_view_missing'}, {}
-    anchor = reference['time_ms']
+    anchor = int(candidate['time_ms'])
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
         return [], {'status': 'unavailable', 'reason': 'video_unavailable'}, {}
@@ -179,8 +195,9 @@ def prepare_contact_sequence(video: Path, candidate: dict):
     fh, fw = frame.shape[:2]
     x1, x2 = max(0, int(px-fw*.16)), min(fw, int(px+fw*.16))
     y1, y2 = max(0, int(py-fh*.20)), min(fh, int(py+fh*.10))
-    if x2-x1 < 100 or y2-y1 < 100 or x1 == 0 or x2 == fw or y2 == fh:
+    if not (0 < px < fw-1 and 0 < py < fh-1) or x2-x1 < 100 or y2-y1 < 100:
         return [], {'status': 'unavailable', 'reason': 'sole_crop_clipped'}, frames
+    padding_clipped = x1 == 0 or x2 == fw or y1 == 0 or y2 == fh
     stride = max(1, round(fps/30))
     indices = sorted(set(list(frames)[::stride]+[min(frames, key=lambda i: abs(i/fps*1000-anchor)), max(frames)]))
     frame_views = {str(index): verify_fixed_floor(validation_frame, frames[index], matrix) for index in indices}
@@ -215,21 +232,26 @@ def prepare_contact_sequence(video: Path, candidate: dict):
                 continue
             borrowed[str(target)] = {'reference_frame_index': reference_index, **frame_views[str(target)]}
     inputs = []
-    overview = frames[min(frames, key=lambda i: abs(i/fps*1000-anchor))]
+    overview = frames[min(frames, key=lambda i: abs(i/fps*1000-reference['time_ms']))]
     from app.services.openai_shot_review import _encode_frame
     inputs.extend([{'type': 'input_text', 'text': 'Unmarked full court overview; use it to identify the straight free-throw line, not the circular arc.'},
                    {'type': 'input_image', 'image_url': _encode_frame(overview), 'detail': 'high'}])
+    inputs.extend([{'type': 'input_text', 'text': 'Full frame at the independently verified release time. Check whether the soles stay grounded or take off.'},
+                   {'type': 'input_image', 'image_url': _encode_frame(validation_frame), 'detail': 'high'}])
     for index in indices:
         crop = frames[index][y1:y2, x1:x2]
         ok, data = cv2.imencode('.png', crop)
         if not ok:
             continue
-        inputs.extend([{'type': 'input_text', 'text': f'frame_index={index}; absolute_time_ms={index/fps*1000:.3f}; native crop {x2-x1}x{y2-y1}. Report crop-local x,y (origin at top left).'},
+        inputs.extend([{'type': 'input_text', 'text': f'frame_index={index}; absolute_time_ms={index/fps*1000:.3f}; native crop {x2-x1}x{y2-y1}. Report crop-local x,y (origin at top left). '
+                       + ('Crop padding touches the image border. Only measure fully visible soles; return unclear if a shoe itself is cut off. ' if padding_clipped else '')},
                        {'type': 'input_image', 'image_url': 'data:image/png;base64,'+base64.b64encode(data).decode(), 'detail': 'high'}])
     metadata = {'status': 'prepared', 'source_fps': fps, 'source_frame_indices': list(frames),
-        'sent_frame_indices': indices, 'anchor_time_ms': anchor, 'anchor_source': 'pose_stable_time_only',
+        'sent_frame_indices': indices, 'anchor_time_ms': anchor, 'anchor_source': 'corrected_release_time',
+        'plant_reference_time_ms': reference['time_ms'],
         'roi_px': [x1, y1, x2, y2], 'decoded_window_ms': [lo/fps*1000, hi/fps*1000],
-        'line_observations': line_checks, 'verified_line_borrows': borrowed, 'native_crop_resized': False}
+        'line_observations': line_checks, 'verified_line_borrows': borrowed, 'native_crop_resized': False,
+        'crop_padding_clipped': padding_clipped}
     metadata.update(verified_contact_frames=frame_views, calibration_validation_frame_index=validation_index)
     return inputs, metadata, frames
 
@@ -245,8 +267,15 @@ def locate_soles_once(client, model, inputs):
             'Coordinates must be in that crop, not full-image pixels. Give an honest pixel error radius and confidence for the contact point. '
             'If two shoes cannot be individually localized, do NOT claim both_grounded. '
             'Identify takeoff_frame_index as the first supplied frame of the final jump where the soles are off the ground, or null if not visible. '
+            'A stationary set shot can remain grounded through release; in that case keep takeoff_frame_index null and report the visible grounded contacts. '
+            'Separately report stance_motion and confidence from the shoe silhouettes across the sequence. '
+            'Stationary means both footprints stay at the same floor positions without a new step or horizontal translation; heel/forefoot rotation alone is allowed. '
+            'If a shoe is obscured enough that this cannot be verified, return unclear, not stationary. '
+            'A raised heel is not airborne when the forefoot or toe still visibly touches the floor. '
+            'In that case measure the center of the actual forefoot/toe contact patch, not the center of the whole shoe. '
             'Distinguish approach running steps from the final stationary two-foot plant. Do not return a court zone or estimated court XY. '
-            'The code independently observes the straight free-throw line and projects your measured pixels. Do not infer a contact from an expected court location.'
+            'The code projects the actual measured contact pixels using its separately verified line or explicit user-confirmed calibration. '
+            'Do not infer a contact from an expected court location.'
         )}, *inputs]}], text_format=ContactSequence)
     parsed = getattr(response, 'output_parsed', None)
     if parsed is None:
@@ -273,24 +302,34 @@ def evaluate_contact_sequence(sequence: ContactSequence, metadata: dict, candida
     if len({f.frame_index for f in sequence.frames}) != len(sequence.frames):
         report['reason'] = 'duplicate_frame_measurement'
         return report
-    if sequence.takeoff_frame_index not in allowed:
+    gate = candidate.get('shot_gate') or {}
+    gate_confidence = gate.get('confidence')
+    grounded_release = (sequence.takeoff_frame_index is None and metadata.get('reviewed_shot_type') == 'set_shot'
+        and gate.get('status') == 'complete' and gate.get('verdict') == 'shot'
+        and isinstance(gate_confidence, (float, int)) and not isinstance(gate_confidence, bool)
+        and .9 <= gate_confidence <= 1)
+    if sequence.takeoff_frame_index not in allowed and not grounded_release:
         report['reason'] = 'takeoff_not_bracketed'
         return report
-    takeoff = next((f for f in sequence.frames if f.frame_index == sequence.takeoff_frame_index), None)
-    if takeoff is None or takeoff.state != 'airborne' or takeoff.contacts:
-        report['reason'] = 'takeoff_not_observed_airborne'
-        return report
-    if not metadata.get('verified_contact_frames', {}).get(str(sequence.takeoff_frame_index), {}).get('verified'):
-        report['reason'] = 'takeoff_view_unverified'
-        return report
+    if not grounded_release:
+        takeoff = next((f for f in sequence.frames if f.frame_index == sequence.takeoff_frame_index), None)
+        if takeoff is None or takeoff.state != 'airborne' or takeoff.contacts:
+            report['reason'] = 'takeoff_not_observed_airborne'
+            return report
+        if not metadata.get('verified_contact_frames', {}).get(str(sequence.takeoff_frame_index), {}).get('verified'):
+            report['reason'] = 'takeoff_view_unverified'
+            return report
+    report['contact_mode'] = 'grounded_through_release' if grounded_release else 'observed_takeoff'
     lines = {l['frame_index']: l for l in metadata.get('line_observations', []) if l['status'] == 'observed'}
     if len(lines) < 2:
         report['reason'] = 'observed_free_throw_line_missing'
         return report
+    report['line_basis'] = 'observed_paint'
     roi = metadata['roi_px']
     samples = []
     for f in sequence.frames:
-        if f.frame_index not in allowed or f.frame_index >= sequence.takeoff_frame_index or f.state != 'both_grounded':
+        if (f.frame_index not in allowed or f.state != 'both_grounded'
+                or (not grounded_release and f.frame_index >= sequence.takeoff_frame_index)):
             continue
         view = metadata.get('verified_contact_frames', {}).get(str(f.frame_index), {})
         if not view.get('verified'):
@@ -343,11 +382,63 @@ def evaluate_contact_sequence(sequence: ContactSequence, metadata: dict, candida
         else:
             report['rejected_frames'].append({'frame_index': f.frame_index, 'reason': 'sole_contact_confidence_low',
                                              'minimum_confidence': min(p.confidence for p in f.contacts)})
-    # Only the final stance, not a running contact earlier in the window.
+    # Use the final stance before observed takeoff or a verified grounded release.
     samples.sort(key=lambda s: s['frame_index'])
+    anchor_ms = (candidate['time_ms'] if grounded_release else sequence.takeoff_frame_index/metadata['source_fps']*1000)
+    post_release = []
+    if grounded_release:
+        required = {index for index in allowed
+                    if anchor_ms-100 <= index/metadata['source_fps']*1000 <= anchor_ms+150}
+        measured = {sample['frame_index']: sample for sample in samples}
+        states = {f.frame_index: f for f in sequence.frames}
+        stationary = (sequence.stance_motion == 'stationary' and sequence.stance_motion_confidence >= CONTACT_CONFIDENCE
+            and all(index in states and states[index].state == 'both_grounded' and len(states[index].contacts) == 2
+                    and {p.foot_id for p in states[index].contacts} == {'foot_1', 'foot_2'}
+                    and metadata.get('verified_contact_frames', {}).get(str(index), {}).get('verified') for index in required))
+        if (not required or (not required <= measured.keys() and not stationary)
+                or min(required)/metadata['source_fps']*1000 > anchor_ms-60
+                or max(required)/metadata['source_fps']*1000 < anchor_ms+50):
+            report['reason'] = 'grounded_release_not_bracketed'
+            if any(r['reason'] == 'sole_contact_confidence_low' for r in report['rejected_frames']):
+                report['reason'] = 'sole_contact_occluded_or_low_confidence'
+            return report
+        post_release = [sample for sample in samples if anchor_ms < sample['time_ms'] <= anchor_ms+150]
+        report['post_release_frames'] = post_release
+        samples = [sample for sample in samples if sample['time_ms'] <= anchor_ms]
+        if stationary and not required <= measured.keys():
+            choices = []
+            recent = [sample for sample in samples if anchor_ms-CONTACT_BEFORE_MS <= sample['time_ms'] <= anchor_ms]
+            for index in range(2, len(recent)):
+                group = recent[index-2:index+1]
+                if (group[-1]['time_ms']-group[0]['time_ms'] >= MIN_CONTACT_SPAN_MS
+                        and all(b['time_ms']-a['time_ms'] <= 70 for a, b in zip(group, group[1:]))):
+                    choices.append(group)
+            if not choices:
+                report['reason'] = 'reliable_stationary_contact_too_early'
+                return report
+            selected = max(choices, key=lambda group: (
+                min(p['confidence'] for frame in group for p in frame['contacts']),
+                -max(p['error_px'] for frame in group for p in frame['contacts']),
+                group[-1]['time_ms']))
+            selected_sides = {sample['side'] for sample in selected}
+            definite_sides = {sample['side'] for sample in recent if sample['side'] != 'straddling'}
+            if len(definite_sides) > 1:
+                report['reason'] = 'stationary_measurements_disagree'
+                return report
+            selected_confidence = min(p['confidence'] for frame in selected for p in frame['contacts'])
+            selected_error = max(p['error_px'] for frame in selected for p in frame['contacts'])
+            if selected_sides != {'straddling'} and any(sample['side'] == 'straddling'
+                    and min(p['confidence'] for p in sample['contacts']) >= selected_confidence
+                    and max(p['error_px'] for p in sample['contacts']) <= selected_error for sample in recent):
+                report['reason'] = 'free_throw_boundary_within_error'
+                return report
+            samples = selected
+            anchor_ms = selected[-1]['time_ms']
+            report['contact_mode'] = 'verified_stationary_pre_release_stance'
+            report['selection_basis'] = 'sole_confidence_then_pixel_error_then_recency; independent_of_boundary_side'
     final = []
     for sample in reversed(samples):
-        if (sequence.takeoff_frame_index-sample['frame_index'])/metadata['source_fps']*1000 > 250:
+        if anchor_ms-sample['time_ms'] > 250:
             continue
         if final and (final[-1]['frame_index']-sample['frame_index'])/metadata['source_fps']*1000 > 70:
             break
@@ -355,22 +446,22 @@ def evaluate_contact_sequence(sequence: ContactSequence, metadata: dict, candida
     final.reverse()
     report['measured_frames'] = final
     if (len(final) < MIN_CONTACT_FRAMES or final[-1]['time_ms']-final[0]['time_ms'] < MIN_CONTACT_SPAN_MS
-            or (sequence.takeoff_frame_index-final[-1]['frame_index'])/metadata['source_fps']*1000 > 100):
+            or anchor_ms-final[-1]['time_ms'] > 100):
         if any(r['reason'] == 'sole_contact_confidence_low' for r in report['rejected_frames']):
             report['reason'] = 'sole_contact_occluded_or_low_confidence'
         return report
-    centers = np.asarray([s['center_xy_ft'] for s in final])
+    centers = np.asarray([s['center_xy_ft'] for s in [*final, *post_release]])
     if np.max(np.linalg.norm(centers-np.median(centers, axis=0), axis=1)) > .5:
         report['reason'] = 'contact_points_unstable'
         return report
-    report['xy_estimate_ft'] = np.median(centers, axis=0).tolist()
-    report['observed_sides'] = [s['side'] for s in final]
+    report['xy_estimate_ft'] = np.median([s['center_xy_ft'] for s in final], axis=0).tolist()
+    report['observed_sides'] = [s['side'] for s in [*final, *post_release]]
     if len(set(report['observed_sides'])) != 1 or report['observed_sides'][0] == 'straddling':
         report['reason'] = 'free_throw_boundary_within_error'
         return report
     xy = report['xy_estimate_ft']
     # The independently observed straight segment is meaningful within the lane.
-    if not all(17 < p['xy_bounds_ft'][0][0] <= p['xy_bounds_ft'][0][1] < 33 for s in final for p in s['contacts']):
+    if not all(17 < p['xy_bounds_ft'][0][0] <= p['xy_bounds_ft'][0][1] < 33 for s in [*final, *post_release] for p in s['contacts']):
         report['reason'] = 'lane_side_boundary_within_error'
         return report
     zone = classify_zone(*xy).value
@@ -378,9 +469,12 @@ def evaluate_contact_sequence(sequence: ContactSequence, metadata: dict, candida
     if not ((side == 'outside' and zone.startswith('mid_')) or (side == 'inside' and zone.startswith('paint_'))):
         report['reason'] = 'other_physical_boundary_requires_review'
         return report
+    confidence = min(p['confidence'] for s in final for p in s['contacts'])
+    if report['contact_mode'] == 'verified_stationary_pre_release_stance':
+        confidence = min(confidence, sequence.stance_motion_confidence)
     report.update(status='resolved', reason='grounded_pixels_and_observed_line_agree',
                   court_x=xy[0], court_y=xy[1], court_zone=zone,
-                  confidence=min(p['confidence'] for s in final for p in s['contacts']))
+                  confidence=confidence)
     return report
 
 
@@ -400,12 +494,14 @@ def needs_contact_verification(decision: dict, candidate: dict, projected_plant=
                and 17 < p[0] < 33 and abs(p[1]-19) <= 2 for p in points)
 
 
-def review_contact_pixels(client, model, video: Path, candidate: dict):
+def review_contact_pixels(client, model, video: Path, candidate: dict, shot_type=None):
     inputs, metadata, native_frames = prepare_contact_sequence(video, candidate)
     del native_frames
-    if not inputs or sum(l['status'] == 'observed' for l in metadata.get('line_observations', [])) < 2:
+    line_available = sum(l['status'] == 'observed' for l in metadata.get('line_observations', [])) >= 2
+    if not inputs or not line_available:
         return {'status': 'needs_review', 'reason': metadata.get('reason', 'observed_free_throw_line_missing'),
                 'preparation': metadata, 'api_called': False}, {}
+    metadata['reviewed_shot_type'] = shot_type
     sequence, usage = locate_soles_once(client, model, inputs)
     result = evaluate_contact_sequence(sequence, metadata, candidate)
     # A second, wider sensitivity assumption cannot turn an ambiguous result
@@ -436,7 +532,7 @@ def _keep_supported_visual_position(review, result, candidate, shoe_evidence) ->
     if review.get('visual_arc_relation') != expected_arc or not review.get('arc_evidence', '').strip():
         return False
     available = set(shoe_evidence.get('offsets_ms', [])) - set(shoe_evidence.get('image_edge_offsets_ms', []))
-    grounded = {t for t in review.get('grounded_frame_offsets_ms', []) if t in available and -1200 <= t < 0}
+    grounded = grounded_image_offsets(review.get('grounded_frame_offsets_ms', [])) & available
     if len(grounded) < 2:
         return False
     diagnostics = result.get('diagnostic_frames', [])

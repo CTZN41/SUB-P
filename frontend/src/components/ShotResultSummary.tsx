@@ -2,10 +2,11 @@ import { shotSummary } from '../utils/shotPresentation'
 import type { PresentableShot } from '../utils/shotPresentation'
 import type { ShotCategory } from '../utils/shotPresentation'
 
-export function ShotResultSummary({ shots, selectedCategory = null, onSelect }: {
+export function ShotResultSummary({ shots, selectedCategory = null, onSelect, onOpen }: {
   shots: PresentableShot[]
   selectedCategory?: ShotCategory | null
   onSelect?: (category: ShotCategory | null) => void
+  onOpen?: (category: ShotCategory | null) => void
 }) {
   const counts = shotSummary(shots)
   const cards: { label: string; count: number; category: ShotCategory | null }[] = [
@@ -17,7 +18,7 @@ export function ShotResultSummary({ shots, selectedCategory = null, onSelect }: 
   ]
   return <section className="review-summary" aria-label="결과 요약">
     {cards.filter(card => card.count > 0 || (card.category !== 'position_review' && card.category !== 'outcome_review')).map(card => onSelect
-      ? <button key={card.label} type="button" aria-label={`${card.label} 보기`} aria-pressed={selectedCategory === card.category} onClick={() => onSelect(card.category)}><span>{card.label}</span><strong>{card.count}</strong></button>
+      ? <button key={card.label} type="button" aria-label={`${card.label} 보기`} aria-pressed={selectedCategory === card.category} onClick={() => onSelect(card.category)} onDoubleClick={() => onOpen?.(card.category)}><span>{card.label}</span><strong>{card.count}</strong></button>
       : <div key={card.label}><span>{card.label}</span><strong>{card.count}</strong></div>)}
   </section>
 }
