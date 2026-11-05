@@ -2,6 +2,8 @@
 from app.models.core import (
     Analysis,
     AnalysisJob,
+    AnalysisNotification,
+    AnalysisEmailRequest,
     AnalysisStatus,
     CalibrationSource,
     CourtCalibration,
@@ -20,6 +22,8 @@ from app.models.core import (
 __all__ = [
     "Analysis",
     "AnalysisJob",
+    "AnalysisNotification",
+    "AnalysisEmailRequest",
     "AnalysisStatus",
     "CalibrationSource",
     "CourtCalibration",

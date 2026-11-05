@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MonthlyShotPreview } from './MonthlyShotPreview'
+import { PracticeReport } from './PracticeReport'
 import type { CourtShot } from './ShotCourt3D'
 import { ShotHeatmap } from './ShotHeatmap'
 import './MonthlyResults.css'
@@ -109,6 +110,7 @@ export function MonthlyResults() {
       <ShotPlaylist shots={visibleShots} numbers={numbers} open={playlistOpen}
         onClose={() => setPlaylistOpen(false)} onStart={() => { setSelectedId(null); setPlaylistOpen(true) }} />
       {selected && <MonthlyShotPreview key={selected.id} shot={selected} number={numbers[selected.id]} typeLabel={TYPE_LABELS[selected.shot_type] ?? selected.shot_type} onClose={() => setSelectedId(null)} />}
+      {data.month && <PracticeReport key={`monthly-${data.month}`} month={data.month} revision={data} />}
     </>}
   </div>
 }

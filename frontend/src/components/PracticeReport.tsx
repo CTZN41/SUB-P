@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { EmailNotification } from './EmailNotification'
 import './PracticeReport.css'
 
 type Line = { attempts: number; made: number; missed: number; unresolved: number; success_rate: number | null }
@@ -28,34 +29,36 @@ async function readResponse(response: Response): Promise<ReportData> {
   return body
 }
 
-export function PracticeReport({ analysisId, revision }: { analysisId: string; revision: unknown }) {
+export function PracticeReport({ analysisId, month, revision }: { analysisId?: string; month?: string; revision: unknown }) {
   const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
   const [kind, setKind] = useState('zone')
   const [retry, setRetry] = useState(0)
+  const [showDelivery, setShowDelivery] = useState(false)
   const requestSequence = useRef(0)
+  const endpoint = month ? `/api/analyses/monthly/practice-report?month=${encodeURIComponent(month)}` : `/api/analyses/${analysisId}/practice-report`
 
   useEffect(() => {
     const controller = new AbortController()
     const sequence = ++requestSequence.current
     setLoading(true)
     setError('')
-    fetch(`/api/analyses/${analysisId}/practice-report`, { signal: controller.signal })
+    fetch(endpoint, { signal: controller.signal })
       .then(readResponse)
       .then(value => { if (sequence === requestSequence.current) setData(value) })
       .catch(cause => { if (!controller.signal.aborted && sequence === requestSequence.current) setError(cause.message) })
       .finally(() => { if (sequence === requestSequence.current) setLoading(false) })
     return () => { controller.abort(); ++requestSequence.current }
-  }, [analysisId, revision, retry])
+  }, [endpoint, revision, retry])
 
   async function generate() {
     const sequence = ++requestSequence.current
     setGenerating(true)
     setError('')
     try {
-      const response = await fetch(`/api/analyses/${analysisId}/practice-report`, { method: 'POST' })
+      const response = await fetch(endpoint, { method: 'POST' })
       const value = await readResponse(response)
       if (sequence === requestSequence.current) setData(value)
     } catch (cause) {
@@ -75,19 +78,20 @@ export function PracticeReport({ analysisId, revision }: { analysisId: string; r
         {evidence.previous && evidence.previous.attempts > 0 && ` / 이전 ${evidence.previous.made}/${evidence.previous.made + evidence.previous.missed} · ${rate(evidence.previous)}`}</small>}</li>
   }
 
-  return <section className="setup-card practice-report" aria-label="AI 연습 리포트" aria-busy={loading || generating}>
-    <div className="panel-title"><div><p className="eyebrow">PRACTICE REPORT</p><h2>AI 연습 리포트</h2></div>
-      {data && <button type="button" className="button primary" disabled={loading || generating || !data.ready || !data.ai_available || Boolean(report)} onClick={generate}>
+  return <section className="setup-card practice-report" aria-label={month ? '월간 리포트' : '연습 리포트'} aria-busy={loading || generating}>
+    <div className="panel-title"><div><p className="eyebrow">{month ? 'MONTHLY REPORT' : 'PRACTICE REPORT'}</p><h2>{month ? '월간 리포트' : '연습 리포트'}</h2></div>
+      <div className="practice-report-actions">{data && <button type="button" className="button primary" disabled={loading || generating || !data.ready || !data.ai_available || Boolean(report)} onClick={generate}>
         {generating ? 'AI 요약 생성 중…' : report ? '요약 생성 완료' : data.stale ? 'AI 요약 갱신' : 'AI 요약 생성'}
-      </button>}</div>
+      </button>}{analysisId && <button type="button" className="button secondary" aria-expanded={showDelivery} onClick={() => setShowDelivery(value => !value)}>리포트 보내기</button>}</div></div>
+    {showDelivery && analysisId && <EmailNotification analysisId={analysisId} revision={revision} manual />}
     {loading && <p className="helper-text">연습 기록을 비교하고 있습니다…</p>}
     {error && <div role="alert" className="inline-warning">{error} <button type="button" className="button secondary" onClick={() => setRetry(value => value + 1)}>다시 확인</button></div>}
     {!loading && data && overall && <>
-      {data.previous && <p className="helper-text">이전 연습 <Link to={`/results/${data.previous.id}`}>{data.previous.title}</Link> · {data.previous.date}</p>}
+      {data.previous && <p className="helper-text">{month ? `지난달 ${data.previous.date}` : <>이전 연습 <Link to={`/results/${data.previous.id}`}>{data.previous.title}</Link> · {data.previous.date}</>}</p>}
       {data.same_source_metadata && <p className="helper-text">같은 원본명·길이·용량의 기록입니다. 재분석 결과일 수 있습니다.</p>}
       <div className="practice-overview">
-        <div><span>이번 연습</span><strong>{rate(overall.current)}</strong><small>{overall.current.attempts}회 시도 · 성공 {overall.current.made} / 실패 {overall.current.missed}</small></div>
-        <div><span>이전 연습</span><strong>{rate(overall.previous)}</strong><small>{overall.previous ? `${overall.previous.attempts}회 시도 · 성공 ${overall.previous.made} / 실패 ${overall.previous.missed}` : '비교 기록 없음'}</small></div>
+        <div><span>{month ? '이번 달' : '이번 연습'}</span><strong>{rate(overall.current)}</strong><small>{overall.current.attempts}회 시도 · 성공 {overall.current.made} / 실패 {overall.current.missed}</small></div>
+        <div><span>{month ? '지난달' : '이전 연습'}</span><strong>{rate(overall.previous)}</strong><small>{overall.previous ? `${overall.previous.attempts}회 시도 · 성공 ${overall.previous.made} / 실패 ${overall.previous.missed}` : '비교 기록 없음'}</small></div>
         <div><span>성공률 변화</span><strong>{change(overall.rate_change_pp, '%p')}</strong><small>시도 수 {change(overall.attempt_change, '회')}</small></div>
       </div>
       <details className="practice-comparison"><summary>구역·슛 종류별 비교</summary>
@@ -107,7 +111,7 @@ export function PracticeReport({ analysisId, revision }: { analysisId: string; r
         <p className="practice-ai-summary">{report.content.summary}</p>
         <div className="practice-ai-columns"><section><h3>이번 연습의 특징</h3><ul>{report.content.findings.map(observation)}</ul></section>
           <section><h3>다음 연습 과제</h3><ol>{report.content.next_practice.map(observation)}</ol></section></div>
-      </div> : <p className="helper-text">{!data.ready ? '분석 완료 후 생성할 수 있습니다.' : !data.ai_available ? 'AI 요약을 사용하려면 OpenAI 연결 설정이 필요합니다.' : '생성 버튼을 누르면 저장된 통계를 OpenAI로 보내 특징과 다음 연습 과제를 작성합니다.'}</p>}
+      </div> : !data.ready ? <p className="helper-text">분석 완료 후 생성할 수 있습니다.</p> : !data.ai_available ? <p className="helper-text">AI 요약을 사용하려면 OpenAI 연결 설정이 필요합니다.</p> : null}
     </>}
   </section>
 }

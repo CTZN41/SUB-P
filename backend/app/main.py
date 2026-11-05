@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +15,7 @@ from app.db.session import create_database_engine, create_session_factory
 from app.services.analysis_jobs import recover_stale_jobs
 from app.services.streaming_upload import recover_uploads
 from app.services.upload_body_limit import UploadBodyLimitMiddleware
+from app.services.email_notifications import configured as email_configured, notification_worker
 
 
 @asynccontextmanager
@@ -32,8 +34,15 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.engine = engine
     app.state.session_factory = session_factory
-    yield
-    engine.dispose()
+    notification_stop = asyncio.Event()
+    notifications = asyncio.create_task(notification_worker(session_factory, settings, notification_stop)) if email_configured(settings) else None
+    try:
+        yield
+    finally:
+        notification_stop.set()
+        if notifications:
+            await notifications
+        engine.dispose()
 
 
 app = FastAPI(

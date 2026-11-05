@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 import base64
 import json
 
-from pydantic import model_validator
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     naver_client_id: str | None = None
     naver_client_secret: str | None = None
     naver_redirect_uri: str | None = None
+    email_notifications_enabled: bool = False
+    gmail_sender: str | None = None
+    gmail_app_password: SecretStr | None = None
+    public_app_url: str | None = None
+    report_font_path: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_ROOT / ".env",

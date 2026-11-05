@@ -168,6 +168,31 @@ class Analysis(Base):
     )
 
 
+class AnalysisEmailRequest(Base):
+    __tablename__ = 'analysis_email_requests'
+
+    request_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    analysis_id: Mapped[str] = mapped_column(ForeignKey('analyses.id', ondelete='CASCADE'), nullable=False, index=True)
+    owner_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class AnalysisNotification(Base):
+    __tablename__ = 'analysis_notifications'
+
+    analysis_id: Mapped[str] = mapped_column(ForeignKey('analyses.id', ondelete='CASCADE'), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    recipient_email: Mapped[str | None] = mapped_column(String(254))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default='waiting', index=True)
+    consent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+    claim_token: Mapped[str | None] = mapped_column(String(36))
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_message_id: Mapped[str | None] = mapped_column(String(100))
+    error_code: Mapped[str | None] = mapped_column(String(60))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class CourtCalibration(Base):
     __tablename__ = "court_calibrations"
 

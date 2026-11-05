@@ -11,7 +11,6 @@ export function ShotTypeComparison({ shots, selectedType, onSelect }: {
     <div className="panel-title"><h2>슛 종류별 성적</h2>
       {selectedType && <button type="button" className="button secondary" onClick={() => onSelect('')}>전체 종류</button>}
     </div>
-    <p className="helper-text">성공률은 위치 확인 여부와 관계없이 결과가 판정된 슛으로 계산합니다.</p>
     {rows.length ? <div className="shot-type-grid">{rows.map(row =>
       <button type="button" key={row.type} className="shot-type-stat" aria-pressed={selectedType === row.type}
         aria-label={`${SHOT_TYPE_LABELS[row.type] ?? row.type} 성적 보기`}

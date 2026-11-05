@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { RecordItem } from './AnalysisHistory'
 import type { CourtShot } from './ShotCourt3D'
-import { zoneTarget } from './ShotHeatmap'
+import { zoneTone } from '../utils/heatmapPolicy'
 import { COURT_ZONES, THREE_POINT_LINE } from '../utils/courtZones'
 import { hasShotPosition, shotNumbers } from '../utils/shotPresentation'
 
@@ -63,7 +63,8 @@ export function HomeAnalysisPreview({ analysis, loading }: { analysis: RecordIte
           <rect width="500" height="470" rx="8" fill="#555c57" />
           {COURT_ZONES.map(zone => {
             const stat = data?.statistics.by_zone[zone.code]
-            const fill = !stat?.attempts || stat.success_rate == null ? '#555c57' : stat.success_rate >= zoneTarget(zone.code) ? '#257b57' : '#98504f'
+            const tone = zoneTone(stat, zone.code)
+            const fill = tone === 'hot' ? '#257b57' : tone === 'cold' ? '#98504f' : '#555c57'
             return <path key={zone.code} d={zone.path} fill={fill} stroke="#353e39" strokeWidth="2" />
           })}
           <g fill="none" stroke="#e3e8df" strokeWidth="4">

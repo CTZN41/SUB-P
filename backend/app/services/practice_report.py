@@ -145,10 +145,10 @@ def _cache_path(settings, analysis_id):
     return settings.work_path / analysis_id / "practice-report.json"
 
 
-def report_view(context, settings, analysis_id):
+def report_view(context, settings, analysis_id, *, cache_path=None):
     report = None
     try:
-        report = SavedReport.model_validate_json(_cache_path(settings, analysis_id).read_text(encoding="utf-8")).model_dump(mode="json")
+        report = SavedReport.model_validate_json((cache_path or _cache_path(settings, analysis_id)).read_text(encoding="utf-8")).model_dump(mode="json")
     except (OSError, ValueError, KeyError, TypeError, ValidationError):
         report = None
     stale = bool(report and report.get("fingerprint") != _fingerprint(context, settings.openai_vision_model))
@@ -188,6 +188,8 @@ def _generate_text(context, settings):
     # 분석 제목·이메일·선수 이름·영상은 보내지 않고 코드에서 계산한 통계만 전달한다.
     evidence = {key: context[key] for key in ("rows", "same_source_metadata", "position_unresolved")}
     evidence["has_previous"] = context["previous"] is not None
+    if context.get('period') == 'monthly':
+        evidence['period'] = 'monthly'
     prompt = (
         "한국어로 개인 농구 연습 리포트를 작성한다. 제공된 통계만 근거로 삼는다. "
         "summary는 두 문장 이내, findings는 한두 개의 관찰, next_practice는 실행 가능한 과제 한두 개다. "
@@ -199,6 +201,8 @@ def _generate_text(context, settings):
         "이전 기록이 없으면 이번 연습만 요약한다. 촬영 형태가 같아도 선수 구성은 다를 수 있다. "
         "자세·피로·동작 원인은 통계로 추측하지 않는다. 일반적인 표현으로 구체적 연습 과제를 제안한다."
     )
+    if context.get('period') == 'monthly':
+        prompt += ' 한국어 월간 리포트다. 이번 달과 직전 달의 합산 기록을 비교한다. 같은 영상의 재분석과 서로 다른 촬영 형태가 포함될 수 있으므로 실력 향상을 단정하지 않는다.'
     start = perf_counter()
     with OpenAI(api_key=settings.openai_api_key, timeout=settings.openai_timeout_seconds, max_retries=0) as client:
         response = client.responses.parse(

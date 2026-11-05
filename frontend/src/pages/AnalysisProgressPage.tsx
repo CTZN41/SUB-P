@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AnalysisBackLink } from '../components/AnalysisBackLink'
+import { EmailNotification } from '../components/EmailNotification'
 import { ANALYSIS_STAGES as STAGES, analysisStageIndex, analysisStageLabel } from '../utils/analysisStages'
 import { readAnalysisResponse, startAnalysisPolling } from '../utils/analysisPolling'
 
@@ -108,5 +109,6 @@ export function AnalysisProgressPage() {
       <div className="actions">{job?.status === 'succeeded' && !simulation && <Link className="button primary" to={`/results/${analysisId}`}>결과 확인</Link>}{analysis && analysis.play_type !== 'solo' && terminal && !completedRealJobId && <Link className="button primary" to={`/results/${analysisId}`}>수동으로 슛 기록하기</Link>}{terminal && !completedRealJobId && <button className="button primary" onClick={start} disabled={busy || analysis?.play_type !== 'solo'}>{busy ? '시작 중…' : '분석 시작'}</button>}
         {job && !terminal && <button className="button secondary" onClick={cancel} disabled={busy}>{busy ? '취소 요청 중…' : '분석 취소'}</button>}<Link className="button secondary" to="/">화면 나가기</Link></div>
     </section>
+    {analysisId && analysis && !simulation && <EmailNotification key={analysisId} analysisId={analysisId} />}
   </div>
 }

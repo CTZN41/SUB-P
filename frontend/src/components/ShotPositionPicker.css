@@ -1,9 +1,12 @@
 .shot-position-picker { margin: 18px 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-inset); }
 .shot-position-picker h3 { margin: 0 0 8px; font-size: 1rem; }
 .shot-position-picker p { margin: 8px 0; color: var(--text-secondary); font-size: .82rem; line-height: 1.6; }
-.shot-position-picker svg { display: block; width: 100%; max-width: 460px; margin: 12px auto; border: 2px solid #dce6dc; border-radius: 6px; cursor: crosshair; }
+.shot-position-picker svg { display: block; box-sizing: border-box; width: 100%; max-width: 560px; margin: 12px auto; border: 2px solid #dce6dc; border-radius: 6px; cursor: crosshair; }
 .shot-position-picker svg:focus-visible { outline: 3px solid #dfff59; outline-offset: 4px; }
 .shot-position-picker svg[aria-disabled="true"] { cursor: wait; opacity: .6; }
+.shot-position-picker .position-court-zones { fill: transparent; stroke: #fff7e8; stroke-width: 1.5; pointer-events: none; }
+.shot-position-picker .position-court-zones .selected { fill: #dfff59; fill-opacity: .3; }
+.shot-position-picker .position-court-marker { pointer-events: none; }
 .shot-position-picker .position-court-lines { fill: none; stroke: #fff7e8; stroke-width: 2; pointer-events: none; }
 .shot-position-picker .position-court-labels { fill: #17291d; font-size: 14px; font-weight: 750; text-anchor: middle; pointer-events: none; }
 .shot-position-picker .position-selection { color: #dfff59; font-weight: 750; }

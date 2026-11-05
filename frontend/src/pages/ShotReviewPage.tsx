@@ -269,7 +269,6 @@ export function ShotReviewPage() {
       zone={selectedZone}
       onZoneChange={setSelectedZone}
     /></Suspense></div>
-    {sourceData && <PracticeReport key={analysisId} analysisId={analysisId} revision={sourceData} />}
     <ShotPlaylist shots={visibleShots.map(shot => ({ ...shot, analysis_id: analysisId }))} numbers={numbers}
       open={playlistOpen} onClose={() => setPlaylistOpen(false)} onStart={() => {
         videoRef.current?.pause()
@@ -300,5 +299,6 @@ export function ShotReviewPage() {
         </form>}
       </section>
     </div>
+    {sourceData && <PracticeReport key={analysisId} analysisId={analysisId} revision={sourceData} />}
   </div>
 }

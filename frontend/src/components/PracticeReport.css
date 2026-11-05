@@ -1,4 +1,6 @@
 .practice-report { margin-top: 1.2rem; }
+.practice-report-actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.practice-report > .email-notification { margin: 1rem 0; padding: 1rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .practice-report h2, .practice-report h3 { margin: 0; }
 .practice-report .eyebrow { margin: 0 0 .5rem; }
 .practice-report .helper-text { line-height: 1.7; overflow-wrap: anywhere; }

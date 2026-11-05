@@ -90,3 +90,11 @@ def read_account_profile(session: Session, user_id: str) -> dict:
         'can_register_password': bool(row['email'] and row['email_confirmed'] and not registered
             and set(providers).intersection({'google', 'kakao', 'custom:naver'})),
     }
+
+
+def verified_account_email(session: Session, user_id: str) -> str | None:
+    """Read the current confirmed address from Auth, never a browser-supplied recipient."""
+    email = session.execute(text('''SELECT email FROM auth.users
+        WHERE id = :user_id AND email_confirmed_at IS NOT NULL'''),
+        {'user_id': user_id}).scalar_one_or_none()
+    return email.strip().lower() if isinstance(email, str) else None

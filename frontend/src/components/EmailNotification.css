@@ -1,0 +1,7 @@
+.email-notification-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.email-notification-heading h2 { margin: 0; }
+.email-notification-form { display: grid; gap: 1rem; margin-top: 1.25rem; }
+.email-notification-consent { display: flex; align-items: flex-start; gap: .65rem; line-height: 1.6; }
+.email-notification-consent input { flex: 0 0 auto; width: auto; margin-top: .3rem; }
+.email-notification-form > button { justify-self: start; }
+.email-notification p { line-height: 1.6; overflow-wrap: anywhere; }

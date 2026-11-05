@@ -13,6 +13,7 @@ htmlcov/
 node_modules/
 dist/
 build/
+/output/
 
 backend/uploads/*
 !backend/uploads/.gitkeep

@@ -1,6 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from 'react'
 import './ShotPositionPicker.css'
-import { THREE_POINT_LINE } from '../utils/courtZones'
+import { COURT_ZONES, THREE_POINT_LINE, classifyCourtZone } from '../utils/courtZones'
 
 export function ShotPositionPicker({ x, y, disabled = false, saved = false, onChange }: {
   x: string
@@ -12,6 +12,8 @@ export function ShotPositionPicker({ x, y, disabled = false, saved = false, onCh
   const hasPosition = x.trim() !== '' && y.trim() !== '' &&
     Number.isFinite(Number(x)) && Number.isFinite(Number(y)) &&
     Number(x) >= 0 && Number(x) <= 50 && Number(y) >= 0 && Number(y) <= 47
+  const selectedZone = hasPosition ? classifyCourtZone(Number(x), Number(y)) : null
+  const selectedLabel = COURT_ZONES.find(zone => zone.code === selectedZone)?.label
 
   function select(xValue: number, yValue: number) {
     if (!disabled) onChange(Math.max(0, Math.min(50, xValue)).toFixed(2), Math.max(0, Math.min(47, yValue)).toFixed(2))
@@ -38,21 +40,24 @@ export function ShotPositionPicker({ x, y, disabled = false, saved = false, onCh
   }
   return <section className="shot-position-picker" aria-label="슛 위치 직접 지정">
     <h3>2D 코트에서 슛 위치 찍기</h3>
-    <svg viewBox="0 0 500 470" role="application" aria-label="슛 위치 선택용 2D 반코트" aria-disabled={disabled} tabIndex={disabled ? -1 : 0} onClick={click} onKeyDown={keyDown}>
+    <svg viewBox="0 0 500 470" role="application" aria-label="14개 구역 슛 위치 선택용 2D 반코트" aria-disabled={disabled} tabIndex={disabled ? -1 : 0} onClick={click} onKeyDown={keyDown}>
       <rect width="500" height="470" fill="#ba8c52" />
+      <g className="position-court-zones" aria-hidden="true">
+        {COURT_ZONES.map(zone => <path key={zone.code} data-zone={zone.code} d={zone.path} fillRule="evenodd" className={zone.code === selectedZone ? 'selected' : undefined} />)}
+      </g>
       <g className="position-court-lines">
         <rect x="1" y="1" width="498" height="468" />
         <rect x="170" y="0" width="160" height="190" />
         <path d={THREE_POINT_LINE} />
-        <path d="M210 52.5A40 40 0 0 0 290 52.5M190 190A60 60 0 0 0 310 190M190 470A60 60 0 0 1 310 470M220 35H280" />
+        <path d="M210 52.5A40 40 0 0 0 290 52.5M205 190A45 45 0 0 0 295 190M190 470A60 60 0 0 1 310 470M220 35H280" />
         <circle cx="250" cy="52.5" r="7" />
       </g>
       <g className="position-court-labels" aria-hidden="true"><text x="250" y="26">골대</text><text x="65" y="440">코트 왼쪽</text><text x="435" y="440">코트 오른쪽</text></g>
-      {hasPosition && <g transform={`translate(${Number(x) * 10} ${Number(y) * 10})`} aria-hidden="true">
+      {hasPosition && <g className="position-court-marker" transform={`translate(${Number(x) * 10} ${Number(y) * 10})`} aria-hidden="true">
         <circle r="11" fill="#dfff59" stroke="#102019" strokeWidth="3" />
         <path d="M-16 0H16M0-16V16" stroke="#102019" strokeWidth="2" />
       </g>}
     </svg>
-    <p className="position-selection" role="status">{hasPosition ? `${saved ? '저장된 위치' : '선택 위치'}: x ${Number(x).toFixed(2)} · y ${Number(y).toFixed(2)}ft${saved ? '' : ' (저장 전)'}` : '아직 위치를 선택하지 않았습니다.'}</p>
+    <p className="position-selection" role="status">{hasPosition ? `${saved ? '저장된 위치' : '선택 위치'}: ${selectedLabel} · x ${Number(x).toFixed(2)} · y ${Number(y).toFixed(2)}ft${saved ? '' : ' (저장 전)'}` : '아직 위치를 선택하지 않았습니다.'}</p>
   </section>
 }

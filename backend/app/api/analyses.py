@@ -1,5 +1,6 @@
 from datetime import date
 from typing import Annotated
+from uuid import UUID
 
 from datetime import datetime, timezone
 import shutil
@@ -8,6 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import FileResponse
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, ConfigDict
 
 from app.db.dependencies import get_db_session
 from app.models import (
@@ -60,9 +62,54 @@ from app.services.monthly_statistics import monthly_statistics
 from app.services.non_shot_policy import visible_shot
 from app.services.authentication import require_analysis_user
 from app.services.practice_report import ReportError, comparison_context, generate_report, report_view
+from app.services.monthly_practice_report import monthly_report_view, generate_monthly_report
+from app.services.email_notifications import NotificationError, cancel_subscription, notification_view, subscribe, request_report_delivery
 
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"], dependencies=[Depends(require_analysis_user)])
+
+
+class NotificationRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    consent: bool = False
+
+
+class ReportDeliveryRequest(NotificationRequest):
+    request_id: UUID
+
+
+@router.post('/{analysis_id}/email-notification/send')
+def send_report_email(analysis_id: str, payload: ReportDeliveryRequest, request: Request,
+                      session: Annotated[Session, Depends(get_db_session)]):
+    analysis = find_analysis(session, analysis_id)
+    try:
+        return request_report_delivery(session, analysis, request.app.state.settings, payload.consent, str(payload.request_id))
+    except NotificationError as error:
+        raise HTTPException(error.status, detail={'code': error.code, 'message': str(error)}) from None
+
+
+@router.get('/{analysis_id}/email-notification')
+def get_email_notification(analysis_id: str, request: Request, session: Annotated[Session, Depends(get_db_session)]):
+    return notification_view(session, find_analysis(session, analysis_id), request.app.state.settings)
+
+
+@router.post('/{analysis_id}/email-notification')
+def request_email_notification(analysis_id: str, payload: NotificationRequest, request: Request,
+                             session: Annotated[Session, Depends(get_db_session)]):
+    analysis = find_analysis(session, analysis_id)
+    try:
+        return subscribe(session, analysis, request.app.state.settings, payload.consent)
+    except NotificationError as error:
+        raise HTTPException(error.status, detail={'code': error.code, 'message': str(error)}) from None
+
+
+@router.delete('/{analysis_id}/email-notification')
+def cancel_email_notification(analysis_id: str, request: Request, session: Annotated[Session, Depends(get_db_session)]):
+    analysis = find_analysis(session, analysis_id)
+    try:
+        return cancel_subscription(session, analysis, request.app.state.settings)
+    except NotificationError as error:
+        raise HTTPException(error.status, detail={'code': error.code, 'message': str(error)}) from None
 
 PLAYER_LIMITS = {
     PlayType.SOLO: 1,
@@ -70,6 +117,22 @@ PLAYER_LIMITS = {
     PlayType.TWO_ON_TWO: 4,
     PlayType.THREE_ON_THREE: 6,
 }
+
+
+@router.get('/monthly/practice-report')
+def get_monthly_practice_report(request: Request, session: Annotated[Session, Depends(get_db_session)], month: str):
+    try:
+        return monthly_report_view(session,request.app.state.settings,session.info.get('auth_user_id'),month)
+    except ReportError as error:
+        raise HTTPException(error.status,detail={'code':error.code,'message':str(error)}) from None
+
+
+@router.post('/monthly/practice-report')
+def create_monthly_practice_report(request: Request, session: Annotated[Session, Depends(get_db_session)], month: str):
+    try:
+        return generate_monthly_report(session,request.app.state.settings,session.info.get('auth_user_id'),month)
+    except ReportError as error:
+        raise HTTPException(error.status,detail={'code':error.code,'message':str(error)}) from None
 
 
 @router.get("/monthly")
