@@ -1,11 +1,12 @@
 """Read only the signed-in user's account; never return password material."""
 import re
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.models import UserProfile
+from app.models import UserProfile, UserEmailPreference, AnalysisNotification
 from app.services.nickname_policy import nickname_from_metadata, normalize_nickname, nickname_key
 
 
@@ -73,6 +74,7 @@ def read_account_profile(session: Session, user_id: str) -> dict:
     providers = sorted(set(providers))
     registered = bool(row['password_registered'])
     saved = session.get(UserProfile, user_id)
+    email_preference = session.get(UserEmailPreference, user_id)
     suggestion = nickname_from_metadata(row['raw_user_meta_data']) if not saved else ''
     conflict = bool(suggestion and not nickname_available(session, suggestion))
     return {
@@ -84,6 +86,7 @@ def read_account_profile(session: Session, user_id: str) -> dict:
         'pending_email': row['email_change'] or None,
         'can_register_email': not bool(row['email']),
         'email_confirmed': bool(row['email_confirmed']),
+        'email_reports_consent': bool(email_preference and email_preference.enabled),
         'providers': providers,
         'created_at': row['created_at'],
         'password_registered': registered,
@@ -98,3 +101,31 @@ def verified_account_email(session: Session, user_id: str) -> str | None:
         WHERE id = :user_id AND email_confirmed_at IS NOT NULL'''),
         {'user_id': user_id}).scalar_one_or_none()
     return email.strip().lower() if isinstance(email, str) else None
+
+
+def email_reports_allowed(session: Session, user_id: str | None) -> bool:
+    preference = session.get(UserEmailPreference, user_id) if user_id else None
+    return bool(preference and preference.enabled)
+
+
+def save_email_preference(session: Session, user_id: str, enabled: bool) -> dict:
+    profile = read_account_profile(session, user_id)
+    if enabled and not (profile['email'] and profile['email_confirmed']):
+        raise profile_error('EMAIL_VERIFICATION_REQUIRED', '이메일을 등록하고 인증한 후 동의해 주세요.')
+    preference = session.scalar(select(UserEmailPreference).where(
+        UserEmailPreference.user_id == user_id).with_for_update())
+    if preference is None:
+        preference = UserEmailPreference(user_id=user_id)
+        session.add(preference)
+    preference.enabled, preference.updated_at = enabled, datetime.now(timezone.utc)
+    if not enabled:
+        session.execute(update(AnalysisNotification).where(
+            AnalysisNotification.owner_id == user_id,
+            AnalysisNotification.status.in_(('waiting', 'preparing'))).values(
+                status='canceled', error_code='EMAIL_CONSENT_WITHDRAWN', claim_token=None, lease_until=None))
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise profile_error('EMAIL_PREFERENCE_BUSY', '설정을 저장 중입니다. 다시 확인해 주세요.') from None
+    return read_account_profile(session, user_id)

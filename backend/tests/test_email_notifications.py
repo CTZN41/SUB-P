@@ -10,7 +10,7 @@ from pydantic import SecretStr
 from sqlalchemy import select
 
 from app.api.analyses import router
-from app.models import Analysis, AnalysisJob, AnalysisNotification, AnalysisEmailRequest, AnalysisStatus, JobStatus, Shot, ShotResult, ShotStatus, ShotType
+from app.models import Analysis, AnalysisJob, AnalysisNotification, AnalysisEmailRequest, AnalysisStatus, JobStatus, Shot, ShotResult, ShotStatus, ShotType, UserEmailPreference
 from app.services import email_notifications as notifications, practice_report as reports
 from app.services.authentication import require_analysis_user
 from test_practice_report import store, add_practice, fake_text
@@ -73,6 +73,9 @@ def test_manual_send_api_retries_return_same_request_without_ai_and_rejects_othe
 @pytest.fixture
 def setup(store, monkeypatch):
     factory, settings = store
+    with factory() as session:
+        session.add_all([UserEmailPreference(user_id=owner, enabled=True) for owner in ('a', 'other')])
+        session.commit()
     settings = settings.model_copy(update={'email_notifications_enabled': True,
         'gmail_sender': 'test-sender@gmail.com', 'gmail_app_password': SecretStr('fake-app-password'),
         'public_app_url': 'https://shotlog.example'})

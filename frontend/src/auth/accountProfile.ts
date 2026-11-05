@@ -9,6 +9,7 @@ export type AccountProfile = {
   pending_email?: string | null
   can_register_email?: boolean
   email_confirmed: boolean
+  email_reports_consent?: boolean
   providers: string[]
   created_at: string
   password_registered: boolean
@@ -60,6 +61,13 @@ export async function checkSignup(nickname: string, email: string) {
 
 export async function claimNickname(value: string, expectedId: string): Promise<AccountProfile> {
   return profilePost<AccountProfile>('profile/nickname', { nickname: value }, expectedId)
+}
+
+export async function saveEmailReportConsent(expectedId: string, enabled: boolean): Promise<AccountProfile> {
+  const profile = await profilePost<AccountProfile>('profile/email-preference', { enabled }, expectedId)
+  if (profile.id !== expectedId) throw new AccountUpdateError('session_changed')
+  if (profile.email_reports_consent !== enabled) throw new AccountUpdateError('email_consent_unconfirmed')
+  return profile
 }
 
 export async function claimSuggestedNickname(profile: AccountProfile,
@@ -144,6 +152,9 @@ export function accountUpdateMessage(error: unknown): string {
     password_mismatch: '비밀번호가 서로 다릅니다.',
     password_unavailable: '비밀번호가 이미 등록됐거나 현재 계정에는 등록할 수 없습니다. 화면을 새로고침해 주세요.',
     email_not_confirmed: '인증된 이메일이 있어야 비밀번호를 등록할 수 있습니다.',
+    email_verification_required: '이메일을 등록하고 인증한 후 동의해 주세요.',
+    email_consent_unconfirmed: '수신 동의 저장을 확인하지 못했습니다. 내 프로필을 다시 확인해 주세요.',
+    email_preference_busy: '설정을 저장 중입니다. 잠시 후 다시 확인해 주세요.',
     email_invalid: '이메일 주소를 확인해 주세요.',
     email_address_invalid: '이메일 주소를 확인해 주세요.',
     email_taken: '이미 사용 중인 이메일입니다. 다른 이메일을 입력해 주세요.',

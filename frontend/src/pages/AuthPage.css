@@ -25,7 +25,6 @@
 .social-button { display: flex; align-items: center; justify-content: center; position: relative; gap: 12px; width: 100%; min-height: 48px; padding: 12px 42px; border: 1px solid transparent; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; line-height: 1.6; }
 .social-button .social-symbol, .social-button svg { width: 20px; height: 20px; position: absolute; left: 16px; font-size: 19px; line-height: 20px; font-weight: 900; }
 .social-button.google { background: #fff; border-color: #dadce0; color: #202124; }
-.social-button.naver { background: #03c75a; color: #07170c; }
 .social-button.kakao { background: #fee500; color: #191919; }
 .social-button:hover:not(:disabled) { filter: brightness(.94); }
 .social-button:disabled { cursor: not-allowed; opacity: .45; }

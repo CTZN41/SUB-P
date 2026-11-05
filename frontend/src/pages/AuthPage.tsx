@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/authContext'
 import { authMessage, safeAuthNext, socialLoginOptions } from '../auth/authPolicy'
-import type { Provider } from '@supabase/supabase-js'
 import { normalizeNickname, NICKNAME_HELP, checkSignup, AccountUpdateError, accountUpdateMessage } from '../auth/accountProfile'
 import './AuthPage.css'
 
@@ -47,14 +46,14 @@ export function AuthPage({ signup = false }: { signup?: boolean }) {
     } catch (failure) { setError(failure instanceof AccountUpdateError ? accountUpdateMessage(failure) : '연결하지 못했습니다. 잠시 후 다시 시도해 주세요.') }
     finally { setBusy(false) }
   }
-  async function social(provider: 'naver' | 'google' | 'kakao') {
+  async function social(provider: 'google' | 'kakao') {
     if (!auth.client || !auth.config?.providers[provider] || busy) return
     setBusy(true); setError('')
     try {
       auth.setRemember(remember)
       sessionStorage.setItem('shotlog_auth_next', next)
       const { error: failure } = await auth.client.auth.signInWithOAuth({
-        provider: (provider === 'naver' ? 'custom:naver' : provider) as Provider,
+        provider,
         options: socialLoginOptions(provider, window.location.origin),
       })
       if (failure) { setError(authMessage(failure.code)); setBusy(false) }
@@ -81,10 +80,9 @@ export function AuthPage({ signup = false }: { signup?: boolean }) {
         {notice && <p className="success-note" role="status">{notice}</p>}
         <button className="button primary auth-submit" type="submit" disabled={!ready || busy}>{busy ? '연결 중…' : signup ? '이메일로 가입하기' : '로그인'}</button>
       </form>
-      <div className="auth-divider"><span>또는 간편 로그인</span></div>
+      <div className="auth-divider"><span>간편 로그인</span></div>
       <div className="auth-social" aria-label="간편 로그인">
         <button className="social-button google" type="button" disabled={busy || !ready || !auth.config?.providers.google} onClick={() => social('google')}><span className="social-symbol" aria-hidden="true">G</span>Google로 계속하기</button>
-        <button className="social-button naver" type="button" disabled={busy || !ready || !auth.config?.providers.naver} onClick={() => social('naver')}><span className="social-symbol" aria-hidden="true">N</span>네이버로 계속하기</button>
         <button className="social-button kakao" type="button" disabled={busy || !ready || !auth.config?.providers.kakao} onClick={() => social('kakao')}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.4 2 10.6c0 2.7 1.9 5.1 4.8 6.5L6 21l4.4-2.9 1.6.1c5.5 0 10-3.4 10-7.6S17.5 3 12 3Z" fill="currentColor" /></svg>카카오로 계속하기</button>
       </div>
     </section>

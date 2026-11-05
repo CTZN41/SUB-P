@@ -8,7 +8,6 @@ from sqlalchemy import text
 from app.api.health import router as health_router
 from app.api.analyses import router as analyses_router
 from app.api.auth import router as auth_router
-from app.api.naver_auth import router as naver_auth_router
 from app.api.uploads import router as uploads_router
 from app.core.config import get_settings
 from app.db.session import create_database_engine, create_session_factory
@@ -62,6 +61,5 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(auth_router)
-app.include_router(naver_auth_router)
 app.include_router(analyses_router)
 app.include_router(uploads_router)

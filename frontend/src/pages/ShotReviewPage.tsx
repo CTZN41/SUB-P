@@ -225,7 +225,7 @@ export function ShotReviewPage() {
     setSelectedZone(nextZone)
     requestAnimationFrame(() => courtRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
-  if (!data) return <div className="page shot-review-page"><p role="status" className="inline-warning">{error || '분석 결과를 불러오는 중입니다…'}</p></div>
+  if (!data) return <div className="page shot-review-page"><AnalysisBackLink to="/history" /><header className="setup-header"><div><p className="eyebrow">분석 결과</p><h1>{analysis?.title ?? '분석 결과'}</h1></div></header><p role="status" className="inline-warning">{error || '분석 결과를 불러오는 중입니다…'}</p></div>
   return <div className="page shot-review-page">
     <AnalysisBackLink to="/history" />
     <header className="setup-header"><div><p className="eyebrow">분석 결과</p><h1>{analysis?.title ?? '분석 결과'}</h1>{analysis && analysis.play_type !== 'solo' && <p className="inline-warning">다인원 자동 추적은 아직 지원하지 않습니다. 원본 영상을 보면서 슛과 선수를 직접 기록해 주세요.</p>}</div></header>

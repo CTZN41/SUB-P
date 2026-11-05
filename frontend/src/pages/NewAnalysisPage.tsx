@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react'
-import type { FormEvent, MouseEvent } from 'react'
+import type { DragEvent, FormEvent, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnalysisBackLink } from '../components/AnalysisBackLink'
 import { registerVideo } from '../utils/videoUpload'
 import type { VideoUploadAttempt } from '../utils/videoUpload'
+import { videoSelectionError } from '../utils/videoSelection'
 
 const API_BASE = '/api'
-const MAX_FILE_BYTES = 5 * 1024 * 1024 * 1024
 
 type RegistrationResult = {
   id: string
@@ -36,6 +36,9 @@ function formatDuration(milliseconds: number) {
 export function NewAnalysisPage() {
   const navigate = useNavigate()
   const recordedDateRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const dragDepth = useRef(0)
+  const [draggingFile, setDraggingFile] = useState(false)
   const uploadAttemptRef = useRef<VideoUploadAttempt | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
@@ -55,6 +58,33 @@ export function NewAnalysisPage() {
     try { input.showPicker() } catch { /* 이 경우 입력창에서 날짜를 직접 선택할 수 있습니다. */ }
   }
 
+  function chooseFiles(files: File[]) {
+    if (submitting || files.length === 0) return
+    const selectionError = videoSelectionError(files)
+    setError(selectionError ?? '')
+    setFile(selectionError ? null : files[0])
+    if (selectionError && fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function preventFileNavigation(event: DragEvent) {
+    if (event.dataTransfer.types.includes('Files')) event.preventDefault()
+  }
+
+  function dropVideo(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    dragDepth.current = 0
+    setDraggingFile(false)
+    if (submitting || !event.dataTransfer.types.includes('Files')) return
+    const files = Array.from(event.dataTransfer.files)
+    if (!files.length) { setError('폴더 대신 MP4 영상 한 개를 끌어다 놓아 주세요.'); return }
+    chooseFiles(files)
+    if (!videoSelectionError(files) && fileInputRef.current) {
+      // Keep the native filename in sync; submission always uses the File in state.
+      fileInputRef.current.files = event.dataTransfer.files
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -70,12 +100,9 @@ export function NewAnalysisPage() {
       setError('분석할 MP4 영상 한 개를 선택해 주세요.')
       return
     }
-    if (!file.name.toLowerCase().endsWith('.mp4')) {
-      setError('MP4 영상만 사용할 수 있습니다.')
-      return
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      setError('영상 파일은 최대 5GB까지 등록할 수 있습니다.')
+    const selectionError = videoSelectionError([file])
+    if (selectionError) {
+      setError(selectionError)
       return
     }
 
@@ -113,9 +140,11 @@ export function NewAnalysisPage() {
     return (
       <div className="page registration-page">
         <AnalysisBackLink to="/history" />
-        <section className="registration-result">
+        <header className="setup-header"><div>
           <p className="eyebrow">영상 등록 완료</p>
           <h1>{result.title}</h1>
+        </div></header>
+        <section className="registration-result">
           <div className="video-facts">
             <span>{result.original_name}</span>
             <span>{formatBytes(result.file_size)}</span>
@@ -142,7 +171,7 @@ export function NewAnalysisPage() {
   }
 
   return (
-    <div className="page registration-page">
+    <div className="page registration-page" onDragOver={preventFileNavigation} onDrop={preventFileNavigation}>
       <AnalysisBackLink to="/" />
       <header className="registration-header">
         <div>
@@ -169,10 +198,27 @@ export function NewAnalysisPage() {
             <label className="recorded-date-field" onClick={openRecordedDatePicker}>촬영 날짜 <small>필수</small><input ref={recordedDateRef} name="recorded_date" type="date" value={recordedDate} onChange={(event) => setRecordedDate(event.target.value)} required /></label>
             {playType !== 'solo' && <label>첫 선수 이름 <small>선택</small><input name="player_name" maxLength={100} placeholder="나머지 선수는 다음 단계에서 등록" /></label>}
           </div>
-          <label className="file-picker">
-            <span>{file ? file.name : 'MP4 파일을 선택하세요 (필수)'}</span>
+          <label className={`file-picker${draggingFile ? ' is-dragging' : ''}`}
+            onDragEnter={event => {
+              if (!event.dataTransfer.types.includes('Files')) return
+              event.preventDefault()
+              dragDepth.current += 1
+              if (!submitting) setDraggingFile(true)
+            }}
+            onDragOver={event => {
+              if (!event.dataTransfer.types.includes('Files')) return
+              event.preventDefault()
+              event.dataTransfer.dropEffect = submitting ? 'none' : 'copy'
+            }}
+            onDragLeave={event => {
+              event.preventDefault()
+              dragDepth.current = Math.max(0, dragDepth.current - 1)
+              if (!dragDepth.current) setDraggingFile(false)
+            }}
+            onDrop={dropVideo}>
+            <span aria-live="polite">{draggingFile ? '여기에 MP4 영상을 놓으세요' : file ? file.name : 'MP4 파일을 끌어다 놓거나 선택하세요 (필수)'}</span>
             <small>{file ? formatBytes(file.size) : '한 번에 한 파일 · 최대 40분 · 최대 5GB'}</small>
-            <input type="file" accept="video/mp4,.mp4" onChange={(event) => setFile(event.target.files?.[0] ?? null)} required />
+            <input ref={fileInputRef} type="file" accept="video/mp4,.mp4" disabled={submitting} onChange={event => chooseFiles(Array.from(event.target.files ?? []))} required={!file} />
           </label>
         </section>
 

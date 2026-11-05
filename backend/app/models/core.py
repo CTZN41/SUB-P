@@ -104,6 +104,14 @@ def enum_column(enum_type: type[StringEnum], *, default: StringEnum | None = Non
     )
 
 
+class UserEmailPreference(Base):
+    __tablename__ = 'user_email_preferences'
+
+    user_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
 class UserProfile(Base):
     __tablename__ = 'user_profiles'
     __table_args__ = (CheckConstraint('length(nickname) BETWEEN 2 AND 20', name='ck_user_profiles_nickname_length'),)

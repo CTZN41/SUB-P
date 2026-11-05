@@ -13,8 +13,7 @@ export function HomePage() {
     <div className="page home-page">
       <header className="home-hero">
         <div className="home-intro">
-          <p className="home-eyebrow"><span />AI 농구 영상 분석</p>
-          <h1>농구 영상을,<br />나만의 <em>슛 기록</em>으로.</h1>
+          <h1>농구 영상을<br />나만의 <em>슛 기록</em>으로</h1>
           <p className="home-description">슛 위치와 성공·실패를 분석하고,<br />3D 슈팅 맵과 히트맵으로 연습을 돌아보세요.</p>
           <div className="actions">
             <Link className="button primary home-start-button" to="/new">영상 분석 시작 <span aria-hidden="true">↗</span></Link>

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db_session
 from app.services.authentication import COOKIE_NAME, check_origin, verify_token, require_analysis_user
-from app.services.account_profile import read_account_profile, nickname_available, claim_nickname, check_email_available
+from app.services.account_profile import read_account_profile, nickname_available, claim_nickname, check_email_available, save_email_preference
 
 router = APIRouter(prefix='/api/auth', tags=['authentication'])
 
@@ -30,6 +30,11 @@ class EmailInput(BaseModel):
     email: str = Field(min_length=3, max_length=254, repr=False)
 
 
+class EmailPreferenceInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    enabled: bool
+
+
 @router.get('/config')
 def auth_config(request: Request):
     s = request.app.state.settings
@@ -37,8 +42,7 @@ def auth_config(request: Request):
     return {'required': s.auth_required, 'configured': ready,
         'url': s.supabase_url if ready else None,
         'publishableKey': s.supabase_publishable_key if ready else None,
-        'providers': {'google': ready and s.auth_google_enabled, 'kakao': ready and s.auth_kakao_enabled,
-            'naver': ready and s.auth_naver_enabled and bool(s.naver_client_id and s.naver_client_secret and s.naver_redirect_uri)}}
+        'providers': {'google': ready and s.auth_google_enabled, 'kakao': ready and s.auth_kakao_enabled}}
 
 
 @router.get('/profile', dependencies=[Depends(require_analysis_user)])
@@ -60,6 +64,19 @@ def signup_check(body: SignupCheckInput, request: Request, response: Response, s
     if not nickname_available(session, body.nickname):
         raise HTTPException(409, detail={'code': 'NICKNAME_TAKEN', 'message': '이미 사용 중인 닉네임입니다.'})
     return {'available': True}
+
+
+@router.post('/profile/email-preference', dependencies=[Depends(require_analysis_user)])
+def update_email_preference(body: EmailPreferenceInput, request: Request, response: Response,
+                            session: Annotated[Session, Depends(get_db_session)]):
+    check_origin(request)
+    user_id = getattr(request.state, 'auth_user_id', None)
+    if not user_id:
+        raise HTTPException(401, detail={'code': 'LOGIN_REQUIRED'})
+    if request.headers.get('x-account-id') != user_id:
+        raise HTTPException(409, detail={'code': 'SESSION_CHANGED'})
+    response.headers['Cache-Control'] = 'no-store'
+    return save_email_preference(session, user_id, body.enabled)
 
 
 @router.post('/profile/nickname', dependencies=[Depends(require_analysis_user)])

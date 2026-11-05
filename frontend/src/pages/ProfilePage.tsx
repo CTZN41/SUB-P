@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/authContext'
+import { AnalysisBackLink } from '../components/AnalysisBackLink'
 import { safeAuthNext } from '../auth/authPolicy'
 import { accountUpdateMessage, fetchAccountProfile, NICKNAME_HELP, normalizeNickname,
-  profileProviderLabels, registerEmail, registerNickname, registerPassword } from '../auth/accountProfile'
+  profileProviderLabels, registerEmail, registerNickname, registerPassword, saveEmailReportConsent } from '../auth/accountProfile'
 import type { AccountProfile } from '../auth/accountProfile'
 import './ProfilePage.css'
 
@@ -24,7 +25,8 @@ export function ProfilePage() {
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [busy, setBusy] = useState<'nickname' | 'password' | 'email' | 'refresh' | null>(null)
+  const [emailConsent, setEmailConsent] = useState(false)
+  const [busy, setBusy] = useState<'nickname' | 'password' | 'email' | 'refresh' | 'consent' | null>(null)
   const [updateError, setUpdateError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -34,7 +36,7 @@ export function ProfilePage() {
     fetchAccountProfile(controller.signal).then(value => {
       if (controller.signal.aborted) return
       if (value.id !== userId) throw new Error('로그인 계정을 다시 확인해 주세요.')
-      setProfile(value); setLoadError('')
+      setProfile(value); setEmailConsent(!!value.email_reports_consent); setLoadError('')
     }).catch(error => {
       if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : '프로필을 불러오지 못했습니다.')
     })
@@ -46,6 +48,19 @@ export function ProfilePage() {
       navigate(next === '/profile' || next.startsWith('/profile?') ? '/' : next, { replace: true })
     }
   }, [setup, profile?.nickname, auth.profile, userId, navigate, next])
+
+  async function saveConsent(event: FormEvent) {
+    event.preventDefault()
+    if (!profile || !userId || busy) return
+    setBusy('consent'); setUpdateError(''); setNotice('')
+    try {
+      const saved = await saveEmailReportConsent(userId, emailConsent)
+      setProfile(saved); setEmailConsent(!!saved.email_reports_consent)
+      await auth.refreshProfile()
+      setNotice(saved.email_reports_consent ? '이메일 수신 동의를 저장했습니다.' : '이메일 수신 동의를 해제했습니다. 대기 중인 발송도 취소됩니다.')
+    } catch (error) { setUpdateError(accountUpdateMessage(error)) }
+    finally { setBusy(null) }
+  }
 
   async function saveNickname(event: FormEvent) {
     event.preventDefault()
@@ -100,9 +115,10 @@ export function ProfilePage() {
     finally { setBusy(null) }
   }
 
-  if (!auth.session) return <div className="page profile-page"><h1>내 프로필</h1><Link className="button primary" to="/login?next=%2Fprofile">로그인</Link></div>
+  if (!auth.session) return <div className="page profile-page"><AnalysisBackLink to="/" /><header className="profile-header"><p className="eyebrow">MY PROFILE</p><h1>내 프로필</h1></header><Link className="button primary" to="/login?next=%2Fprofile">로그인</Link></div>
   const date = profile ? new Date(profile.created_at) : null
   return <div className="page profile-page" aria-busy={!!busy}>
+    <AnalysisBackLink to="/" />
     <header className="profile-header"><p className="eyebrow">MY PROFILE</p><h1>{setup ? '닉네임 설정' : '내 프로필'}</h1></header>
     {loadError ? <section className="profile-card"><p className="form-error" role="alert">{loadError}</p><button className="button secondary" onClick={() => setReloadCount(value => value + 1)}>다시 확인</button></section>
       : !profile ? <p role="status">프로필을 불러오고 있습니다…</p>
@@ -133,17 +149,29 @@ export function ProfilePage() {
             </form>}
             {(profile.pending_email || emailRequested || (profile.email && !profile.email_confirmed)) && <button type="button" className="button secondary profile-email-refresh" disabled={!!busy} onClick={() => void refreshEmail()}>등록 상태 확인</button>}
           </section>
-          <section className="profile-card" aria-labelledby="password-heading">
-            <h2 id="password-heading">이메일 로그인 비밀번호</h2>
-            {profile.password_registered ? <p className="profile-password-status">등록됨</p>
-              : !profile.can_register_password ? <p className="profile-help">인증된 이메일이 있는 간편로그인 계정에서 등록할 수 있습니다.</p>
-              : <form className="auth-form profile-form" onSubmit={savePassword}>
-                <p className="profile-help">비밀번호를 등록하면 간편로그인과 같은 이메일로 로그인할 수 있습니다.</p>
-                <label>비밀번호<span className="auth-password"><input name="new_password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} placeholder="8자 이상 입력해 주세요" value={password} onChange={event => setPassword(event.target.value)} disabled={!!busy} /><button type="button" disabled={!!busy} aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? '숨기기' : '보기'}</button></span></label>
-                <label>비밀번호 확인<input name="password_confirmation" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={!!busy} /></label>
-                <button className="button primary" disabled={!!busy || password.length < 8 || password !== confirmation}>{busy === 'password' ? '등록 중…' : '비밀번호 등록'}</button>
-              </form>}
-          </section>
+          <div className="profile-side-stack">
+            <section className="profile-card profile-password" aria-labelledby="password-heading">
+              <h2 id="password-heading">이메일 로그인 비밀번호</h2>
+              {profile.password_registered ? <p className="profile-password-status">등록됨</p>
+                : !profile.can_register_password ? <p className="profile-help">인증된 이메일이 있는 간편로그인 계정에서 등록할 수 있습니다.</p>
+                : <form className="auth-form profile-form" onSubmit={savePassword}>
+                  <p className="profile-help">비밀번호를 등록하면 간편로그인과 같은 이메일로 로그인할 수 있습니다.</p>
+                  <label>비밀번호<span className="auth-password"><input name="new_password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} placeholder="8자 이상 입력해 주세요" value={password} onChange={event => setPassword(event.target.value)} disabled={!!busy} /><button type="button" disabled={!!busy} aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? '숨기기' : '보기'}</button></span></label>
+                  <label>비밀번호 확인<input name="password_confirmation" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={!!busy} /></label>
+                  <button className="button primary" disabled={!!busy || password.length < 8 || password !== confirmation}>{busy === 'password' ? '등록 중…' : '비밀번호 등록'}</button>
+                </form>}
+            </section>
+            <section className="profile-card profile-email-preference" aria-labelledby="email-preference-heading">
+              <h2 id="email-preference-heading">이메일 수신 설정</h2>
+              <form className="profile-form" onSubmit={saveConsent}>
+                <label className="profile-email-consent"><input type="checkbox" checked={emailConsent} onChange={event => setEmailConsent(event.target.checked)} disabled={!!busy || (!profile.email_confirmed && !profile.email_reports_consent)} />
+                  <span>분석 결과와 PDF 리포트를 내 계정의 인증된 이메일로 받는 데 동의합니다.</span></label>
+                <p className="profile-help">저장한 동의는 다시 로그인해도 유지됩니다. 결과 화면의 ‘리포트 보내기’에서 발송할 수 있습니다.</p>
+                {!profile.email_confirmed && <p className="profile-help">이메일을 등록하고 인증한 후 동의할 수 있습니다.</p>}
+                <button type="submit" className="button primary" disabled={!!busy || emailConsent === !!profile.email_reports_consent}>{busy === 'consent' ? '저장 중…' : '수신 설정 저장'}</button>
+              </form>
+            </section>
+          </div>
         </div>
         {updateError && <p className="form-error profile-feedback" role="alert">{updateError}</p>}
         {notice && <p className="success-note profile-feedback" role="status">{notice}</p>}

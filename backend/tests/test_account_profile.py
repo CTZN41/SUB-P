@@ -10,7 +10,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.auth import router
 from app.db.session import create_session_factory
-from app.models import UserProfile
+from app.models import UserProfile, UserEmailPreference, AnalysisNotification
+from app.db.base import Base
 from app.services import authentication
 from app.services.account_profile import nickname_from_metadata
 from app.services.nickname_policy import nickname_key
@@ -20,7 +21,7 @@ from test_authentication import auth_settings, USER_A, USER_B
 @pytest.fixture
 def profile_client(monkeypatch):
     engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
-    UserProfile.__table__.create(engine)
+    Base.metadata.create_all(engine)
     with engine.begin() as db:
         db.execute(text("ATTACH DATABASE ':memory:' AS auth"))
         db.execute(text("CREATE TABLE auth.users (id TEXT PRIMARY KEY, email TEXT, created_at TEXT, raw_user_meta_data TEXT, email_confirmed_at TEXT, encrypted_password TEXT, email_change TEXT DEFAULT '')"))

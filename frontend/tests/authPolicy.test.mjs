@@ -20,7 +20,7 @@ test('Kakao alone replaces default email scope without changing redirect or othe
   const origin = 'http://127.0.0.1:5173'
   const kakao = socialLoginOptions('kakao', origin)
   assert.deepEqual(kakao, { redirectTo: `${origin}/auth/callback`, queryParams: { scope: 'profile_nickname' } })
-  for (const provider of ['google', 'naver']) assert.deepEqual(socialLoginOptions(provider, origin), { redirectTo: `${origin}/auth/callback` })
+  assert.deepEqual(socialLoginOptions('google', origin), { redirectTo: `${origin}/auth/callback` })
   const client = createClient('https://test-project.example', 'test-public-key', { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
   const { data, error } = await client.auth.signInWithOAuth({ provider: 'kakao', options: { ...kakao, skipBrowserRedirect: true } })
   assert.equal(error, null)

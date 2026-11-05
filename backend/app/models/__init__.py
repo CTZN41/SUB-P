@@ -16,6 +16,7 @@ from app.models.core import (
     ShotStatus,
     ShotType,
     UserProfile,
+    UserEmailPreference,
     new_id,
 )
 
@@ -36,5 +37,6 @@ __all__ = [
     "ShotStatus",
     "ShotType",
     "UserProfile",
+    "UserEmailPreference",
     "new_id",
 ]

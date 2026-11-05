@@ -4,7 +4,7 @@ export function safeAuthNext(value: string | null | undefined): string {
   return value
 }
 
-export function socialLoginOptions(provider: 'google' | 'naver' | 'kakao', origin: string) {
+export function socialLoginOptions(provider: 'google' | 'kakao', origin: string) {
   return { redirectTo: `${origin}/auth/callback`,
     // `scopes` appends to Supabase's Kakao defaults. On the deployed Auth
     // endpoint, the provider query parameter replaces scope instead. Never

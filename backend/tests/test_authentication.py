@@ -31,11 +31,22 @@ def client_for(settings):
 
 
 def test_public_config_never_returns_provider_secret():
-    client = client_for(auth_settings(naver_client_secret='private-test-secret'))
+    client = client_for(auth_settings(auth_google_enabled=True, auth_kakao_enabled=True,
+        auth_naver_enabled=True, naver_client_id='test-client',
+        naver_client_secret='private-test-secret', naver_redirect_uri='https://project.example/auth/v1/callback'))
     result = client.get('/api/auth/config')
     assert result.status_code == 200
     assert 'private-test-secret' not in result.text
-    assert result.json()['providers']['naver'] is False
+    assert result.json()['providers'] == {'google': True, 'kakao': True}
+
+
+def test_naver_login_routes_are_not_registered_in_service():
+    from app.main import app
+
+    client = TestClient(app)
+    assert client.get('/api/auth/naver/authorize', follow_redirects=False).status_code == 404
+    assert client.post('/api/auth/naver/token').status_code == 404
+    assert client.get('/api/auth/naver/userinfo').status_code == 404
 
 
 def test_local_mode_is_explicit_and_cannot_be_used_in_production():

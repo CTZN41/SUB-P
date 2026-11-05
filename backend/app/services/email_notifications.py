@@ -16,12 +16,12 @@ from uuid import uuid4
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
-from app.models import Analysis, AnalysisJob, AnalysisNotification, AnalysisEmailRequest, AnalysisStatus, Shot
+from app.models import Analysis, AnalysisJob, AnalysisNotification, AnalysisEmailRequest, AnalysisStatus, Shot, UserEmailPreference
 from app.services.analysis_jobs import ACTIVE_JOB_STATUSES
 from app.services.analysis_reuse import digest
 from app.services.non_shot_policy import visible_shot
 from app.services.practice_report import ReportError, comparison_context, generate_report, report_view
-from app.services.account_profile import verified_account_email
+from app.services.account_profile import verified_account_email, email_reports_allowed
 from app.services.practice_report_pdf import build_practice_pdf, PDFReportError
 
 PENDING = ('waiting', 'preparing', 'sending')
@@ -83,6 +83,7 @@ def notification_view(session, analysis, settings):
             'position_pending': state['position_pending'], 'outcome_pending': state['outcome_pending'],
             'status': row.status if row else None,
             'email_available': bool(account_email),
+            'email_reports_consent': email_reports_allowed(session, analysis.owner_id),
             'account_email_masked': mask_email(account_email) if account_email else None,
             'recipient_masked': mask_email(row.recipient_email) if row else None,
             'error_code': row.error_code if row else None,
@@ -94,6 +95,8 @@ def subscribe(session, analysis, settings, consent, *, explicit_resend=False):
         raise NotificationError(503, 'EMAIL_NOT_CONFIGURED', '이메일 알림을 준비하고 있습니다.')
     if not consent:
         raise NotificationError(422, 'CONSENT_REQUIRED', '이메일 알림 수신에 동의해 주세요.')
+    if not email_reports_allowed(session, analysis.owner_id):
+        raise NotificationError(422, 'CONSENT_REQUIRED', '내 프로필에서 이메일 수신에 동의해 주세요.')
     if not analysis.owner_id:
         raise NotificationError(409, 'OWNER_REQUIRED', '로그인한 본인 분석에서 신청해 주세요.')
     email = recipient_email(session, analysis.owner_id)
@@ -124,6 +127,8 @@ def request_report_delivery(session, analysis, settings, consent, request_id):
     """One explicit click may resend; a retried HTTP request may not."""
     if not consent:
         raise NotificationError(422, 'CONSENT_REQUIRED', '이메일 수신에 동의해 주세요.')
+    if not email_reports_allowed(session, analysis.owner_id):
+        raise NotificationError(422, 'CONSENT_REQUIRED', '내 프로필에서 이메일 수신에 동의해 주세요.')
     session.scalar(select(Analysis).where(Analysis.id == analysis.id).with_for_update())
     previous = session.get(AnalysisEmailRequest, request_id)
     if previous:
@@ -223,6 +228,10 @@ def process_notification(factory, settings, analysis_id):
         analysis = session.get(Analysis, analysis_id)
         if row is None or analysis is None or row.owner_id != analysis.owner_id or not row.recipient_email:
             return
+        if row.status in ('waiting', 'preparing') and not email_reports_allowed(session, analysis.owner_id):
+            row.status, row.error_code, row.claim_token, row.lease_until = 'canceled', 'EMAIL_CONSENT_WITHDRAWN', None, None
+            session.commit()
+            return
         if row.status == 'sending' and row.lease_until and _utc(row.lease_until) < now:
             row.status, row.error_code = 'unknown', 'EMAIL_DELIVERY_UNKNOWN'
             session.commit()
@@ -264,10 +273,18 @@ def process_notification(factory, settings, analysis_id):
             payload = message_payload(analysis, context, view['report'], settings, row.recipient_email)
             row.status = 'sending'
             session.commit()  # A crash after dispatch must never cause an automatic duplicate.
+            # Serialize the final dispatch with account-level consent withdrawal.
+            preference = session.scalar(select(UserEmailPreference).where(
+                UserEmailPreference.user_id == analysis.owner_id).with_for_update())
+            allowed = bool(preference and preference.enabled)
             row = session.scalar(select(AnalysisNotification).where(
                 AnalysisNotification.analysis_id == analysis_id).with_for_update())
             analysis = session.scalar(select(Analysis).where(Analysis.id == analysis_id).with_for_update())
             session.expire_all()
+            if row and row.claim_token == token and not allowed:
+                row.status, row.error_code, row.claim_token, row.lease_until = 'canceled', 'EMAIL_CONSENT_WITHDRAWN', None, None
+                session.commit()
+                return
             if (row is None or analysis is None or row.claim_token != token or row.status != 'sending'
                     or row.owner_id != analysis.owner_id
                     or recipient_email(session, analysis.owner_id) != row.recipient_email

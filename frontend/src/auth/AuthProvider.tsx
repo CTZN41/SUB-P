@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let auth: SupabaseClient | null = null
     fetch('/api/auth/config').then(async response => {
       // The running pre-auth local backend may not yet have this new route.
-      if (response.status === 404 && import.meta.env.DEV) return { required: false, configured: false, url: null, publishableKey: null, providers: { google: false, naver: false, kakao: false } } as Config
+      if (response.status === 404 && import.meta.env.DEV) return { required: false, configured: false, url: null, publishableKey: null, providers: { google: false, kakao: false } } as Config
       if (!response.ok) throw new Error('로그인 연결 상태를 확인하지 못했습니다.')
       return response.json() as Promise<Config>
     }).then(async data => {
