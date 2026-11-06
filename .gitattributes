@@ -1,0 +1,6 @@
+# Keep the verified model and export hashes identical on every platform.
+backend/models/** -text whitespace=cr-at-eol
+backend/models/.gitkeep text
+backend/models/*_openvino_model/*.xml binary
+*.pt binary
+*.bin binary

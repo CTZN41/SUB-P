@@ -23,6 +23,22 @@ backend/data/*
 !backend/data/.gitkeep
 backend/models/*
 !backend/models/.gitkeep
+# Verified runtime weights and exports are versioned for recovery.
+!backend/models/README.md
+!backend/models/manifest.json
+!backend/models/basketball-yolo26n-pilot-v4.pt
+!backend/models/yolo26n.pt
+!backend/models/yolo26n-pose.pt
+!backend/models/basketball-yolo26n-pilot-v4_openvino_model/
+backend/models/basketball-yolo26n-pilot-v4_openvino_model/*
+!backend/models/basketball-yolo26n-pilot-v4_openvino_model/best.bin
+!backend/models/basketball-yolo26n-pilot-v4_openvino_model/best.xml
+!backend/models/basketball-yolo26n-pilot-v4_openvino_model/metadata.yaml
+!backend/models/yolo26n-pose_openvino_model/
+backend/models/yolo26n-pose_openvino_model/*
+!backend/models/yolo26n-pose_openvino_model/yolo26n-pose.bin
+!backend/models/yolo26n-pose_openvino_model/yolo26n-pose.xml
+!backend/models/yolo26n-pose_openvino_model/metadata.yaml
 backend/datasets/*
 !backend/datasets/.gitkeep
 
