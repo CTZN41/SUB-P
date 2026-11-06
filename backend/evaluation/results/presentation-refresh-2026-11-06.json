@@ -1,0 +1,60 @@
+{
+  "source_unchanged_sha256": "cd497509f06f713ec4fc589cd1aab799f465e90ec9ccdd443ebdc6a14db104ad",
+  "model_sha256": "c3b48728f72d06313d62e17d1ee71fd1f7a646bc4497054c2ac2cee56f673bec",
+  "paid_api_calls": 0,
+  "static_ball_detections_removed": 524,
+  "saved_analysis_id": "b0f40c55-f0e0-4820-afb2-52f5a88b8c2b",
+  "YOLO": {
+    "frames": 583,
+    "seconds": 24.291666666666668,
+    "bytes": 9445160,
+    "sha256": "b95273d0fcc1b009e418b4a4946533a245759a5b47b175fd5fea9aefd9df9e9f"
+  },
+  "AI": {
+    "frames": 1056,
+    "seconds": 44.0,
+    "bytes": 9643327,
+    "sha256": "00ca0c092100536b290c38fb667b388d15b05abab51af46b952a4b213b793de3"
+  },
+  "actual_rule_pair": {
+    "from_ms": 2125,
+    "to_ms": 2542,
+    "from_ball_px": [
+      1360.0,
+      413.25
+    ],
+    "to_ball_px": [
+      1308.75,
+      243.9375
+    ],
+    "rule": {
+      "time_ms": 2125,
+      "next_time_ms": 2542,
+      "frame_index": 51,
+      "foot_point_px": [
+        1388.0,
+        622.25
+      ],
+      "ball_point_px": [
+        1360.0,
+        413.25
+      ],
+      "confidence": 0.4082,
+      "review_reasons": []
+    }
+  },
+  "plant_sample_ms": 2067,
+  "plant_proxy_px": [
+    1387.76,
+    622.57
+  ],
+  "projection_ft": [
+    35.25562843862911,
+    16.03622632995577
+  ],
+  "final_ai_position_ft": [
+    35.3,
+    16.0
+  ],
+  "format": "1920x1080 / 24fps / H.264 / no audio"
+}

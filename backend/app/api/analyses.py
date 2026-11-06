@@ -66,6 +66,7 @@ from app.services.court_zones import ZONE_LABELS, ZoneCode, classify_zone
 from app.services.shot_statistics import calculate_statistics
 from app.services.monthly_statistics import monthly_statistics
 from app.services.non_shot_policy import visible_shot
+from app.services.demo_analyses import is_demo_analysis, demo_analysis_clause
 from app.services.authentication import require_analysis_user
 from app.services.practice_report import ReportError, comparison_context, generate_report, report_view
 from app.services.monthly_practice_report import monthly_report_view, generate_monthly_report
@@ -257,7 +258,7 @@ def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *,
     else:
         next_path = f"/progress/{analysis.id}"
     return AnalysisListItem(
-        id=analysis.id, title=analysis.title, original_name=analysis.original_name,
+        id=analysis.id, is_demo=is_demo_analysis(analysis), title=analysis.title, original_name=analysis.original_name,
         play_type=analysis.play_type, status=analysis.status, created_at=analysis.created_at,
         duration_ms=analysis.duration_ms, video_available=video_available,
         next_path=next_path, state_label=label, state_detail=detail,
@@ -277,7 +278,7 @@ def list_analyses(request: Request, session: Annotated[Session, Depends(get_db_s
     query = select(Analysis, has_calibration, has_assigned_player, job_status)
     if session.info.get('auth_required'):
         query = query.where(Analysis.owner_id == session.info['auth_user_id'])
-    rows = session.execute(query.order_by(Analysis.created_at.desc(), Analysis.id.desc())).all()
+    rows = session.execute(query.order_by(demo_analysis_clause().asc(), Analysis.created_at.desc(), Analysis.id.desc())).all()
     report_states = completion_states(session, [row[0] for row in rows])
     return AnalysisListResponse(analyses=[
         _list_item(

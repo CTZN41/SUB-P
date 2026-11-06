@@ -19,6 +19,7 @@ from app.models import Analysis, AnalysisStatus, Shot
 from app.services.analysis_reuse import atomic_json, digest
 from app.services.court_zones import ZONE_LABELS, classify_zone
 from app.services.non_shot_policy import visible_shot
+from app.services.demo_analyses import is_demo_analysis, real_analysis_clause
 from app.services.shot_statistics import calculate_statistics
 
 
@@ -109,10 +110,11 @@ def comparison_context(session, analysis):
     candidates = session.scalars(select(Analysis).where(
         Analysis.owner_id == analysis.owner_id, Analysis.play_type == analysis.play_type,
         Analysis.status.in_(READY_STATUSES), Analysis.id != analysis.id,
+        real_analysis_clause(),
     )).all()
     previous = None
     previous_shots = []
-    for candidate in sorted(candidates, key=_practice_order, reverse=True):
+    for candidate in ([] if is_demo_analysis(analysis) else sorted(candidates, key=_practice_order, reverse=True)):
         if _practice_order(candidate) < _practice_order(analysis):
             previous_shots = _shots(session, candidate.id)
             if previous_shots:

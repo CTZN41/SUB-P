@@ -12,6 +12,7 @@ from app.models import Analysis, Shot
 from app.services.court_zones import ZONE_LABELS, ZoneCode
 from app.services.shot_statistics import calculate_statistics
 from app.services.non_shot_policy import visible_shot
+from app.services.demo_analyses import real_analysis_clause
 
 
 KOREA = ZoneInfo("Asia/Seoul")
@@ -31,7 +32,7 @@ def _is_shot(shot: Shot) -> bool:
 
 
 def monthly_statistics(session: Session, requested_month: str | None = None) -> dict:
-    query = select(Analysis, Shot).join(Shot, Shot.analysis_id == Analysis.id)
+    query = select(Analysis, Shot).join(Shot, Shot.analysis_id == Analysis.id).where(real_analysis_clause())
     if session.info.get('auth_required'):
         query = query.where(Analysis.owner_id == session.info['auth_user_id'])
     rows = session.execute(query).all()

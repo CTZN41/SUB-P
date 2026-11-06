@@ -7,7 +7,7 @@ import './HomePage.css'
 
 export function HomePage() {
   const [records, setRecords] = useState<RecordItem[] | null>(null)
-  const latestResult = records?.find(record => record.video_available &&
+  const latestResult = records?.find(record => !record.is_demo && record.video_available &&
     (record.status === 'completed' || record.status === 'review_required')) ?? null
   return (
     <div className="page home-page">

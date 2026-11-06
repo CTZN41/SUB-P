@@ -11,6 +11,7 @@ from app.services.analysis_reuse import atomic_json, digest
 from app.services.monthly_statistics import _month
 from app.services.non_shot_policy import visible_shot
 from app.services.email_notifications import completion_states
+from app.services.demo_analyses import real_analysis_clause
 
 
 def validate_month(month):
@@ -25,7 +26,7 @@ def validate_month(month):
 def monthly_context(session, owner_id, month):
     first = validate_month(month)
     previous_month = (first-timedelta(days=1)).strftime('%Y-%m') if first > date.min else None
-    pairs = session.execute(select(Analysis, Shot).join(Shot, Shot.analysis_id == Analysis.id).where(Analysis.owner_id == owner_id)).all()
+    pairs = session.execute(select(Analysis, Shot).join(Shot, Shot.analysis_id == Analysis.id).where(Analysis.owner_id == owner_id, real_analysis_clause())).all()
     current = [s for a,s in pairs if _month(a) == month and visible_shot(s)]
     selected = {a.id: a for a,s in pairs if _month(a) == month and visible_shot(s)}
     states = completion_states(session, list(selected.values()))

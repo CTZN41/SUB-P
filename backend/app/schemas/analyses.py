@@ -38,6 +38,7 @@ class AnalysisRegistrationResponse(BaseModel):
 
 class AnalysisListItem(BaseModel):
     id: str
+    is_demo: bool = False
     title: str
     original_name: str
     play_type: PlayType

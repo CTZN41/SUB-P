@@ -5,11 +5,13 @@ import './AnalysisHistory.css'
 import { formatShotTime } from '../utils/shotPresentation'
 import { canSendSelectedReports } from '../utils/historyReports'
 import { readAnalysisResponse } from '../utils/analysisPolling'
+import { visibleHistoryRecords } from '../utils/historyVisibility'
 
 const API_BASE = '/api'
 
 export type RecordItem = {
   id: string
+  is_demo?: boolean
   title: string
   original_name: string
   status: string
@@ -99,7 +101,7 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
     }
   }
 
-  const visible = recent ? records.slice(0, 3) : records
+  const visible = visibleHistoryRecords(records, recent)
   const selected = records.filter(item => selectedIds.includes(item.id))
   const allSelected = records.length > 0 && selected.length === records.length
   const reportsReady = canSendSelectedReports(selected)
@@ -133,7 +135,7 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
   return <section className={`history-section${recent ? ' recent-history' : ''}`} aria-label={recent ? '최근 분석 기록' : '분석 기록'}>
     <div className="history-heading"><h2>{recent ? '최근 분석 기록' : '영상별 기록'}</h2>{recent && <Link to="/history">전체 보기</Link>}</div>
     {loading && <p>기록을 불러오는 중입니다.</p>}
-    {!loading && !error && records.length === 0 && <p>아직 저장된 분석 기록이 없습니다.</p>}
+    {!loading && !error && visible.length === 0 && <p>아직 저장된 분석 기록이 없습니다.</p>}
     {notice && <p className="success-note" role="status">{notice}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
     {!recent && !loading && records.length > 0 && <div className="history-selection-toolbar">
@@ -149,7 +151,9 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
       {selected.length > 0 && !reportsReady && <p className="history-report-hint">위치와 결과 확인이 모두 끝난 기록만 선택해 주세요.</p>}
     </div>}
     <div className="history-list">{visible.map((item, index) => <Fragment key={item.id}>
-      {!recent && (index === 0 || new Date(visible[index - 1].created_at).toLocaleDateString('ko-KR') !== new Date(item.created_at).toLocaleDateString('ko-KR')) && <h3 className="history-day-heading">{new Date(item.created_at).toLocaleDateString('ko-KR')}</h3>}
+      {!recent && (item.is_demo
+        ? (index === 0 || !visible[index - 1].is_demo)
+        : (index === 0 || new Date(visible[index - 1].created_at).toLocaleDateString('ko-KR') !== new Date(item.created_at).toLocaleDateString('ko-KR'))) && <h3 className="history-day-heading">{item.is_demo ? '발표용 더미' : new Date(item.created_at).toLocaleDateString('ko-KR')}</h3>}
       <article className={`history-item${selectedIds.includes(item.id) ? ' is-selected' : ''}`}>
       {recent && <div className="history-thumbnail" aria-hidden="true">
         {item.video_available && <img loading="lazy" src={`${API_BASE}/analyses/${item.id}/calibration/frame?time_ms=${Math.min(6000, Math.floor(item.duration_ms / 2))}`} alt="" onError={event => { event.currentTarget.hidden = true }} />}
