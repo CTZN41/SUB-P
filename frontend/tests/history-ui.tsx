@@ -13,17 +13,22 @@ const records = [
 ].map(item => ({ ...item, created_at: '2026-11-03T05:00:00Z', duration_ms: 32000, video_available: false,
   next_path: '#', state_label: item.status === 'running' ? '분석 중' : '완료', state_detail: null }))
 
+let batchRequests = 0
 window.fetch = async (input, options) => {
   const url = String(input)
   if (url === '/api/analyses' && !options?.method) return Response.json({ analyses: records })
-  if (url.startsWith('/api/analyses/fixture-') && options?.method === 'DELETE') {
-    const id = url.split('/').pop()
-    if (id === 'fixture-active') return Response.json({ detail: { message: '분석 중에는 삭제할 수 없습니다. 먼저 취소해 주세요.' } }, { status: 409 })
-    return new Response(null, { status: 204 })
+  if (url === '/api/analyses/bulk-delete' && options?.method === 'POST') {
+    batchRequests++
+    document.getElementById('batch-request-count')!.textContent = `일괄 삭제 요청 ${batchRequests}회`
+    const { analysis_ids: ids } = JSON.parse(String(options.body)) as { analysis_ids: string[] }
+    return Response.json({
+      removed: ids.filter(id => id !== 'fixture-active'),
+      failed: ids.filter(id => id === 'fixture-active').map(id => ({ id, code: 'ANALYSIS_ACTIVE', message: '분석 중에는 삭제할 수 없습니다. 먼저 취소해 주세요.' })),
+    })
   }
   throw new Error('이 시험 화면에서는 실제 API 요청을 보내지 않습니다.')
 }
 
 createRoot(document.getElementById('root')!).render(
-  <MemoryRouter><main className="page history-page"><p className="inline-warning">별도 UI 시험 화면 · 실제 기록과 API에 연결되지 않습니다.</p><h1>분석 기록</h1><AnalysisHistory /></main></MemoryRouter>,
+  <MemoryRouter><main className="page history-page"><p className="inline-warning">별도 UI 시험 화면 · 실제 기록과 API에 연결되지 않습니다.</p><p id="batch-request-count">일괄 삭제 요청 0회</p><h1>분석 기록</h1><AnalysisHistory /></main></MemoryRouter>,
 )

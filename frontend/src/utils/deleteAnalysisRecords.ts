@@ -1,22 +1,21 @@
 export type DeleteFailure = { id: string; message: string }
+export type DeleteResult = { removed: string[]; failed: DeleteFailure[] }
 
-/** Keep successful removals visible even if a later record cannot be deleted. */
+/** Submit one batch and update the visible list once its complete result arrives. */
 export async function deleteAnalysisRecords(
   ids: string[],
-  removeOne: (id: string) => Promise<void>,
-  onRemoved: (id: string) => void,
-): Promise<{ removed: string[]; failed: DeleteFailure[] }> {
-  const removed: string[] = []
-  const failed: DeleteFailure[] = []
-  for (const id of new Set(ids)) {
-    try {
-      await removeOne(id)
-    } catch (error) {
-      failed.push({ id, message: error instanceof Error ? error.message : '기록을 삭제하지 못했습니다.' })
-      continue
-    }
-    removed.push(id)
-    onRemoved(id)
+  removeMany: (ids: string[]) => Promise<DeleteResult>,
+  onRemoved: (ids: string[]) => void,
+): Promise<DeleteResult> {
+  const uniqueIds = [...new Set(ids)]
+  if (!uniqueIds.length) return { removed: [], failed: [] }
+  const result = await removeMany(uniqueIds)
+  const requested = new Set(uniqueIds)
+  const reported = [...result.removed, ...result.failed.map(item => item.id)]
+  if (reported.length !== uniqueIds.length || new Set(reported).size !== uniqueIds.length
+    || reported.some(id => !requested.has(id))) {
+    throw new Error('삭제 결과를 확인하지 못했습니다. 기록 목록을 새로고침해 주세요.')
   }
-  return { removed, failed }
+  if (result.removed.length) onRemoved(result.removed)
+  return result
 }

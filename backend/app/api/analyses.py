@@ -3,6 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
 import shutil
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
@@ -15,6 +16,8 @@ from app.db.dependencies import get_db_session
 from app.models import (
     Analysis,
     AnalysisJob,
+    AnalysisNotification,
+    AnalysisEmailRequest,
     AnalysisStatus,
     JobStatus,
     CalibrationSource,
@@ -29,6 +32,9 @@ from app.models import (
 )
 from app.schemas.analyses import (
     AnalysisRegistrationResponse,
+    AnalysisBulkDeleteRequest,
+    AnalysisBulkDeleteResponse,
+    AnalysisDeleteFailure,
     AnalysisListItem,
     AnalysisListResponse,
     AnalysisJobResponse,
@@ -237,15 +243,7 @@ def list_analyses(request: Request, session: Annotated[Session, Depends(get_db_s
     ])
 
 
-@router.delete("/{analysis_id}", status_code=204)
-def delete_analysis(
-    request: Request, analysis_id: str, session: Annotated[Session, Depends(get_db_session)]
-) -> Response:
-    analysis = find_analysis(session, analysis_id)
-    job = current_job(session, analysis_id)
-    if job and job.status in ACTIVE_JOB_STATUSES:
-        raise HTTPException(status_code=409, detail={"code": "ANALYSIS_ACTIVE", "message": "분석 중에는 삭제할 수 없습니다. 먼저 취소해 주세요."})
-    settings = request.app.state.settings
+def _remove_analysis_files(settings, analysis_id: str) -> None:
     # A failed file removal leaves the database record visible for retry.
     folders = (
         (settings.upload_path / analysis_id, "원본 영상 폴더"),
@@ -261,6 +259,69 @@ def delete_analysis(
                 "code": "PARTIAL_DELETE", "message": "일부 파일을 삭제하지 못했습니다. 기록은 남아 있습니다. 저장 폴더의 권한을 확인한 뒤 다시 삭제해 주세요.",
                 "remaining": label,
             }) from error
+
+
+@router.post('/bulk-delete', response_model=AnalysisBulkDeleteResponse)
+def bulk_delete_analyses(
+    payload: AnalysisBulkDeleteRequest, request: Request,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> AnalysisBulkDeleteResponse:
+    ids = list(dict.fromkeys(str(value) for value in payload.analysis_ids))
+    query = select(Analysis).where(Analysis.id.in_(ids)).with_for_update()
+    if session.info.get('auth_required'):
+        query = query.where(Analysis.owner_id == session.info['auth_user_id'])
+    records = {record.id: record for record in session.scalars(query)}
+    active_ids = set(session.scalars(select(AnalysisJob.analysis_id).where(
+        AnalysisJob.analysis_id.in_(records), AnalysisJob.status.in_(ACTIVE_JOB_STATUSES),
+    )))
+    failed: dict[str, AnalysisDeleteFailure] = {}
+    eligible = []
+    for record_id in ids:
+        if record_id not in records:
+            failed[record_id] = AnalysisDeleteFailure(id=record_id, code='NOT_FOUND', message='분석 기록을 찾을 수 없습니다.')
+        elif record_id in active_ids:
+            failed[record_id] = AnalysisDeleteFailure(id=record_id, code='ANALYSIS_ACTIVE', message='분석 중에는 삭제할 수 없습니다. 먼저 취소해 주세요.')
+        else:
+            eligible.append(record_id)
+
+    def remove_files(record_id: str) -> AnalysisDeleteFailure | None:
+        # File workers never share the SQLAlchemy session or access other records.
+        try:
+            _remove_analysis_files(request.app.state.settings, record_id)
+        except HTTPException as error:
+            return AnalysisDeleteFailure(id=record_id, code=error.detail['code'], message=error.detail['message'])
+        return None
+
+    if eligible:
+        with ThreadPoolExecutor(max_workers=min(4, len(eligible))) as pool:
+            for record_id, failure in zip(eligible, pool.map(remove_files, eligible)):
+                if failure:
+                    failed[record_id] = failure
+    removed = [record_id for record_id in eligible if record_id not in failed]
+    try:
+        if removed:
+            # One transaction for the whole successful set, including related rows.
+            for model in (AnalysisEmailRequest, AnalysisNotification, Shot, AnalysisJob, CourtCalibration, Player):
+                session.execute(delete(model).where(model.analysis_id.in_(removed)))
+            session.execute(delete(Analysis).where(Analysis.id.in_(removed)))
+        session.commit()
+    except Exception:
+        session.rollback()
+        for record_id in removed:
+            failed[record_id] = AnalysisDeleteFailure(id=record_id, code='DATABASE_DELETE_FAILED', message='파일은 삭제됐지만 기록을 지우지 못했습니다. 기록 목록에서 다시 삭제해 주세요.')
+        removed = []
+    return AnalysisBulkDeleteResponse(removed=removed, failed=[failed[record_id] for record_id in ids if record_id in failed])
+
+
+@router.delete("/{analysis_id}", status_code=204)
+def delete_analysis(
+    request: Request, analysis_id: str, session: Annotated[Session, Depends(get_db_session)]
+) -> Response:
+    analysis = find_analysis(session, analysis_id)
+    job = current_job(session, analysis_id)
+    if job and job.status in ACTIVE_JOB_STATUSES:
+        raise HTTPException(status_code=409, detail={"code": "ANALYSIS_ACTIVE", "message": "분석 중에는 삭제할 수 없습니다. 먼저 취소해 주세요."})
+    _remove_analysis_files(request.app.state.settings, analysis_id)
     try:
         session.delete(analysis)
         session.commit()

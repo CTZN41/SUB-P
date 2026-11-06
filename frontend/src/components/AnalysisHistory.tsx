@@ -55,16 +55,20 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
     setBusy(true)
     setError('')
     try {
-      const result = await deleteAnalysisRecords(deleting.map(item => item.id), async (id) => {
-        const response = await fetch(`${API_BASE}/analyses/${id}`, { method: 'DELETE' })
-        if (response.status === 404) return // Already removed in another tab.
+      const result = await deleteAnalysisRecords(deleting.map(item => item.id), async (ids) => {
+        const response = await fetch(`${API_BASE}/analyses/bulk-delete`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ analysis_ids: ids }),
+        })
         if (!response.ok) {
           const payload = await response.json().catch(() => null)
           throw new Error(payload?.detail?.message ?? '기록을 삭제하지 못했습니다. 다시 시도해 주세요.')
         }
-      }, (id) => {
-        setRecords(current => current.filter(item => item.id !== id))
-        setSelectedIds(current => current.filter(selected => selected !== id))
+        return response.json()
+      }, (ids) => {
+        const removedIds = new Set(ids)
+        setRecords(current => current.filter(item => !removedIds.has(item.id)))
+        setSelectedIds(current => current.filter(id => !removedIds.has(id)))
       })
       if (result.failed.length) {
         const failedIds = new Set(result.failed.map(item => item.id))

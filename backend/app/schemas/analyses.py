@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -51,6 +52,23 @@ class AnalysisListItem(BaseModel):
 
 class AnalysisListResponse(BaseModel):
     analyses: list[AnalysisListItem]
+
+
+class AnalysisBulkDeleteRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    analysis_ids: list[UUID] = Field(min_length=1, max_length=1000)
+
+
+class AnalysisDeleteFailure(BaseModel):
+    id: str
+    code: str
+    message: str
+
+
+class AnalysisBulkDeleteResponse(BaseModel):
+    removed: list[str]
+    failed: list[AnalysisDeleteFailure]
 
 
 class WarningAcceptanceResponse(BaseModel):
