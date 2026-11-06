@@ -19,12 +19,31 @@ export function AuthPage({ signup = false }: { signup?: boolean }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [rememberChoice, setRememberChoice] = useState<boolean | null>(null)
+  const socialRequest = useRef(false)
+  const leavingForSocial = useRef(false)
   const remember = rememberChoice ?? auth.remember
   const ready = !!auth.client && !!auth.config?.configured
   useEffect(() => { if (auth.ready) navigate(next, { replace: true }) }, [auth.ready, navigate, next])
+  useEffect(() => {
+    // Back/forward cache can restore the state from before navigation completed.
+    // Only unlock an OAuth departure; a pending email request must keep its lock.
+    const returned = () => {
+      if (!leavingForSocial.current) return
+      leavingForSocial.current = false
+      socialRequest.current = false
+      setBusy(false)
+    }
+    window.addEventListener('pageshow', returned)
+    window.addEventListener('focus', returned)
+    return () => {
+      window.removeEventListener('pageshow', returned)
+      window.removeEventListener('focus', returned)
+    }
+  }, [])
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (!auth.client || busy) return
+    leavingForSocial.current = false
     setError(''); setNotice('')
     if (signup && !normalizeNickname(nickname)) { setError(NICKNAME_HELP); return }
     if (signup && password !== confirmation) { setError('비밀번호가 서로 다릅니다.'); return }
@@ -47,17 +66,23 @@ export function AuthPage({ signup = false }: { signup?: boolean }) {
     finally { setBusy(false) }
   }
   async function social(provider: 'google' | 'kakao') {
-    if (!auth.client || !auth.config?.providers[provider] || busy) return
-    setBusy(true); setError('')
+    if (!auth.client || !auth.config?.providers[provider] || busy || socialRequest.current) return
+    socialRequest.current = true
+    leavingForSocial.current = false
+    setBusy(true); setError(''); setNotice('')
     try {
       auth.setRemember(remember)
       sessionStorage.setItem('shotlog_auth_next', next)
-      const { error: failure } = await auth.client.auth.signInWithOAuth({
+      const { data, error: failure } = await auth.client.auth.signInWithOAuth({
         provider,
-        options: socialLoginOptions(provider, window.location.origin),
+        options: { ...socialLoginOptions(provider, window.location.origin), skipBrowserRedirect: true },
       })
-      if (failure) { setError(authMessage(failure.code)); setBusy(false) }
-    } catch { setError('간편 로그인에 연결하지 못했습니다.'); setBusy(false) }
+      if (failure) { setError(authMessage(failure.code)); return }
+      if (!data.url) throw new Error('OAuth redirect unavailable')
+      leavingForSocial.current = true
+      window.location.assign(data.url)
+    } catch { leavingForSocial.current = false; setError('간편 로그인에 연결하지 못했습니다.') }
+    finally { socialRequest.current = false; setBusy(false) }
   }
   return <main className="auth-page">
     <Link className="auth-wordmark" to="/">ShotLog</Link>
@@ -111,6 +136,6 @@ export function AuthCallbackPage() {
   }, [auth.client, auth.loading, code])
   return <main className="auth-page"><Link className="auth-wordmark" to="/">ShotLog</Link><section className="auth-card"><h1>로그인 확인</h1>
     <p role={error || (auth.client && !code) ? 'alert' : 'status'}>{error || auth.error || (!auth.loading && !auth.client ? '로그인 연결을 준비하고 있습니다.' : !code ? '로그인이 취소되었거나 연결이 만료됐습니다. 다시 로그인해 주세요.' : '잠시만 기다려 주세요…')}</p>
-    {(error || auth.error || (!auth.loading && !auth.client) || !code) && <Link className="button primary" to="/login">로그인으로 돌아가기</Link>}
+    {(error || auth.error || (!auth.loading && !auth.client) || !code) && <Link className="button primary" to={`/login?next=${encodeURIComponent(next)}`}>로그인으로 돌아가기</Link>}
   </section></main>
 }

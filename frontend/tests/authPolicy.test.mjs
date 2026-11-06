@@ -31,3 +31,24 @@ test('Kakao alone replaces default email scope without changing redirect or othe
   assert.equal(url.searchParams.get('scopes'), null)
   assert.equal(url.searchParams.get('redirect_to'), `${origin}/auth/callback`)
 })
+
+test('retrying a cancelled OAuth attempt creates fresh PKCE challenges for the same or another provider', async () => {
+  const values = new Map()
+  const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) }
+  const client = createClient('https://test-project.example', 'test-public-key', { auth: {
+    storage, storageKey: 'cancel-retry-fixture', flowType: 'pkce', persistSession: true,
+    autoRefreshToken: false, detectSessionInUrl: false,
+  } })
+  const challenges = []
+  for (const provider of ['google', 'google', 'kakao']) {
+    const { data, error } = await client.auth.signInWithOAuth({ provider,
+      options: { ...socialLoginOptions(provider, 'http://127.0.0.1:5173'), skipBrowserRedirect: true } })
+    assert.equal(error, null)
+    const url = new URL(data.url)
+    assert.equal(url.searchParams.get('redirect_to'), 'http://127.0.0.1:5173/auth/callback')
+    assert.equal(url.searchParams.get('code_challenge_method'), 's256')
+    assert.ok(values.get('cancel-retry-fixture-code-verifier'))
+    challenges.push(url.searchParams.get('code_challenge'))
+  }
+  assert.equal(new Set(challenges).size, 3)
+})

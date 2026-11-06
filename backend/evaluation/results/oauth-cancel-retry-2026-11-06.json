@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "Provider cancel/back/focus/pageshow/retry keeps input and remember choice",
+    "Pending OAuth URL preparation blocks duplicate clicks and premature unlock",
+    "Provider error, exception, and missing URL all release the lock",
+    "Return events do not unlock an in-flight email login",
+    "Cancelled callback returns to login and preserves the intended destination"
+  ],
+  "passed": true,
+  "real_provider_requests": 0,
+  "limitation": "Isolated Chrome fixture with simulated provider replies; no real account OAuth performed.",
+  "frontend_unit_tests": 62,
+  "typecheck_build": "passed",
+  "dummy_data_mutated": false,
+  "backend_code_changed": false
+}
