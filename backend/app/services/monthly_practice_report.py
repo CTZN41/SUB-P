@@ -10,6 +10,7 @@ from app.services import practice_report as reports
 from app.services.analysis_reuse import atomic_json, digest
 from app.services.monthly_statistics import _month
 from app.services.non_shot_policy import visible_shot
+from app.services.email_notifications import completion_states
 
 
 def validate_month(month):
@@ -26,6 +27,8 @@ def monthly_context(session, owner_id, month):
     previous_month = (first-timedelta(days=1)).strftime('%Y-%m') if first > date.min else None
     pairs = session.execute(select(Analysis, Shot).join(Shot, Shot.analysis_id == Analysis.id).where(Analysis.owner_id == owner_id)).all()
     current = [s for a,s in pairs if _month(a) == month and visible_shot(s)]
+    selected = {a.id: a for a,s in pairs if _month(a) == month and visible_shot(s)}
+    states = completion_states(session, list(selected.values()))
     previous = [s for a,s in pairs if _month(a) == previous_month and visible_shot(s)]
     groups, prior = reports._groups(current), reports._groups(previous)
     rows=[]
@@ -40,7 +43,10 @@ def monthly_context(session, owner_id, month):
     return {'period':'monthly','current':{'id':month,'title':month+' 월간 연습','date':month},
             'previous':{'id':previous_month,'title':previous_month+' 월간 연습','date':previous_month} if previous else None,
             'same_source_metadata':False,'rows':rows,
-            'position_unresolved':sum(s.court_x is None or s.court_y is None for s in current),'ready':bool(current)}
+            'analysis_ids': sorted(selected),
+            'position_unresolved':sum(state['position_pending'] for state in states.values()),
+            'outcome_unresolved':sum(state['outcome_pending'] for state in states.values()),
+            'ready':bool(current) and all(state['ready'] for state in states.values())}
 
 
 def cache_path(settings, owner_id, month):
@@ -57,7 +63,7 @@ def generate_monthly_report(session, settings, owner_id, month):
     with reports._generation_lock(path.with_suffix('.lock')):
         view=monthly_report_view(session,settings,owner_id,month)
         if not view['ready']:
-            raise reports.ReportError(409,'REPORT_NOT_READY','이 달에 저장된 슛 기록이 있을 때 생성할 수 있습니다.')
+            raise reports.ReportError(409,'REPORT_NOT_READY','이 달의 위치와 결과 확인을 모두 마친 후 생성해 주세요.')
         if view['report'] and not view['stale']:
             return view
         if not settings.openai_api_key:

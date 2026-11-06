@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { deleteAnalysisRecords } from '../utils/deleteAnalysisRecords'
 import './AnalysisHistory.css'
 import { formatShotTime } from '../utils/shotPresentation'
+import { canSendSelectedReports } from '../utils/historyReports'
+import { readAnalysisResponse } from '../utils/analysisPolling'
 
 const API_BASE = '/api'
 
@@ -17,6 +19,9 @@ export type RecordItem = {
   next_path: string
   state_label: string
   state_detail: string | null
+  report_ready?: boolean
+  position_pending?: number
+  outcome_pending?: number
 }
 
 export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: boolean; onRecordsChange?: (records: RecordItem[]) => void }) {
@@ -29,6 +34,8 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
   const dialogRef = useRef<HTMLDialogElement>(null)
   const deleteLock = useRef(false)
   const [busy, setBusy] = useState(false)
+  const [sendingReports, setSendingReports] = useState(false)
+  const reportRequest = useRef<{ selection: string; request_id: string } | null>(null)
 
   const load = useCallback(async () => {
     const response = await fetch(`${API_BASE}/analyses`)
@@ -39,6 +46,12 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
 
   useEffect(() => {
     void Promise.resolve().then(load).catch((caught) => setError(caught.message)).finally(() => setLoading(false))
+  }, [load])
+
+  useEffect(() => {
+    const refresh = () => { void load().catch(() => {}) }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
   }, [load])
 
   useEffect(() => {
@@ -89,6 +102,33 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
   const visible = recent ? records.slice(0, 3) : records
   const selected = records.filter(item => selectedIds.includes(item.id))
   const allSelected = records.length > 0 && selected.length === records.length
+  const reportsReady = canSendSelectedReports(selected)
+  async function sendReports() {
+    if (!reportsReady || deleteLock.current) return
+    deleteLock.current = true
+    setBusy(true); setSendingReports(true); setError(''); setNotice('')
+    const ids = selected.map(item => item.id).sort()
+    const selection = JSON.stringify(ids)
+    if (reportRequest.current?.selection !== selection) {
+      reportRequest.current = { selection, request_id: crypto.randomUUID() }
+    }
+    try {
+      const response = await fetch(`${API_BASE}/analyses/bulk-report-email`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consent: true, analysis_ids: ids, request_id: reportRequest.current.request_id }),
+      })
+      const result = await readAnalysisResponse<{ requested: string[] }>(response, '리포트 발송을 신청하지 못했습니다.')
+      setNotice(`영상 ${result.requested.length}개를 합친 리포트 PDF 한 개의 이메일 발송 요청을 접수했습니다.`)
+      setSelectedIds([])
+      reportRequest.current = null
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '리포트 발송을 신청하지 못했습니다.')
+    } finally {
+      await load().catch(() => {})
+      deleteLock.current = false
+      setSendingReports(false); setBusy(false)
+    }
+  }
   function requestDelete(items: RecordItem[]) { setDeleting(items); setError(''); setNotice('') }
   return <section className={`history-section${recent ? ' recent-history' : ''}`} aria-label={recent ? '최근 분석 기록' : '분석 기록'}>
     <div className="history-heading"><h2>{recent ? '최근 분석 기록' : '영상별 기록'}</h2>{recent && <Link to="/history">전체 보기</Link>}</div>
@@ -103,8 +143,10 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
       <span className="history-selected-count" role="status">{selected.length}개 선택</span>
       <div className="history-selection-actions">
         {selected.length > 0 && <button className="button secondary" disabled={busy} onClick={() => setSelectedIds([])}>선택 해제</button>}
+        <button className="button primary" disabled={busy || !reportsReady} onClick={() => void sendReports()}>리포트 보내기{sendingReports ? '…' : ''}</button>
         <button className="button danger" disabled={busy || selected.length === 0} onClick={() => requestDelete(selected)}>선택 삭제{selected.length > 0 ? ` (${selected.length})` : ''}</button>
       </div>
+      {selected.length > 0 && !reportsReady && <p className="history-report-hint">위치와 결과 확인이 모두 끝난 기록만 선택해 주세요.</p>}
     </div>}
     <div className="history-list">{visible.map((item, index) => <Fragment key={item.id}>
       {!recent && (index === 0 || new Date(visible[index - 1].created_at).toLocaleDateString('ko-KR') !== new Date(item.created_at).toLocaleDateString('ko-KR')) && <h3 className="history-day-heading">{new Date(item.created_at).toLocaleDateString('ko-KR')}</h3>}
@@ -118,6 +160,8 @@ export function AnalysisHistory({ recent = false, onRecordsChange }: { recent?: 
       <div className="history-record-info"><h3>{item.title}</h3><p title={item.original_name}>{recent ? new Date(item.created_at).toLocaleDateString('ko-KR') : `${new Date(item.created_at).toLocaleString('ko-KR')} · ${item.original_name} · ${(item.duration_ms / 1000).toFixed(1)}초`}</p>
         <span className={`history-state ${item.video_available ? '' : 'broken'}`}>{item.state_label}</span>
         {item.state_detail && <p className="history-detail">{item.state_detail}</p>}
+        {!recent && !!item.position_pending && <p className="history-detail">위치 확인 필요 {item.position_pending}개</p>}
+        {!recent && !!item.outcome_pending && <p className="history-detail">결과 확인 필요 {item.outcome_pending}개</p>}
       </div>
       <div className="history-actions">{item.video_available && <Link className="button secondary" to={item.next_path}>{item.status === 'completed' || item.status === 'review_required' ? '결과 보기' : '이어하기'}</Link>}
         <button className="button secondary" disabled={busy} onClick={() => requestDelete([item])}>삭제</button></div>

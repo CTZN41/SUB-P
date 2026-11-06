@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.models import UserProfile, UserEmailPreference, AnalysisNotification
+from app.models import UserProfile, UserEmailPreference, AnalysisNotification, ReportEmailBatch
 from app.services.nickname_policy import nickname_from_metadata, normalize_nickname, nickname_key
 
 
@@ -119,6 +119,10 @@ def save_email_preference(session: Session, user_id: str, enabled: bool) -> dict
         session.add(preference)
     preference.enabled, preference.updated_at = enabled, datetime.now(timezone.utc)
     if not enabled:
+        session.execute(update(ReportEmailBatch).where(
+            ReportEmailBatch.owner_id == user_id,
+            ReportEmailBatch.status.in_(('waiting', 'preparing'))).values(
+                status='canceled', error_code='EMAIL_CONSENT_WITHDRAWN', claim_token=None, lease_until=None))
         session.execute(update(AnalysisNotification).where(
             AnalysisNotification.owner_id == user_id,
             AnalysisNotification.status.in_(('waiting', 'preparing'))).values(

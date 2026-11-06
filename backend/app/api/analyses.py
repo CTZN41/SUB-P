@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import FileResponse
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.db.dependencies import get_db_session
 from app.models import (
@@ -69,7 +69,7 @@ from app.services.non_shot_policy import visible_shot
 from app.services.authentication import require_analysis_user
 from app.services.practice_report import ReportError, comparison_context, generate_report, report_view
 from app.services.monthly_practice_report import monthly_report_view, generate_monthly_report
-from app.services.email_notifications import NotificationError, cancel_subscription, notification_view, subscribe, request_report_delivery
+from app.services.email_notifications import NotificationError, cancel_subscription, notification_view, subscribe, request_report_delivery, completion_states
 
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"], dependencies=[Depends(require_analysis_user)])
@@ -82,6 +82,31 @@ class NotificationRequest(BaseModel):
 
 class ReportDeliveryRequest(NotificationRequest):
     request_id: UUID
+
+
+class BulkReportRequest(NotificationRequest):
+    analysis_ids: list[UUID] = Field(min_length=1, max_length=1000)
+    request_id: UUID
+
+
+@router.post('/bulk-report-email')
+def send_selected_reports(payload: BulkReportRequest, request: Request,
+                          session: Annotated[Session, Depends(get_db_session)]):
+    from app.services.selected_report_email import request_batch
+    ids = [str(aid) for aid in payload.analysis_ids]
+    if len(set(ids)) != len(ids):
+        raise HTTPException(422, detail={'code': 'EMAIL_DUPLICATE_SELECTION', 'message': '중복된 선택을 해제한 후 다시 보내 주세요.'})
+    try:
+        for aid in ids:
+            find_analysis(session, aid)
+        return request_batch(session, request.app.state.settings, session.info.get('auth_user_id'),
+                             ids, payload.consent, str(payload.request_id))
+    except NotificationError as error:
+        session.rollback()
+        raise HTTPException(error.status, detail={'code': error.code, 'message': str(error)}) from None
+    except Exception:
+        session.rollback()
+        raise
 
 
 @router.post('/{analysis_id}/email-notification/send')
@@ -141,6 +166,22 @@ def create_monthly_practice_report(request: Request, session: Annotated[Session,
         raise HTTPException(error.status,detail={'code':error.code,'message':str(error)}) from None
 
 
+@router.post('/monthly/report-email')
+def send_monthly_report(payload: ReportDeliveryRequest, request: Request, month: str,
+                        session: Annotated[Session, Depends(get_db_session)]):
+    from app.services.monthly_practice_report import monthly_context
+    from app.services.selected_report_email import request_batch
+    try:
+        context = monthly_context(session, session.info.get('auth_user_id'), month)
+        if not context['ready']:
+            raise NotificationError(409, 'EMAIL_NOT_READY', '이 달의 위치와 결과 확인을 모두 마친 후 보내 주세요.')
+        return request_batch(session, request.app.state.settings, session.info.get('auth_user_id'),
+                             context['analysis_ids'], payload.consent, str(payload.request_id))
+    except (NotificationError, ReportError) as error:
+        session.rollback()
+        raise HTTPException(error.status, detail={'code': error.code, 'message': str(error)}) from None
+
+
 @router.get("/monthly")
 def get_monthly_statistics(
     session: Annotated[Session, Depends(get_db_session)],
@@ -178,7 +219,7 @@ def create_practice_report(analysis_id: str, request: Request, session: Annotate
         raise HTTPException(status_code=error.status, detail={"code": error.code, "message": str(error)}) from error
 
 
-def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *, has_calibration: bool, has_assigned_player: bool) -> AnalysisListItem:
+def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *, has_calibration: bool, has_assigned_player: bool, report_state: dict) -> AnalysisListItem:
     video_available = (upload_path / analysis.id / "original.mp4").is_file()
     if not video_available:
         label, detail = "원본 영상 없음", "원본 파일이 없어 재생하거나 다시 분석할 수 없습니다. 기록을 삭제할 수 있습니다."
@@ -220,6 +261,8 @@ def _list_item(analysis: Analysis, upload_path, job_status: JobStatus | None, *,
         play_type=analysis.play_type, status=analysis.status, created_at=analysis.created_at,
         duration_ms=analysis.duration_ms, video_available=video_available,
         next_path=next_path, state_label=label, state_detail=detail,
+        report_ready=report_state['ready'], position_pending=report_state['position_pending'],
+        outcome_pending=report_state['outcome_pending'],
     )
 
 
@@ -235,10 +278,12 @@ def list_analyses(request: Request, session: Annotated[Session, Depends(get_db_s
     if session.info.get('auth_required'):
         query = query.where(Analysis.owner_id == session.info['auth_user_id'])
     rows = session.execute(query.order_by(Analysis.created_at.desc(), Analysis.id.desc())).all()
+    report_states = completion_states(session, [row[0] for row in rows])
     return AnalysisListResponse(analyses=[
         _list_item(
             analysis, request.app.state.settings.upload_path, latest_job_status,
             has_calibration=calibration_ready, has_assigned_player=player_ready,
+            report_state=report_states[analysis.id],
         ) for analysis, calibration_ready, player_ready, latest_job_status in rows
     ])
 

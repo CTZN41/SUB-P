@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmailNotification } from './EmailNotification'
 import './PracticeReport.css'
+import { readAnalysisResponse } from '../utils/analysisPolling'
 
 type Line = { attempts: number; made: number; missed: number; unresolved: number; success_rate: number | null }
 type ComparisonRow = { key: string; kind: string; label: string; current: Line; previous: Line | null; attempt_change: number | null; rate_change_pp: number | null }
@@ -10,6 +11,7 @@ type ReportData = {
   current: { id: string; title: string; date: string }
   previous: { id: string; title: string; date: string } | null
   same_source_metadata: boolean; position_unresolved: number; ready: boolean; stale: boolean; ai_available: boolean
+  outcome_unresolved?: number
   rows: ComparisonRow[]
   report: { generated_at: string; model: string; elapsed_seconds: number; api_usage: { input_tokens: number; output_tokens: number; total_tokens: number } | null
     content: { summary: string; findings: Observation[]; next_practice: Observation[] } } | null
@@ -37,6 +39,9 @@ export function PracticeReport({ analysisId, month, revision }: { analysisId?: s
   const [kind, setKind] = useState('zone')
   const [retry, setRetry] = useState(0)
   const [showDelivery, setShowDelivery] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [deliveryNotice, setDeliveryNotice] = useState('')
+  const deliveryRequest = useRef<{ month: string; id: string } | null>(null)
   const requestSequence = useRef(0)
   const endpoint = month ? `/api/analyses/monthly/practice-report?month=${encodeURIComponent(month)}` : `/api/analyses/${analysisId}/practice-report`
 
@@ -68,6 +73,22 @@ export function PracticeReport({ analysisId, month, revision }: { analysisId?: s
     }
   }
 
+  async function sendMonthly() {
+    if (!month || loading || !data?.ready || sending) return
+    setSending(true); setError(''); setDeliveryNotice('')
+    if (deliveryRequest.current?.month !== month) deliveryRequest.current = { month, id: crypto.randomUUID() }
+    try {
+      const response = await fetch(`/api/analyses/monthly/report-email?month=${encodeURIComponent(month)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consent: true, request_id: deliveryRequest.current.id }),
+      })
+      await readAnalysisResponse(response, '월간 리포트 발송을 신청하지 못했습니다.')
+      setDeliveryNotice('월별 결과를 합친 PDF 한 개의 이메일 발송 요청을 접수했습니다.')
+      deliveryRequest.current = null
+    } catch (cause) { setError(cause instanceof Error ? cause.message : '리포트 발송을 신청하지 못했습니다.') }
+    finally { setSending(false) }
+  }
+
   const overall = data?.rows.find(row => row.key === 'overall')
   const rows = data?.rows.filter(row => row.kind === kind) ?? []
   const report = data?.stale ? null : data?.report
@@ -82,8 +103,11 @@ export function PracticeReport({ analysisId, month, revision }: { analysisId?: s
     <div className="panel-title"><div><p className="eyebrow">{month ? 'MONTHLY REPORT' : 'PRACTICE REPORT'}</p><h2>{month ? '월간 리포트' : '연습 리포트'}</h2></div>
       <div className="practice-report-actions">{data && <button type="button" className="button primary" disabled={loading || generating || !data.ready || !data.ai_available || Boolean(report)} onClick={generate}>
         {generating ? 'AI 요약 생성 중…' : report ? '요약 생성 완료' : data.stale ? 'AI 요약 갱신' : 'AI 요약 생성'}
-      </button>}{analysisId && <button type="button" className="button secondary" aria-expanded={showDelivery} onClick={() => setShowDelivery(value => !value)}>리포트 보내기</button>}</div></div>
-    {showDelivery && analysisId && <EmailNotification analysisId={analysisId} revision={revision} manual />}
+      </button>}{analysisId && <button type="button" className="button secondary" disabled={loading || generating || !data?.ready} aria-expanded={showDelivery} onClick={() => setShowDelivery(value => !value)}>리포트 보내기</button>}
+      {month && <button type="button" className="button secondary" disabled={loading || generating || sending || !data?.ready} onClick={() => void sendMonthly()}>{sending ? '신청 중…' : '리포트 보내기'}</button>}</div></div>
+    {deliveryNotice && <p role="status">{deliveryNotice}</p>}
+    {month && data && !data.ready && <p className="helper-text">이 달의 위치와 결과 확인을 모두 마치면 리포트를 생성하고 보낼 수 있습니다.</p>}
+    {showDelivery && analysisId && data?.ready && !loading && <EmailNotification analysisId={analysisId} revision={revision} manual />}
     {loading && <p className="helper-text">연습 기록을 비교하고 있습니다…</p>}
     {error && <div role="alert" className="inline-warning">{error} <button type="button" className="button secondary" onClick={() => setRetry(value => value + 1)}>다시 확인</button></div>}
     {!loading && data && overall && <>
@@ -111,7 +135,7 @@ export function PracticeReport({ analysisId, month, revision }: { analysisId?: s
         <p className="practice-ai-summary">{report.content.summary}</p>
         <div className="practice-ai-columns"><section><h3>이번 연습의 특징</h3><ul>{report.content.findings.map(observation)}</ul></section>
           <section><h3>다음 연습 과제</h3><ol>{report.content.next_practice.map(observation)}</ol></section></div>
-      </div> : !data.ready ? <p className="helper-text">분석 완료 후 생성할 수 있습니다.</p> : !data.ai_available ? <p className="helper-text">AI 요약을 사용하려면 OpenAI 연결 설정이 필요합니다.</p> : null}
+      </div> : !data.ready ? !month && <p className="helper-text">위치와 결과 확인을 모두 마치면 생성할 수 있습니다.</p> : !data.ai_available ? <p className="helper-text">AI 요약을 사용하려면 OpenAI 연결 설정이 필요합니다.</p> : null}
     </>}
   </section>
 }

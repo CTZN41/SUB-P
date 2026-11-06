@@ -48,6 +48,9 @@ class AnalysisListItem(BaseModel):
     next_path: str
     state_label: str
     state_detail: str | None
+    report_ready: bool = False
+    position_pending: int = 0
+    outcome_pending: int = 0
 
 
 class AnalysisListResponse(BaseModel):

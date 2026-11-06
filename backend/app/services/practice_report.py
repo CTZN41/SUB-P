@@ -104,6 +104,7 @@ def _groups(shots):
 
 
 def comparison_context(session, analysis):
+    from app.services.email_notifications import completion
     current_shots = _shots(session, analysis.id)
     candidates = session.scalars(select(Analysis).where(
         Analysis.owner_id == analysis.owner_id, Analysis.play_type == analysis.play_type,
@@ -134,7 +135,7 @@ def comparison_context(session, analysis):
     return {"current": _metadata(analysis), "previous": _metadata(previous) if previous else None,
             "same_source_metadata": same_source, "rows": rows,
             "position_unresolved": sum(shot.court_x is None or shot.court_y is None for shot in current_shots),
-            "ready": analysis.status in READY_STATUSES and bool(current_shots)}
+            "ready": completion(session, analysis)['ready']}
 
 
 def _fingerprint(context, model):
@@ -230,7 +231,7 @@ def generate_report(session, analysis, settings):
         context = comparison_context(session, analysis)
         view = report_view(context, settings, analysis_id)
         if not context["ready"]:
-            raise ReportError(409, "REPORT_NOT_READY", "분석이 완료되고 슛 기록이 있을 때 리포트를 만들 수 있습니다.")
+            raise ReportError(409, "REPORT_NOT_READY", "슛 기록의 위치와 결과 확인을 모두 마친 후 리포트를 만들 수 있습니다.")
         if view["report"] and not view["stale"]:
             return view
         if not settings.openai_api_key:

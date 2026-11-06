@@ -201,6 +201,23 @@ class AnalysisNotification(Base):
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class ReportEmailBatch(Base):
+    __tablename__ = 'report_email_batches'
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    analysis_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    selection_key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    recipient_email: Mapped[str] = mapped_column(String(254), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default='waiting', index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    claim_token: Mapped[str | None] = mapped_column(String(36))
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_message_id: Mapped[str | None] = mapped_column(String(100))
+    error_code: Mapped[str | None] = mapped_column(String(60))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class CourtCalibration(Base):
     __tablename__ = "court_calibrations"
 

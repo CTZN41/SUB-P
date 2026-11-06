@@ -58,19 +58,34 @@ def mask_email(email):
     return local[:1] + '***@' + domain
 
 
-def completion(session, analysis):
-    shots = [s for s in session.scalars(select(Shot).where(Shot.analysis_id == analysis.id)) if visible_shot(s)]
+def _completion_state(analysis, shots, active):
+    shots = [s for s in shots if visible_shot(s)]
     position_missing = sum(s.court_x is None or s.court_y is None
                            or not math.isfinite(s.court_x) or not math.isfinite(s.court_y)
                            or not (0 <= s.court_x <= 50 and 0 <= s.court_y <= 47) for s in shots)
     outcome_missing = sum(s.result.value not in ('made', 'missed') for s in shots)
-    active = session.scalar(select(AnalysisJob.id).where(
-        AnalysisJob.analysis_id == analysis.id, AnalysisJob.status.in_(ACTIVE_JOB_STATUSES)).limit(1))
     fingerprint = digest(sorted((s.id, s.candidate_time_ms, s.court_x, s.court_y,
                                  s.result.value, s.shot_type.value,
                                  _utc(s.updated_at).isoformat()) for s in shots))
     return {'ready': bool(shots) and analysis.status in READY and not active and not position_missing and not outcome_missing,
             'position_pending': position_missing, 'outcome_pending': outcome_missing, 'fingerprint': fingerprint}
+
+
+def completion_states(session, analyses):
+    """Share delivery eligibility with history without per-record queries."""
+    ids = [a.id for a in analyses]
+    if not ids:
+        return {}
+    grouped = {aid: [] for aid in ids}
+    for shot in session.scalars(select(Shot).where(Shot.analysis_id.in_(ids))):
+        grouped[shot.analysis_id].append(shot)
+    active = set(session.scalars(select(AnalysisJob.analysis_id).where(
+        AnalysisJob.analysis_id.in_(ids), AnalysisJob.status.in_(ACTIVE_JOB_STATUSES))))
+    return {a.id: _completion_state(a, grouped[a.id], a.id in active) for a in analyses}
+
+
+def completion(session, analysis):
+    return completion_states(session, [analysis])[analysis.id]
 
 
 def notification_view(session, analysis, settings):
@@ -178,7 +193,9 @@ def message_payload(analysis, context, report, settings, email):
     previous = next(row.get('previous') for row in context['rows'] if row['key'] == 'overall')
     if previous and previous['success_rate'] is not None:
         sections.append(f"이전 연습 성공률 {previous['success_rate']:g}% (결과 확정 슛 기준)")
-    link = public_result_link(settings, analysis.id)
+    link = None if context.get('period') == 'selection' else public_result_link(settings, analysis.id)
+    if context.get('period') == 'selection':
+        sections.insert(1, f"선택한 영상 {context['analysis_count']}개를 합산한 결과입니다.")
     sections.append('결과 및 원본 장면 보기: ' + link if link else '원본 장면은 ShotLog의 분석 기록에서 확인해 주세요.')
     message = EmailMessage()
     message['Subject'] = '[ShotLog] ' + title + ' 분석 결과'
@@ -193,7 +210,7 @@ def message_payload(analysis, context, report, settings, email):
     message.add_alternative('<html><body><div style="font-family:Arial,sans-serif;line-height:1.7;max-width:680px;margin:auto">'
                             + html_parts + '</div></body></html>', subtype='html')
     message.add_attachment(build_practice_pdf(analysis, context, report, settings),
-                           maintype='application', subtype='pdf', filename='ShotLog-practice-report.pdf')
+                           maintype='application', subtype='pdf', filename='ShotLog-combined-report.pdf' if context.get('period') == 'selection' else 'ShotLog-practice-report.pdf')
     return message
 
 
@@ -337,6 +354,14 @@ async def notification_worker(factory, settings, stop):
                     if stop.is_set():
                         break
                     process_notification(factory, settings, analysis_id)
+                from app.models import ReportEmailBatch
+                from app.services.selected_report_email import process_batch
+                with factory() as session:
+                    batch_ids = list(session.scalars(select(ReportEmailBatch.id).where(ReportEmailBatch.status.in_(PENDING))))
+                for batch_id in batch_ids:
+                    if stop.is_set():
+                        break
+                    process_batch(factory, settings, batch_id)
             await asyncio.to_thread(process_queue)
         except Exception:
             # Preserve durable status, including an uncertain dispatch, for recovery.
